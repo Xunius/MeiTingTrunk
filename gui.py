@@ -1,4 +1,3 @@
-
 import sys,os
 import operator
 import sqlite3
@@ -379,8 +378,6 @@ class MainFrame(QtWidgets.QWidget):
 
         self.show()
 
-
-
     def createTable(self):
 
         tv=QtWidgets.QTableView(self)
@@ -407,17 +404,31 @@ class MainFrame(QtWidgets.QWidget):
 
         return tv
 
-
-
-
     def addLibTree(self):
 
         libtree=QtWidgets.QTreeWidget()
         libtree.setHeaderHidden(True)
-        f1=self.addTreeItem(libtree.invisibleRootItem(), 'f1')
-        f2=self.addTreeItem(libtree.invisibleRootItem(), 'f2')
-        s11=self.addTreeItem(f1, 'sub1')
-        s21=self.addTreeItem(f2, 'sub2')
+
+        folder_dict=getFolders(self.db)
+
+        #-------------Get all level 1 folders-------------
+        query='''SELECT DISTINCT id
+        FROM Folders
+        WHERE Folders.parentId=-1'''
+        
+        ret=self.db.execute(query).fetchall()
+        folders1=[(folder_dict[fii[0]][0],fii[0]) for fii in ret]
+        folders1.sort()
+
+        #---------------Add level 1 folders---------------
+        for fnameii,idii in folders1:
+            fii=self.addTreeItem(libtree.invisibleRootItem(), fnameii)
+            sub_ids=getSubFolders(folder_dict,idii)
+            #-----------------Get sub folders-----------------
+            for subii in sub_ids:
+                subfii=folder_dict[subii][0]
+                sii=self.addTreeItem(fii, subfii)
+        
         libtree.itemChanged.connect(self.libtreeChange)
 
         return libtree
@@ -585,8 +596,9 @@ def getMetaData(db, docid):
 
     query_folder=\
     '''
-    SELECT DocumentFolders.name
-    FROM DocumentFolders
+    SELECT Folders.name
+    FROM Folders
+    LEFT JOIN DocumentFolders ON DocumentFolders.folderid=Folders.id
     WHERE (DocumentFolders.docid=%s)
     ''' %docid
 
@@ -643,7 +655,211 @@ def getMetaData(db, docid):
     return result
 
 
+def getFolders(db):
 
+    #-----------------Get all folders-----------------
+    query='''SELECT id, name, parentId
+    FROM Folders
+    '''
+    ret=db.execute(query)
+    data=ret.fetchall()
+
+    # dict, key: folderid, value: (folder_name, parent_id)
+    df=dict([(ii[0],ii[1:]) for ii in data])
+
+    return df
+
+
+
+
+
+
+#--------------Get folder id and name list in database----------------
+def getFolderList(db,folder,verbose=True):
+    '''Get folder id and name list in database
+
+    <folder>: select folder from database.
+              If None, select all folders/subfolders.
+              If str, select folder <folder>, and all subfolders. If folder
+              name conflicts, select the one with higher level.
+              If a tuple of (id, folder), select folder with name <folder>
+              and folder id <id>, to avoid name conflicts.
+
+    Return: <folders>: list, with elements of (id, folder_tree).
+            where <folder_tree> is a str of folder name with tree structure, e.g.
+            test/testsub/testsub2.
+
+    Update time: 2016-06-16 19:38:15.
+    '''
+
+    # get all folders with id, name, parentid
+    query=\
+    '''SELECT Folders.id,
+              Folders.name,
+              Folders.parentID
+       FROM Folders
+    '''
+    # get folder by name
+    query1=\
+    '''SELECT Folders.id,
+              Folders.name,
+              Folders.parentID
+       FROM Folders
+       WHERE (Folders.name="%s")
+    '''%folder
+
+    #-----------------Get all folders-----------------
+    ret=db.execute(query)
+    data=ret.fetchall()
+
+    # dict, key: folderid, value: (folder_name, parent_id)
+    df=dict([(ii[0],ii[1:]) for ii in data])
+
+    allfolderids=[ii[0] for ii in data]
+
+    #---------------Select target folder---------------
+    if folder is None:
+        folderids=allfolderids
+    if type(folder) is str:
+        folderids=db.execute(query1).fetchall()
+        folderids=[ii[0] for ii in folderids]
+    elif isinstance(folder, (tuple,list)):
+        # get folder from gui
+        #seldf=df[(df.folderid==folder[0]) & (df.folder==folder[1])]
+        #folderids=fetchField(seldf,'folderid')
+        folderids=[folder[0]]
+
+    #----------------Get all subfolders----------------
+    if folder is not None:
+        folderids2=[]
+        for ff in folderids:
+            folderids2.append(ff)
+            subfs=getSubFolders(df,ff)
+            folderids2.extend(subfs)
+    else:
+        folderids2=folderids
+
+    #---------------Remove empty folders---------------
+    folderids2=[ff for ff in folderids2 if not isFolderEmpty(db,ff)]
+
+    #---Get names and tree structure of all non-empty folders---
+    folders=[]
+    for ff in folderids2:
+        folders.append(getFolderTree(df,ff))
+
+    #----------------------Return----------------------
+    if folder is None:
+        return folders
+    else:
+        if len(folders)==0:
+            print("Given folder name not found in database or folder is empty.")
+            return []
+        else:
+            return folders
+
+
+#--------------------Check a folder is empty or not--------------------
+def isFolderEmpty(db,folderid,verbose=True):
+    '''Check a folder is empty or not
+    '''
+
+    query=\
+    '''SELECT Documents.title,
+              DocumentFolders.folderid,
+              Folders.name
+       FROM Documents
+       LEFT JOIN DocumentFolders
+           ON Documents.id=DocumentFolders.documentId
+       LEFT JOIN Folders
+           ON Folders.id=DocumentFolders.folderid
+    '''
+
+    fstr='(Folders.id="%s")' %folderid
+    fstr='WHERE '+fstr
+    query=query+' '+fstr
+
+    ret=db.execute(query)
+    data=ret.fetchall()
+    if len(data)==0:
+        return True
+    else:
+        return False
+
+
+#-------------------Get subfolders of a given folder-------------------
+def getSubFolders(df,folderid,verbose=True):
+    '''Get subfolders of a given folder
+
+    <df>: dict, key: folderid, value: (folder_name, parent_id).
+    <folderid>: int, folder id
+    '''
+
+    getParentId=lambda df,id: df[id][1]
+    results=[]
+
+    for idii in df:
+        fii,pii=df[idii]
+        cid=idii
+        while True:
+            pid=getParentId(df,cid)
+            if pid==-1 or pid==0:
+                break
+            if pid==folderid:
+                results.append(idii)
+                break
+            else:
+                cid=pid
+
+    results.sort()
+    return results
+
+#-------------Get folder tree structure of a given folder-------------
+def getFolderTree(df,folderid,verbose=True):
+    '''Get folder tree structure of a given folder
+
+    <df>: dict, key: folderid, value: (folder_name, parent_id).
+    <folderid>: int, folder id
+    '''
+
+    getFolderName=lambda df,id: df[id][0]
+    getParentId=lambda df,id: df[id][1]
+
+    folder=getFolderName(df,folderid)
+
+    #------------Back track tree structure------------
+    cid=folderid
+    while True:
+        pid=getParentId(df,cid)
+        if pid==-1 or pid==0:
+            break
+        else:
+            pfolder=getFolderName(df,pid)
+            folder=u'%s/%s' %(pfolder,folder)
+        cid=pid
+
+    return folderid,folder
+
+
+#----------Get a list of docids from a folder--------------
+def getFolderDocList(db,folderid,verbose=True):
+    '''Get a list of docids from a folder
+
+    Update time: 2018-07-28 20:11:09.
+    '''
+
+    query=\
+    '''SELECT Documents.id
+       FROM Documents
+       LEFT JOIN DocumentFolders
+           ON Documents.id=DocumentFolders.documentId
+       WHERE (DocumentFolders.folderid=%s)
+    ''' %folderid
+
+    ret=db.execute(query)
+    data=ret.fetchall()
+    docids=[ii[0] for ii in data]
+    docids.sort()
+    return docids
 
 
 

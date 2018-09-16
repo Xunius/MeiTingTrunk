@@ -159,13 +159,24 @@ if __name__=='__main__':
     query='''CREATE TABLE IF NOT EXISTS DocumentFolders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     docid INT,
-    name TEXT,
-    parentId INT,
-    path TEXT
+    folderid INT
     )'''
 
     cout.execute(query)
     dbout.commit()
+
+    #---------------Create Folders table---------------
+    query='''CREATE TABLE IF NOT EXISTS Folders (
+    id INTEGER,
+    name TEXT,
+    parentId INT,
+    path TEXT,
+    UNIQUE (name, parentId)
+    )'''
+
+    cout.execute(query)
+    dbout.commit()
+    
 
     #--------Create DocumentContributors table--------
     query='''CREATE TABLE IF NOT EXISTS DocumentContributors (
@@ -197,6 +208,19 @@ if __name__=='__main__':
     if not os.path.exists(FILE_FOLDER):
         os.makedirs(FILE_FOLDER)
         print("Create folder %s" %FILE_FOLDER)
+
+    #----------------Copy folders table----------------
+    query='''SELECT id, name, parentId
+    FROM Folders
+    '''
+
+    ret=cin.execute(query).fetchall()
+
+    query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
+    VALUES (?,?,?,?)'''
+
+    for fii in ret:
+        cout.execute(query, (fii[0], fii[1], fii[2], os.path.join(LIB_FOLDER,fii[1])))
 
     #----------------Loop through docs----------------
     def selByDocid(cursor, table, column, docid):
@@ -271,10 +295,15 @@ if __name__=='__main__':
             cout.execute(query, (ii,)+ nii)
 
         for fii in folder_info:
-            query='''INSERT INTO DocumentFolders (docid, name, parentId, path)
-            VALUES (?, ?, ?, ?)'''
-            cout.execute(query, (ii, fii[1], fii[2],
-                os.path.join(LIB_FOLDER,fii[1])))
+            query='''INSERT INTO DocumentFolders (docid, folderid)
+            VALUES (?, ?)'''
+            cout.execute(query, (ii, fii[0]))
+            #cout.execute(query, (ii, fii[1], fii[2],
+                #os.path.join(LIB_FOLDER,fii[1])))
+
+            query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
+            VALUES (?,?,?,?)'''
+            cout.execute(query, (fii[0], fii[1], fii[2], os.path.join(LIB_FOLDER,fii[1])))
 
         for aii in authors:
             query='''INSERT INTO DocumentContributors (
