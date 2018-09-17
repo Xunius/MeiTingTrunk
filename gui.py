@@ -280,10 +280,13 @@ class MyHeaderView(QtWidgets.QHeaderView):
 
 class MainFrame(QtWidgets.QWidget):
 
-    def __init__(self,db):
+    def __init__(self,db,meta,folder_data,folder_dict):
         super(MainFrame,self).__init__()
 
         self.db=db
+        self.meta=meta
+        self.folder_data=folder_data
+        self.folder_dict=folder_dict
 
         #self.thumbnail_meta_list=thumbnail_meta_list
         #self.thumbnail_btn_dict={}    # buttons for preset icons
@@ -337,6 +340,7 @@ class MainFrame(QtWidgets.QWidget):
 
         #-------------------Add lib tree-------------------
         self.libtree=self.addLibTree()
+        self.libtree.itemClicked.connect(self.selFolder)
         h_split=QtWidgets.QSplitter(Qt.Horizontal)
         h_split.setSizePolicy(getXExpandYExpandSizePolicy())
         v_split=QtWidgets.QSplitter(Qt.Vertical)
@@ -368,7 +372,7 @@ class MainFrame(QtWidgets.QWidget):
         self.status_bar.showMessage('etest')
 
         #------------------Load doc table------------------
-        self.loadDocTable()
+        self.loadDocTable(None)
         
 
 
@@ -399,17 +403,24 @@ class MainFrame(QtWidgets.QWidget):
         hh.setSectionsMovable(True)
         hh.tv=tv
 
-
+        header=['favourite','read','author', 'title','journal','year']
+        tablemodel=TableModel(self,[],header)
+        tv.setModel(tablemodel)
+        hh.setModel(tablemodel)
 
 
         return tv
+
+
+
 
     def addLibTree(self):
 
         libtree=QtWidgets.QTreeWidget()
         libtree.setHeaderHidden(True)
+        libtree.setColumnCount(1)
 
-        folder_dict=getFolders(self.db)
+        #folder_dict=getFolders(self.db)
 
         #-------------Get all level 1 folders-------------
         query='''SELECT DISTINCT id
@@ -417,47 +428,37 @@ class MainFrame(QtWidgets.QWidget):
         WHERE Folders.parentId=-1'''
         
         ret=self.db.execute(query).fetchall()
-        folders1=[(folder_dict[fii[0]][0],fii[0]) for fii in ret]
+        folders1=[(self.folder_dict[fii[0]][0],fii[0]) for fii in ret]
         folders1.sort()
 
-        #---------------Add level 1 folders---------------
         for fnameii,idii in folders1:
-            fii=self.addTreeItem(libtree.invisibleRootItem(), fnameii)
-            sub_ids=getSubFolders(folder_dict,idii)
-            #-----------------Get sub folders-----------------
-            for subii in sub_ids:
-                subfii=folder_dict[subii][0]
-                sii=self.addTreeItem(fii, subfii)
+            self.addFolder(libtree,idii,self.folder_dict)
         
-        libtree.itemChanged.connect(self.libtreeChange)
+        #libtree.itemChanged.connect(self.libtreeChange)
 
         return libtree
 
-    def addTreeItem(self,parent,foldername):
-        column=0
-        folder=self.addParent(parent, column, foldername)
-        #self.addChild(parent, column, foldername)
-        return folder
+    def addFolder(self,parent,folderid,folder_dict):
 
-    def addParent(self, parent, column, title):
-        item = QtWidgets.QTreeWidgetItem(parent, [title])
-        #item.setData(column, QtCore.Qt.UserRole, '')
-        item.setChildIndicatorPolicy(QtWidgets.QTreeWidgetItem.ShowIndicator)
-        item.setExpanded(True)
-        return item
+        foldername,parentid=folder_dict[folderid]
+        fitem=QtWidgets.QTreeWidgetItem([foldername])
+        sub_ids=getChildFolders(folder_dict,folderid)
+        if parentid==-1:
+            parent.addTopLevelItem(fitem)
+        else:
+            parent.addChild(fitem)
+        if len(sub_ids)>0:
+            for sii in sub_ids:
+                self.addFolder(fitem,sii,folder_dict)
 
-    def addChild(self, parent, column, title):
-        item = QtWidgets.QTreeWidgetItem(parent, [title])
-        #item.setData(column, QtCore.Qt.UserRole, data)
-        item.setCheckState (column, QtCore.Qt.Unchecked)
-        return item
+        return
 
-    def libtreeChange(self, item, column):
-        pass
-        #if item.checkState(column) == QtCore.Qt.Checked:
-        #print "checked", item, item.text(column)
-        #if item.checkState(column) == QtCore.Qt.Unchecked:
-        #print "unchecked", item, item.text(column)
+    def selFolder(self,item,column):
+        print 'sel folder', item.text(column)
+
+
+
+
 
 
     def createTabs(self):
@@ -480,38 +481,39 @@ class MainFrame(QtWidgets.QWidget):
 
         return tabs
 
-    def loadDocTable(self):
+    def loadDocTable(self,folder=None):
 
-        header=['favourite','read','author', 'title','journal','year']
-        tablemodel=TableModel(self,[],header)
-        self.doc_table.setModel(tablemodel)
+        tablemodel=self.doc_table.model()
         hh=self.doc_table.horizontalHeader()
-        hh.setModel(tablemodel)
+        #self.doc_table.setModel(tablemodel)
+        #hh=self.doc_table.horizontalHeader()
+        #hh.setModel(tablemodel)
 
-        n=10
-        data=[]
+        if folder is None:
+            n=10
+            data=[]
 
-        for ii in range(n):
-            ii+=1
-            entryii=getMetaData(self.db,ii)
+            for ii in range(n):
+                ii+=1
+                entryii=getMetaData(self.db,ii)
 
-            first=entryii['firstNames']
-            last=entryii['lastName']
-            if first is None or last is None:
-                authors=''
-            if type(first) is not list and type(last) is not list:
-                authors='%s, %s' %(last, first)
-            else:
-                authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
-                authors=' and '.join(authors)
+                first=entryii['firstNames']
+                last=entryii['lastName']
+                if first is None or last is None:
+                    authors=''
+                if type(first) is not list and type(last) is not list:
+                    authors='%s, %s' %(last, first)
+                else:
+                    authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
+                    authors=' and '.join(authors)
 
-            aii=[QtWidgets.QCheckBox(entryii['favourite']),
-                    QtWidgets.QCheckBox(entryii['read']),
-                    authors,
-                    entryii['title'],
-                    entryii['publication'],
-                    entryii['year']]
-            data.append(aii)
+                aii=[QtWidgets.QCheckBox(entryii['favourite']),
+                        QtWidgets.QCheckBox(entryii['read']),
+                        authors,
+                        entryii['title'],
+                        entryii['publication'],
+                        entryii['year']]
+                data.append(aii)
 
         if len(data)==0:
             return
@@ -535,7 +537,8 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow,self).__init__()
 
         self.db=db
-        self.main_frame=MainFrame(db)
+        meta,folder_data,folder_dict=readSqlite(db)
+        self.main_frame=MainFrame(db, meta, folder_data, folder_dict)
         self.setCentralWidget(self.main_frame)
         self.initUI()
 
@@ -555,6 +558,42 @@ class MainWindow(QtWidgets.QMainWindow):
     def closeEvent(self,event):
         pass
 
+
+def readSqlite(dbin):
+
+
+    #-------------------Get folders-------------------
+    folder_dict=getFolders(dbin)
+
+    #-------------------Get metadata-------------------
+    meta={}
+    query='''SELECT DISTINCT id
+    FROM Documents
+    '''
+    docids=dbin.execute(query).fetchall()
+    docids=[ii[0] for ii in docids]
+    docids.sort()
+
+    folder_data={}
+
+    for idii in docids:
+        metaii=getMetaData(dbin,idii)
+        meta[idii]=metaii
+
+        folderii=metaii['folder']
+        folderids=[ff[0] for ff in folderii]
+        for fii in folderids:
+            if fii in folder_data:
+                folder_data[fii].append(idii)
+            else:
+                folder_data[fii]=[idii]
+
+
+    __import__('pdb').set_trace()
+    return meta, folder_data, folder_dict
+
+    
+
 def getMetaData(db, docid):
     '''Get meta-data of a doc by docid.
     '''
@@ -563,55 +602,56 @@ def getMetaData(db, docid):
     query_base=\
     '''SELECT Documents.%s
        FROM Documents
-       WHERE (Documents.id=%s)
+       WHERE (Documents.id=?)
     '''
 
     query_tags=\
     '''
     SELECT DocumentTags.tag
     FROM DocumentTags
-    WHERE (DocumentTags.docid=%s)
-    ''' %docid
+    WHERE (DocumentTags.docid=?)
+    '''
 
     query_firstnames=\
     '''
     SELECT DocumentContributors.firstNames
     FROM DocumentContributors
-    WHERE (DocumentContributors.docid=%s)
-    ''' %docid
+    WHERE (DocumentContributors.docid=?)
+    '''
 
     query_lastnames=\
     '''
     SELECT DocumentContributors.lastName
     FROM DocumentContributors
-    WHERE (DocumentContributors.docid=%s)
-    ''' %docid
+    WHERE (DocumentContributors.docid=?)
+    '''
 
     query_keywords=\
     '''
     SELECT DocumentKeywords.text
     FROM DocumentKeywords
-    WHERE (DocumentKeywords.docid=%s)
-    ''' %docid
+    WHERE (DocumentKeywords.docid=?)
+    '''
 
     query_folder=\
     '''
-    SELECT Folders.name
+    SELECT Folders.id, Folders.name
     FROM Folders
     LEFT JOIN DocumentFolders ON DocumentFolders.folderid=Folders.id
-    WHERE (DocumentFolders.docid=%s)
-    ''' %docid
+    WHERE (DocumentFolders.docid=?)
+    '''
 
 
-    def fetchField(db,query):
-        aa=db.execute(query).fetchall()
-        bb=[ii[0] for ii in aa]
-        if len(bb)==1:
-            return bb[0]
-        elif len(bb)==0:
+    def fetchField(db,query,values,ncol=1):
+        aa=db.execute(query,values).fetchall()
+        if len(aa)==0:
             return None
+        if ncol==1:
+            aa=[ii[0] for ii in aa]
+        if len(aa)==1:
+            return aa[0]
         else:
-            return bb
+            return aa
 
     #------------------Get file meta data------------------
     fields=['id','citationkey','title','issue','pages',\
@@ -625,14 +665,16 @@ def getMetaData(db, docid):
 
     # query single-worded fields, e.g. year, city
     for kii in fields:
-        vii=fetchField(db,query_base %(kii,docid))
+        vii=fetchField(db,query_base %(kii), (docid,))
         result[kii]=vii
 
-    result['tags']=fetchField(db,query_tags)
-    result['firstNames']=fetchField(db,query_firstnames)
-    result['lastName']=fetchField(db,query_lastnames)
-    result['keywords']=fetchField(db,query_keywords)
-    result['folder']=fetchField(db,query_folder)
+    result['tags']=fetchField(db,query_tags,(docid,))
+    result['firstNames']=fetchField(db,query_firstnames,(docid,))
+    result['lastName']=fetchField(db,query_lastnames,(docid,))
+    result['keywords']=fetchField(db,query_keywords,(docid,))
+    result['folder']=fetchField(db,query_folder,(docid,),2)
+    #result['folder']=db.execute(query_folder).fetchall()
+    __import__('pdb').set_trace()
 
     #-----------------Append user name-----------------
     #result['user_name']=getUserName(db)
@@ -642,7 +684,7 @@ def getMetaData(db, docid):
 
     #-----Add folder to tags, if not there already-----
     folder=result['folder']
-    result['folder']=folder or 'Canonical' # if no folder name, a canonical doc
+    result['folder']=folder or [(-1, 'Canonical')] # if no folder name, a canonical doc
     tags=result['tags']
     tags=tags or []
 
@@ -652,7 +694,24 @@ def getMetaData(db, docid):
 
     result['tags']=tags
 
-    return result
+    first=result['firstNames']
+    last=result['lastName']
+    if first is None or last is None:
+        authors=''
+    if type(first) is not list and type(last) is not list:
+        authors='%s, %s' %(last, first)
+    else:
+        authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
+        authors=' and '.join(authors)
+
+    data=[QtWidgets.QCheckBox(result['favourite']),
+            QtWidgets.QCheckBox(result['read']),
+            authors,
+            result['title'],
+            result['publication'],
+            result['year']]
+
+    return result, data
 
 
 def getFolders(db):
@@ -785,6 +844,20 @@ def isFolderEmpty(db,folderid,verbose=True):
     else:
         return False
 
+#-------------------Get subfolders of a given folder-------------------
+def getChildFolders(df,folderid,verbose=True):
+    '''Get subfolders of a given folder
+
+    <df>: dict, key: folderid, value: (folder_name, parent_id).
+    <folderid>: int, folder id
+    '''
+    results=[]
+    for idii in df:
+        fii,pii=df[idii]
+        if pii==folderid:
+            results.append(idii)
+    results.sort()
+    return results
 
 #-------------------Get subfolders of a given folder-------------------
 def getSubFolders(df,folderid,verbose=True):
