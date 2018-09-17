@@ -110,6 +110,7 @@ class TableModel(QAbstractTableModel):
                 }
         self.icon_sec_indices=[self.headerdata.index(kk) for kk
                 in self.icon_section.keys()]
+        print 'icon sec',self.icon_sec_indices
 
     def rowCount(self,p):
         return len(self.arraydata)
@@ -153,8 +154,6 @@ class TableModel(QAbstractTableModel):
         return True
 
     def flags(self, index):
-        if not index.isValid():
-            return None
         if index.column() in self.icon_sec_indices:
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable\
                     | QtCore.Qt.ItemIsUserCheckable
@@ -191,6 +190,7 @@ class MyHeaderView(QtWidgets.QHeaderView):
 
 
     def initresizeSections(self):
+        print 'initresize', self.minimumSectionSize()
         model=self.model()
         if model is None:
             return
@@ -246,6 +246,7 @@ class MyHeaderView(QtWidgets.QHeaderView):
         perc=[]
         total_w=self.length() # width of the table
         total_w2=self.size().width()   # new available space after resizing
+        print 'resize', total_w, total_w2
         for c in range(self.count()):
             wii=self.sectionSize(c)
             ws.append(wii)
@@ -287,6 +288,7 @@ class MainFrame(QtWidgets.QWidget):
         self.meta=meta
         self.folder_data=folder_data
         self.folder_dict=folder_dict
+        self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
 
         #self.thumbnail_meta_list=thumbnail_meta_list
         #self.thumbnail_btn_dict={}    # buttons for preset icons
@@ -317,8 +319,8 @@ class MainFrame(QtWidgets.QWidget):
         # Add button
         self.add_button=QtWidgets.QToolButton(self)
         self.add_button.setText('Add')
-        #self.add_button.setIcon(QIcon.fromTheme('list-add'))
-        self.add_button.setIcon(QIcon.fromTheme('edit-undo'))
+        self.add_button.setIcon(QIcon.fromTheme('list-add'))
+        #self.add_button.setIcon(QIcon.fromTheme('edit-undo'))
         self.add_button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
         self.add_button.clicked.connect(self.add_button_clicked)
         h_layout0.addWidget(self.add_button)
@@ -340,7 +342,12 @@ class MainFrame(QtWidgets.QWidget):
 
         #-------------------Add lib tree-------------------
         self.libtree=self.addLibTree()
-        self.libtree.itemClicked.connect(self.selFolder)
+        #tv.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+
+        self.libtree.itemClicked.connect(self.clickSelFolder)
+        self.libtree.selectionModel().selectionChanged.connect(self.selFolder)
+
+        print dir(self.libtree.currentChanged)
         h_split=QtWidgets.QSplitter(Qt.Horizontal)
         h_split.setSizePolicy(getXExpandYExpandSizePolicy())
         v_split=QtWidgets.QSplitter(Qt.Vertical)
@@ -407,6 +414,7 @@ class MainFrame(QtWidgets.QWidget):
         tablemodel=TableModel(self,[],header)
         tv.setModel(tablemodel)
         hh.setModel(tablemodel)
+        hh.initresizeSections()
 
 
         return tv
@@ -420,16 +428,11 @@ class MainFrame(QtWidgets.QWidget):
         libtree.setHeaderHidden(True)
         libtree.setColumnCount(1)
 
-        #folder_dict=getFolders(self.db)
-
         #-------------Get all level 1 folders-------------
-        query='''SELECT DISTINCT id
-        FROM Folders
-        WHERE Folders.parentId=-1'''
-        
-        ret=self.db.execute(query).fetchall()
-        folders1=[(self.folder_dict[fii[0]][0],fii[0]) for fii in ret]
+        folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if vv[1]<=0]
         folders1.sort()
+
+        libtree.addTopLevelItem(QtWidgets.QTreeWidgetItem(['All']))
 
         for fnameii,idii in folders1:
             self.addFolder(libtree,idii,self.folder_dict)
@@ -443,7 +446,7 @@ class MainFrame(QtWidgets.QWidget):
         foldername,parentid=folder_dict[folderid]
         fitem=QtWidgets.QTreeWidgetItem([foldername])
         sub_ids=getChildFolders(folder_dict,folderid)
-        if parentid==-1:
+        if parentid<=0:
             parent.addTopLevelItem(fitem)
         else:
             parent.addChild(fitem)
@@ -453,8 +456,41 @@ class MainFrame(QtWidgets.QWidget):
 
         return
 
-    def selFolder(self,item,column):
-        print 'sel folder', item.text(column)
+    def clickSelFolder(self,item,column):
+        print 'clikc',item
+        sel=self.libtree.selectedIndexes()[0]
+        #print dir(aa)
+        #print aa.column(), aa.row(), aa.data(), aa.flags(), aa.isValid()
+        if sel.column() != column:
+            print 'mismatch!!!!!!!!!!!!!!!!!!!!!!!'
+
+        folder=item.text(column)
+        self.status_bar.showMessage('Select folder %s' %folder)
+        if folder=='All':
+            folder=None
+        self.loadDocTable(folder)
+
+    def selFolder(self,selected,deselected):
+        #print dir(selected)
+        #print dir(selected[0])
+        '''
+        print 'sel',sel
+        indices=selected.indexes()
+        if indices:
+            print indices[0].row(), indices[0].column(),selected[0].parent()
+            print indices[0].data()
+            print indices[0]
+            #print 'aaa', dir(selected[0].parent()), selected[0].parent().data()
+        '''
+        sel=self.libtree.selectedIndexes()[0]
+        indices=selected.indexes()
+        folder=indices[0].data()
+
+        #folder=item.text(column)
+        self.status_bar.showMessage('Select folder %s' %folder)
+        if folder=='All':
+            folder=None
+        self.loadDocTable(folder)
 
 
 
@@ -471,31 +507,61 @@ class MainFrame(QtWidgets.QWidget):
             return scroll
 
         tabs=QtWidgets.QTabWidget()
-        t_meta=_createPage()
-        t_notes=_createPage()
-        t_topics=_createPage()
+        self.t_meta=_createPage()
+        self.t_notes=_createPage()
+        self.t_topics=_createPage()
 
-        tabs.addTab(t_meta,'Meta data')
-        tabs.addTab(t_notes,'Notes')
-        tabs.addTab(t_topics,'Topics')
+        tabs.addTab(self.t_meta,'Meta data')
+        tabs.addTab(self.t_notes,'Notes')
+        tabs.addTab(self.t_topics,'Topics')
+
+        #print dir(tabs)
+        #print tabs.children()
+        #print tabs.count()
+        #print tabs.tabBar().count()
+
 
         return tabs
+
+    def loadMetaTab(self,docid=None):
+        if docid is None:
+            return
+        v_layout=QtWidgets.QVBoxLayout()
+        fields=['title','authors','publication','year','month','keywords']
+
+        metaii=self.meta[docid]
+        def deu(text):
+            if isinstance(text,(str,unicode)):
+                #return text.decode('utf8','replace')
+                return text
+            else:
+                return str(text)
+
+        for fii in fields:
+            if fii=='title':
+                lineii=QtWidgets.QPlainTextEdit(self)
+                lineii.insertPlainText(deu(metaii[fii]))
+            else:
+                lineii=QtWidgets.QLineEdit(self)
+                lineii.setText(deu(metaii[fii]))
+            v_layout.addWidget(lineii)
+
+        v_layout.addStretch()
+        self.t_meta.setLayout(v_layout)
+
+
+
+
 
     def loadDocTable(self,folder=None):
 
         tablemodel=self.doc_table.model()
         hh=self.doc_table.horizontalHeader()
-        #self.doc_table.setModel(tablemodel)
-        #hh=self.doc_table.horizontalHeader()
-        #hh.setModel(tablemodel)
 
-        if folder is None:
-            n=10
+        def prepareDocs(docids):
             data=[]
-
-            for ii in range(n):
-                ii+=1
-                entryii=getMetaData(self.db,ii)
+            for ii in docids:
+                entryii=self.meta[ii]
 
                 first=entryii['firstNames']
                 last=entryii['lastName']
@@ -515,13 +581,29 @@ class MainFrame(QtWidgets.QWidget):
                         entryii['year']]
                 data.append(aii)
 
+            return data
+
+        if folder is None:
+            docids=self.meta.keys()
+            data=prepareDocs(docids)
+        else:
+            folderid=self.inv_folder_dict[folder]
+            if folderid in self.folder_data:
+                docids=self.folder_data[folderid]
+                data=prepareDocs(docids)
+            else:
+                data=[]
+
+
         if len(data)==0:
             return
 
         self.tabledata=data
         tablemodel.arraydata=self.tabledata
         tablemodel.sort(0,Qt.DescendingOrder)
-        hh.initresizeSections()
+        #hh.initresizeSections()
+
+        self.loadMetaTab(docids[0])
 
 
 
@@ -587,9 +669,10 @@ def readSqlite(dbin):
                 folder_data[fii].append(idii)
             else:
                 folder_data[fii]=[idii]
+    # add All:
+    #folder_dict[-1]=('All', -2)
+    #folder_data[-1]=docids
 
-
-    __import__('pdb').set_trace()
     return meta, folder_data, folder_dict
 
     
@@ -660,7 +743,6 @@ def getMetaData(db, docid):
             'isbn','issn','month','day','publisher','series','type',\
             'read','favourite']
 
-
     result={}
 
     # query single-worded fields, e.g. year, city
@@ -672,9 +754,8 @@ def getMetaData(db, docid):
     result['firstNames']=fetchField(db,query_firstnames,(docid,))
     result['lastName']=fetchField(db,query_lastnames,(docid,))
     result['keywords']=fetchField(db,query_keywords,(docid,))
-    result['folder']=fetchField(db,query_folder,(docid,),2)
-    #result['folder']=db.execute(query_folder).fetchall()
-    __import__('pdb').set_trace()
+    #result['folder']=fetchField(db,query_folder,(docid,),2)
+    result['folder']=db.execute(query_folder,(docid,)).fetchall()
 
     #-----------------Append user name-----------------
     #result['user_name']=getUserName(db)
@@ -704,14 +785,28 @@ def getMetaData(db, docid):
         authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
         authors=' and '.join(authors)
 
+    result['authors']=authors
+
+    '''
+    first=result['firstNames']
+    last=result['lastName']
+    if first is None or last is None:
+        authors=''
+    if type(first) is not list and type(last) is not list:
+        authors='%s, %s' %(last, first)
+    else:
+        authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
+        authors=' and '.join(authors)
+
     data=[QtWidgets.QCheckBox(result['favourite']),
             QtWidgets.QCheckBox(result['read']),
             authors,
             result['title'],
             result['publication'],
             result['year']]
+    '''
 
-    return result, data
+    return result
 
 
 def getFolders(db):
