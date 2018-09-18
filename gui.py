@@ -65,6 +65,11 @@ def getXMinYExpandSizePolicy():
             QtWidgets.QSizePolicy.Expanding)
     return sizePolicy
 
+def getXExpandYMinSizePolicy():
+    sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
+            QtWidgets.QSizePolicy.Minimum)
+    return sizePolicy
+
 def getXExpandYExpandSizePolicy():
     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Expanding)
@@ -126,7 +131,7 @@ class TableModel(QAbstractTableModel):
             return QVariant()
         if role == Qt.BackgroundRole:
             if index.row()%2==0:
-                return QBrush(QColor(230,230,240))
+                return QBrush(QColor(230,230,249))
         if role==Qt.DisplayRole:
             return QVariant(self.arraydata[index.row()][index.column()])
         if role==Qt.EditRole:
@@ -185,12 +190,11 @@ class MyHeaderView(QtWidgets.QHeaderView):
     def __init__(self,parent):
         super(MyHeaderView,self).__init__(Qt.Horizontal,parent)
 
-        self.colSizes={'favourite': 20, 'read': 20, 'author': 200, 'title': 500,
+        self.colSizes={'docid':0, 'favourite': 20, 'read': 20, 'author': 200, 'title': 500,
                 'journal':100,'year':50}
 
 
     def initresizeSections(self):
-        print 'initresize', self.minimumSectionSize()
         model=self.model()
         if model is None:
             return
@@ -276,6 +280,33 @@ class MyHeaderView(QtWidgets.QHeaderView):
         return -1
 
 
+class MyTextEdit(QtWidgets.QTextEdit):
+    def __init__(self,parent=None):
+        super(MyTextEdit,self).__init__(parent)
+
+        self.textChanged.connect(self.resizeTextEdit)
+
+    #def sizeHint(self):
+        #h=self.document().size().height()
+        #w=self.document().size().width()
+        #print 'sizehint', w,h
+        #return QtCore.QSize(w,h)
+
+    #def resizeEvent(self,event):
+        #self.updateGeometry()
+        #super(QtWidgets.QTextEdit,self).resizeEvent(event)
+
+    def resizeTextEdit(self):
+        #h=self.sizeHint()
+        docheight=self.document().size().height()+10
+        #print sender.toPlainText()
+        self.setMinimumHeight(docheight)
+        self.setMaximumHeight(docheight+10)
+        #self.resize(self.width(),docheight)
+        print 'hei',docheight
+        print 'h',self.height()
+        #super(QtWidgets.QHeaderView, self).resizeEvent(event)
+        #self.updateGeometry()
 
 
 
@@ -289,6 +320,12 @@ class MainFrame(QtWidgets.QWidget):
         self.folder_data=folder_data
         self.folder_dict=folder_dict
         self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
+
+        self.font_dict={
+            'meta_title': QFont('Times', 14, QFont.Bold | QFont.Capitalize),
+            'meta_authors': QFont('Serif', 12),
+            'meta_publication': QFont('Times', 10, QFont.StyleItalic)
+                }
 
         #self.thumbnail_meta_list=thumbnail_meta_list
         #self.thumbnail_btn_dict={}    # buttons for preset icons
@@ -304,6 +341,10 @@ class MainFrame(QtWidgets.QWidget):
         #self.tab_btn_dict={}
 
         self.initUI()
+
+        #--------------------Load dataa--------------------
+        self.loadLibTree()
+        self.loadDocTable(None)
 
 
     def initUI(self):
@@ -347,7 +388,6 @@ class MainFrame(QtWidgets.QWidget):
         self.libtree.itemClicked.connect(self.clickSelFolder)
         self.libtree.selectionModel().selectionChanged.connect(self.selFolder)
 
-        print dir(self.libtree.currentChanged)
         h_split=QtWidgets.QSplitter(Qt.Horizontal)
         h_split.setSizePolicy(getXExpandYExpandSizePolicy())
         v_split=QtWidgets.QSplitter(Qt.Vertical)
@@ -359,28 +399,20 @@ class MainFrame(QtWidgets.QWidget):
         v_split.addWidget(self.filter_list)
         h_split.addWidget(v_split)
 
-
         v_split.setSizes([2,1])
-        
 
         #------------------Add doc table------------------
         self.doc_table=self.createTable()
         h_split.addWidget(self.doc_table)
 
-
         #---------------------Add tabs---------------------
         self.tabs=self.createTabs()
-
         h_split.addWidget(self.tabs)
 
         #------------------Add status bar------------------
         self.status_bar=QtWidgets.QStatusBar()
         v_layout0.addWidget(self.status_bar)
         self.status_bar.showMessage('etest')
-
-        #------------------Load doc table------------------
-        self.loadDocTable(None)
-        
 
 
         h_split.setHandleWidth(10)
@@ -397,11 +429,7 @@ class MainFrame(QtWidgets.QWidget):
         hh.setSectionsClickable(True)
         hh.setHighlightSections(True)
         hh.sectionResized.connect(hh.myresize)
-        #hh.sectionResized.connect(hh.resizeSections)
         hh.setStretchLastSection(False)
-        #hh.setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        #hh.setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
-        #tv.setSizeAdjustPolicy(getXExpandYExpandSizePolicy())
 
         tv.setHorizontalHeader(hh)
         tv.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -410,14 +438,26 @@ class MainFrame(QtWidgets.QWidget):
         hh.setSectionsMovable(True)
         hh.tv=tv
 
-        header=['favourite','read','author', 'title','journal','year']
+        header=['docid', 'favourite','read','author', 'title','journal','year']
         tablemodel=TableModel(self,[],header)
         tv.setModel(tablemodel)
         hh.setModel(tablemodel)
         hh.initresizeSections()
+        tv.setColumnHidden(0,True)
+
+        #tv.itemSelectionChanged.connect
+        tv.selectionModel().currentChanged.connect(self.selDoc)
 
 
         return tv
+
+
+    def selDoc(self,current,previous):
+        rowid=current.row()
+        docid=self.tabledata[rowid][0]
+        self.loadMetaTab(docid)
+
+
 
 
 
@@ -427,19 +467,25 @@ class MainFrame(QtWidgets.QWidget):
         libtree=QtWidgets.QTreeWidget()
         libtree.setHeaderHidden(True)
         libtree.setColumnCount(1)
+        # single selection
+        libtree.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
 
+        return libtree
+
+    def loadLibTree(self):
         #-------------Get all level 1 folders-------------
         folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if vv[1]<=0]
         folders1.sort()
 
-        libtree.addTopLevelItem(QtWidgets.QTreeWidgetItem(['All']))
+        allitem=QtWidgets.QTreeWidgetItem(['All'])
+        self.libtree.addTopLevelItem(allitem)
 
         for fnameii,idii in folders1:
-            self.addFolder(libtree,idii,self.folder_dict)
+            self.addFolder(self.libtree,idii,self.folder_dict)
         
         #libtree.itemChanged.connect(self.libtreeChange)
-
-        return libtree
+        self.libtree.setCurrentItem(allitem)
+        return 
 
     def addFolder(self,parent,folderid,folder_dict):
 
@@ -457,40 +503,21 @@ class MainFrame(QtWidgets.QWidget):
         return
 
     def clickSelFolder(self,item,column):
-        print 'clikc',item
-        sel=self.libtree.selectedIndexes()[0]
-        #print dir(aa)
-        #print aa.column(), aa.row(), aa.data(), aa.flags(), aa.isValid()
-        if sel.column() != column:
-            print 'mismatch!!!!!!!!!!!!!!!!!!!!!!!'
-
         folder=item.text(column)
         self.status_bar.showMessage('Select folder %s' %folder)
         if folder=='All':
             folder=None
         self.loadDocTable(folder)
 
-    def selFolder(self,selected,deselected):
-        #print dir(selected)
-        #print dir(selected[0])
-        '''
-        print 'sel',sel
-        indices=selected.indexes()
-        if indices:
-            print indices[0].row(), indices[0].column(),selected[0].parent()
-            print indices[0].data()
-            print indices[0]
-            #print 'aaa', dir(selected[0].parent()), selected[0].parent().data()
-        '''
-        sel=self.libtree.selectedIndexes()[0]
-        indices=selected.indexes()
-        folder=indices[0].data()
 
-        #folder=item.text(column)
-        self.status_bar.showMessage('Select folder %s' %folder)
-        if folder=='All':
-            folder=None
-        self.loadDocTable(folder)
+    def selFolder(self,selected,deselected):
+        item=self.libtree.selectedItems()
+        if item:
+            item=item[0]
+            print 'item', dir(item), item
+            print item.data(0,0)
+            column=selected.indexes()[0].column()
+            self.clickSelFolder(item,column)
 
 
 
@@ -507,9 +534,11 @@ class MainFrame(QtWidgets.QWidget):
             return scroll
 
         tabs=QtWidgets.QTabWidget()
-        self.t_meta=_createPage()
+        #self.t_meta=_createPage()
         self.t_notes=_createPage()
         self.t_topics=_createPage()
+
+        self.t_meta=self.createMetaTab()
 
         tabs.addTab(self.t_meta,'Meta data')
         tabs.addTab(self.t_notes,'Notes')
@@ -523,31 +552,77 @@ class MainFrame(QtWidgets.QWidget):
 
         return tabs
 
+    def createMetaTab(self):
+        
+        #v_layout=QtWidgets.QVBoxLayout()
+        #scroll=QtWidgets.QScrollArea()
+
+        frame=QtWidgets.QWidget()
+        scroll=QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(frame)
+        v_layout=QtWidgets.QVBoxLayout()
+
+        fields=['title','authors','publication','year','month','keywords']
+        fields_dict={}
+
+        for fii in fields:
+            if fii=='title':
+                lineii=QtWidgets.QTextEdit(scroll)
+                #lineii=MyTextEdit(scroll)
+                #lineii.setSizePolicy(getXExpandYMinSizePolicy())
+                #lineii.document().contentsChanged.connect(
+                        #lambda:self.resizeTextEdit(lineii))
+                lineii.textChanged.connect(self.resizeTextEdit)
+            else:
+                lineii=QtWidgets.QLineEdit(self)
+
+            if 'meta_%s' %fii in self.font_dict:
+                lineii.setFont(self.font_dict['meta_%s' %fii])
+            #lineii.document().contentsChanged.connect(self.resizeTextEdit)
+
+            fields_dict[fii]=lineii
+            v_layout.addWidget(lineii)
+
+        v_layout.addStretch()
+        frame.setLayout(v_layout)
+
+
+
+        scroll.fields_dict=fields_dict
+
+        return scroll
+
+
+    def resizeTextEdit(self):
+        sender=self.sender()
+        #print 'hint',sender.sizeHint()
+        docheight=sender.document().size().height()+10
+        #docheight=sender.sizeHint().height()+10
+        sender.setMinimumHeight(docheight)
+        sender.setMaximumHeight(docheight+1)
+        print 'docheight',docheight, sender.height()
+        print sender.toPlainText()
+        #sender.updateGeometry()
+
+
     def loadMetaTab(self,docid=None):
         if docid is None:
             return
-        v_layout=QtWidgets.QVBoxLayout()
+
         fields=['title','authors','publication','year','month','keywords']
 
         metaii=self.meta[docid]
         def deu(text):
             if isinstance(text,(str,unicode)):
-                #return text.decode('utf8','replace')
                 return text
             else:
                 return str(text)
 
         for fii in fields:
-            if fii=='title':
-                lineii=QtWidgets.QPlainTextEdit(self)
-                lineii.insertPlainText(deu(metaii[fii]))
-            else:
-                lineii=QtWidgets.QLineEdit(self)
-                lineii.setText(deu(metaii[fii]))
-            v_layout.addWidget(lineii)
+            self.t_meta.fields_dict[fii].setText(deu(metaii[fii]))
 
-        v_layout.addStretch()
-        self.t_meta.setLayout(v_layout)
+        return 
 
 
 
@@ -570,15 +645,16 @@ class MainFrame(QtWidgets.QWidget):
                 if type(first) is not list and type(last) is not list:
                     authors='%s, %s' %(last, first)
                 else:
-                    authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
+                    authors=['%s, %s' %(jj[0],jj[1]) for jj in zip(last,first)]
                     authors=' and '.join(authors)
 
-                aii=[QtWidgets.QCheckBox(entryii['favourite']),
-                        QtWidgets.QCheckBox(entryii['read']),
-                        authors,
-                        entryii['title'],
-                        entryii['publication'],
-                        entryii['year']]
+                aii=[ii,
+                    QtWidgets.QCheckBox(entryii['favourite']),
+                    QtWidgets.QCheckBox(entryii['read']),
+                    authors,
+                    entryii['title'],
+                    entryii['publication'],
+                    entryii['year']]
                 data.append(aii)
 
             return data
@@ -598,12 +674,15 @@ class MainFrame(QtWidgets.QWidget):
         if len(data)==0:
             return
 
-        self.tabledata=data
-        tablemodel.arraydata=self.tabledata
+        tablemodel.arraydata=data
         tablemodel.sort(0,Qt.DescendingOrder)
-        #hh.initresizeSections()
+        self.tabledata=tablemodel.arraydata
 
-        self.loadMetaTab(docids[0])
+        self.doc_table.selectRow(0)
+        current_row=self.doc_table.currentIndex().row()
+        docid=self.tabledata[current_row][0]
+        self.loadMetaTab(docid)
+
 
 
 
