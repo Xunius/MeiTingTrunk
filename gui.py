@@ -2,15 +2,21 @@ import sys,os
 import operator
 import sqlite3
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
+from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, QSettings
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor
-import tempfile
-import subprocess
+#import tempfile
+#import subprocess
 import json
+from lib import sqlitedb
 
 __version__='v0.1'
 
 FILE_IN='new.sqlite'
+
+
+
+
+
 
 def dirFind(string,obj,num=10,verbose=True):
     '''Fuzzy search dir(obj)
@@ -48,10 +54,10 @@ def dirFind(string,obj,num=10,verbose=True):
 
     num=max([num,len(high)])
 
-    print '\n# <dirFind>: %-20.40s    %s' %('<obj> element:','Score:')
-    print '-'*70
+    print('\n# <dirFind>: %-20.40s    %s' %('<obj> element:','Score:'))
+    print('-'*70)
     for ii in range(num):
-        print '# <dirFind>: %-20.40s    %d' %(dirlist[ii],scores[ii])
+        print('# <dirFind>: %-20.40s    %d' %(dirlist[ii],scores[ii]))
 
     return
 
@@ -115,7 +121,7 @@ class TableModel(QAbstractTableModel):
                 }
         self.icon_sec_indices=[self.headerdata.index(kk) for kk
                 in self.icon_section.keys()]
-        print 'icon sec',self.icon_sec_indices
+        print('icon sec',self.icon_sec_indices)
 
     def rowCount(self,p):
         return len(self.arraydata)
@@ -184,8 +190,6 @@ class TableModel(QAbstractTableModel):
             self.arraydata.reverse()
         self.layoutChanged.emit()
 
-
-
 class MyHeaderView(QtWidgets.QHeaderView):
     def __init__(self,parent):
         super(MyHeaderView,self).__init__(Qt.Horizontal,parent)
@@ -250,7 +254,7 @@ class MyHeaderView(QtWidgets.QHeaderView):
         perc=[]
         total_w=self.length() # width of the table
         total_w2=self.size().width()   # new available space after resizing
-        print 'resize', total_w, total_w2
+        print('resize', total_w, total_w2)
         for c in range(self.count()):
             wii=self.sectionSize(c)
             ws.append(wii)
@@ -279,7 +283,6 @@ class MyHeaderView(QtWidgets.QHeaderView):
             return headers.index(label)
         return -1
 
-
 class MyTextEdit(QtWidgets.QTextEdit):
     def __init__(self,parent=None):
         super(MyTextEdit,self).__init__(parent)
@@ -303,16 +306,14 @@ class MyTextEdit(QtWidgets.QTextEdit):
         self.setMinimumHeight(docheight)
         self.setMaximumHeight(docheight+10)
         #self.resize(self.width(),docheight)
-        print 'hei',docheight
-        print 'h',self.height()
+        print('hei',docheight)
+        print('h',self.height())
         #super(QtWidgets.QHeaderView, self).resizeEvent(event)
         #self.updateGeometry()
 
-
-
 class MainFrame(QtWidgets.QWidget):
 
-    def __init__(self,db,meta,folder_data,folder_dict):
+    def __init__(self,db,meta,folder_data,folder_dict,settings):
         super(MainFrame,self).__init__()
 
         self.db=db
@@ -320,13 +321,17 @@ class MainFrame(QtWidgets.QWidget):
         self.folder_data=folder_data
         self.folder_dict=folder_dict
         self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
+        self.settings=settings
 
+        # get font configs
         self.font_dict={
-            'meta_title': QFont('Times', 14, QFont.Bold | QFont.Capitalize),
-            'meta_authors': QFont('Serif', 12),
-            'meta_publication': QFont('Times', 10, QFont.StyleItalic),
-            'meta_keywords': QFont('Times', 10, QFont.StyleItalic)
-                }
+            'meta_title': self.settings.value('display/fonts/meta_title',QFont),
+            'meta_authors': self.settings.value('display/fonts/meta_authors',QFont),
+            'meta_publication': self.settings.value('display/fonts/meta_publication',QFont),
+            'meta_keywords': self.settings.value('display/fonts/meta_keywords',QFont)
+            }
+
+
 
         #self.thumbnail_meta_list=thumbnail_meta_list
         #self.thumbnail_btn_dict={}    # buttons for preset icons
@@ -343,14 +348,14 @@ class MainFrame(QtWidgets.QWidget):
 
         self.initUI()
 
-        #--------------------Load dataa--------------------
+        #--------------------Load data--------------------
         self.loadLibTree()
         self.loadDocTable(None)
 
+        self.show()
+
 
     def initUI(self):
-
-        self.setWindowTitle('reference manager')
 
         v_layout0=QtWidgets.QVBoxLayout(self)
 
@@ -385,7 +390,6 @@ class MainFrame(QtWidgets.QWidget):
         #-------------------Add lib tree-------------------
         self.libtree=self.addLibTree()
 
-
         h_split=QtWidgets.QSplitter(Qt.Horizontal)
         h_split.setSizePolicy(getXExpandYExpandSizePolicy())
         v_split=QtWidgets.QSplitter(Qt.Vertical)
@@ -397,10 +401,10 @@ class MainFrame(QtWidgets.QWidget):
         v_split.addWidget(self.filter_list)
         h_split.addWidget(v_split)
 
-        v_split.setSizes([2,1])
+        v_split.setSizes([3,1])
 
         #------------------Add doc table------------------
-        self.doc_table=self.createTable()
+        self.doc_table=self.createDocTable()
         h_split.addWidget(self.doc_table)
 
         #---------------------Add tabs---------------------
@@ -412,14 +416,14 @@ class MainFrame(QtWidgets.QWidget):
         v_layout0.addWidget(self.status_bar)
         self.status_bar.showMessage('etest')
 
-
         h_split.setHandleWidth(10)
         w=h_split.size().width()
         h_split.setSizes([w*0.15,w*0.6,w*0.25])
 
         self.show()
 
-    def createTable(self):
+
+    def createDocTable(self):
 
         tv=QtWidgets.QTableView(self)
 
@@ -434,7 +438,6 @@ class MainFrame(QtWidgets.QWidget):
         tv.setShowGrid(True)
         tv.setSortingEnabled(True)
         hh.setSectionsMovable(True)
-        #hh.tv=tv
 
         header=['docid', 'favourite','read','author', 'title','journal','year']
         tablemodel=TableModel(self,[],header)
@@ -445,7 +448,6 @@ class MainFrame(QtWidgets.QWidget):
 
         #tv.itemSelectionChanged.connect
         tv.selectionModel().currentChanged.connect(self.selDoc)
-
 
         return tv
 
@@ -465,7 +467,6 @@ class MainFrame(QtWidgets.QWidget):
         libtree=QtWidgets.QTreeWidget()
         libtree.setHeaderHidden(True)
         libtree.setColumnCount(1)
-        # single selection
         libtree.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         libtree.itemClicked.connect(self.clickSelFolder)
         libtree.selectionModel().selectionChanged.connect(self.selFolder)
@@ -483,14 +484,14 @@ class MainFrame(QtWidgets.QWidget):
         for fnameii,idii in folders1:
             self.addFolder(self.libtree,idii,self.folder_dict)
         
-        self.libtree.setCurrentItem(allitem)
+        #self.libtree.setCurrentItem(allitem)
         return 
 
     def addFolder(self,parent,folderid,folder_dict):
 
         foldername,parentid=folder_dict[folderid]
         fitem=QtWidgets.QTreeWidgetItem([foldername])
-        sub_ids=getChildFolders(folder_dict,folderid)
+        sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
         if parentid<=0:
             parent.addTopLevelItem(fitem)
         else:
@@ -502,6 +503,7 @@ class MainFrame(QtWidgets.QWidget):
         return
 
     def clickSelFolder(self,item,column):
+        '''Select folder by clicking'''
         folder=item.text(column)
         self.status_bar.showMessage('Select folder %s' %folder)
         if folder=='All':
@@ -510,11 +512,12 @@ class MainFrame(QtWidgets.QWidget):
 
 
     def selFolder(self,selected,deselected):
+        '''Select folder by changing current'''
         item=self.libtree.selectedItems()
         if item:
             item=item[0]
-            print 'item', item
-            print item.data(0,0)
+            print('item', item)
+            print(item.data(0,0))
             column=selected.indexes()[0].column()
             self.clickSelFolder(item,column)
 
@@ -532,12 +535,14 @@ class MainFrame(QtWidgets.QWidget):
         #self.t_meta=_createPage()
         self.t_notes=_createPage()
         self.t_topics=_createPage()
+        self.t_scratchpad=_createPage()
 
         self.t_meta=self.createMetaTab()
 
-        tabs.addTab(self.t_meta,'Meta data')
+        tabs.addTab(self.t_meta,'Meta Data')
         tabs.addTab(self.t_notes,'Notes')
         tabs.addTab(self.t_topics,'Topics')
+        tabs.addTab(self.t_scratchpad,'Strach Pad')
 
 
         return tabs
@@ -615,12 +620,13 @@ class MainFrame(QtWidgets.QWidget):
         docheight2=sender.sizeHint().height()+10
         sender.setMinimumHeight(docheight)
         sender.setMaximumHeight(docheight+1)
-        print 'docheight',docheight,'sizehint',docheight2, sender.height()
+        print('sender',sender,'docheight',docheight,'sizehint',docheight2, sender.height())
         #print sender.toPlainText()
         #sender.updateGeometry()
 
 
     def loadMetaTab(self,docid=None):
+        print('loadMetaTab',docid)
         if docid is None:
             return
 
@@ -630,7 +636,8 @@ class MainFrame(QtWidgets.QWidget):
 
         metaii=self.meta[docid]
         def deu(text):
-            if isinstance(text,(str,unicode)):
+            #if isinstance(text,(str,unicode)):
+            if isinstance(text,(str)):
                 return text
             else:
                 return str(text)
@@ -650,10 +657,11 @@ class MainFrame(QtWidgets.QWidget):
 
 
     def loadDocTable(self,folder=None):
+        '''Load doc table given folder'''
 
         tablemodel=self.doc_table.model()
-        hh=self.doc_table.horizontalHeader()
-        print 'load tabel', folder
+        #hh=self.doc_table.horizontalHeader()
+        print('load tabel', folder)
 
         def prepareDocs(docids):
             data=[]
@@ -696,6 +704,7 @@ class MainFrame(QtWidgets.QWidget):
         if len(data)==0:
             return
 
+        print('num in folder',len(docids))
         tablemodel.arraydata=data
         tablemodel.sort(4,Qt.AscendingOrder)
         self.tabledata=tablemodel.arraydata
@@ -703,18 +712,18 @@ class MainFrame(QtWidgets.QWidget):
         self.doc_table.selectRow(0)
         current_row=self.doc_table.currentIndex().row()
         docid=self.tabledata[current_row][0]
-        print 'current_row',current_row, docid
-        print self.tabledata[current_row]
+        print('current_row',current_row, docid)
+        print(self.tabledata[current_row])
         self.loadMetaTab(docid)
 
 
 
 
     def add_button_clicked(self):
-        print 'add'
+        print('add')
 
     def search_bar_pressed(self):
-        print 'search term:', self.search_bar.text()
+        print('search term:', self.search_bar.text())
 
 class MainWindow(QtWidgets.QMainWindow):
 
@@ -722,10 +731,47 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow,self).__init__()
 
         self.db=db
-        meta,folder_data,folder_dict=readSqlite(db)
+        meta,folder_data,folder_dict=sqlitedb.readSqlite(db)
+        self.settings=self.loadSettings()
+
         self.initUI()
-        self.main_frame=MainFrame(db, meta, folder_data, folder_dict)
+
+        self.main_frame=MainFrame(db,meta,folder_data,folder_dict,self.settings)
         self.setCentralWidget(self.main_frame)
+
+    def initSettings(self):
+        folder_name=os.path.dirname(os.path.abspath(__file__))
+        settings_path=os.path.join(folder_name,'settings.ini')
+
+        if not os.path.exists(settings_path):
+            settings=QSettings(settings_path,QSettings.IniFormat)
+
+            settings.setValue('display/fonts/meta_title',
+                QFont('Times', 14, QFont.Bold | QFont.Capitalize))
+            settings.setValue('display/fonts/meta_authors',
+                QFont('Serif', 12))
+            settings.setValue('display/fonts/meta_publication',
+                QFont('Times', 10, QFont.StyleItalic))
+            settings.setValue('display/fonts/meta_keywords',
+                QFont('Times', 10, QFont.StyleItalic))
+
+            settings.sync()
+
+        else:
+            settings=QSettings(settings_path,QSettings.IniFormat)
+
+        return settings
+
+    def loadSettings(self):
+        settings=self.initSettings()
+        print(settings.fileName())
+
+        aa=settings.value('display/fonts/meta_title')
+        print('settings',settings)
+        print('fonat',aa)
+
+        return settings
+
 
     def initUI(self):
         self.setWindowTitle('Reference manager %s' %__version__)
@@ -741,397 +787,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.show()
 
     def closeEvent(self,event):
-        pass
-
-
-def readSqlite(dbin):
-
-
-    #-------------------Get folders-------------------
-    folder_dict=getFolders(dbin)
-
-    #-------------------Get metadata-------------------
-    meta={}
-    query='''SELECT DISTINCT id
-    FROM Documents
-    '''
-    docids=dbin.execute(query).fetchall()
-    docids=[ii[0] for ii in docids]
-    docids.sort()
-
-    folder_data={}
-
-    for idii in docids:
-        metaii=getMetaData(dbin,idii)
-        meta[idii]=metaii
-
-        folderii=metaii['folder']
-        folderids=[ff[0] for ff in folderii]
-        for fii in folderids:
-            if fii in folder_data:
-                folder_data[fii].append(idii)
-            else:
-                folder_data[fii]=[idii]
-    # add All:
-    #folder_dict[-1]=('All', -2)
-    #folder_data[-1]=docids
-
-    return meta, folder_data, folder_dict
-
-    
-
-def getMetaData(db, docid):
-    '''Get meta-data of a doc by docid.
-    '''
-
-    # fetch column from Document table
-    query_base=\
-    '''SELECT Documents.%s
-       FROM Documents
-       WHERE (Documents.id=?)
-    '''
-
-    query_tags=\
-    '''
-    SELECT DocumentTags.tag
-    FROM DocumentTags
-    WHERE (DocumentTags.docid=?)
-    '''
-
-    query_firstnames=\
-    '''
-    SELECT DocumentContributors.firstNames
-    FROM DocumentContributors
-    WHERE (DocumentContributors.docid=?)
-    '''
-
-    query_lastnames=\
-    '''
-    SELECT DocumentContributors.lastName
-    FROM DocumentContributors
-    WHERE (DocumentContributors.docid=?)
-    '''
-
-    query_keywords=\
-    '''
-    SELECT DocumentKeywords.text
-    FROM DocumentKeywords
-    WHERE (DocumentKeywords.docid=?)
-    '''
-
-    query_folder=\
-    '''
-    SELECT Folders.id, Folders.name
-    FROM Folders
-    LEFT JOIN DocumentFolders ON DocumentFolders.folderid=Folders.id
-    WHERE (DocumentFolders.docid=?)
-    '''
-
-
-    def fetchField(db,query,values,ncol=1):
-        aa=db.execute(query,values).fetchall()
-        if len(aa)==0:
-            return None
-        if ncol==1:
-            aa=[ii[0] for ii in aa]
-        if len(aa)==1:
-            return aa[0]
-        else:
-            return aa
-
-    #------------------Get file meta data------------------
-    fields=['id','citationkey','title','issue','pages',\
-            'publication','volume','year','doi','abstract',\
-            'arxivId','chapter','city','country','edition','institution',\
-            'isbn','issn','month','day','publisher','series','type',\
-            'read','favourite']
-
-    result={}
-
-    # query single-worded fields, e.g. year, city
-    for kii in fields:
-        vii=fetchField(db,query_base %(kii), (docid,))
-        result[kii]=vii
-
-    result['tags']=fetchField(db,query_tags,(docid,))
-    result['firstNames']=fetchField(db,query_firstnames,(docid,))
-    result['lastName']=fetchField(db,query_lastnames,(docid,))
-    result['keywords']=fetchField(db,query_keywords,(docid,))
-    #result['folder']=fetchField(db,query_folder,(docid,),2)
-    result['folder']=db.execute(query_folder,(docid,)).fetchall()
-
-    #-----------------Append user name-----------------
-    #result['user_name']=getUserName(db)
-
-    #------------------Add local url------------------
-    #result['path']=getFilePath(db,docid)  # None or list
-
-    #-----Add folder to tags, if not there already-----
-    folder=result['folder']
-    result['folder']=folder or [(-1, 'Canonical')] # if no folder name, a canonical doc
-    tags=result['tags']
-    tags=tags or []
-
-    if not isinstance(tags,list):
-        tags=[tags,]
-    tags.sort()
-
-    result['tags']=tags
-
-    first=result['firstNames']
-    last=result['lastName']
-    if first is None or last is None:
-        authors=''
-    if type(first) is not list and type(last) is not list:
-        authors='%s, %s' %(last, first)
-    else:
-        authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
-        authors=' and '.join(authors)
-
-    result['authors']=authors
-
-    '''
-    first=result['firstNames']
-    last=result['lastName']
-    if first is None or last is None:
-        authors=''
-    if type(first) is not list and type(last) is not list:
-        authors='%s, %s' %(last, first)
-    else:
-        authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
-        authors=' and '.join(authors)
-
-    data=[QtWidgets.QCheckBox(result['favourite']),
-            QtWidgets.QCheckBox(result['read']),
-            authors,
-            result['title'],
-            result['publication'],
-            result['year']]
-    '''
-
-    return result
-
-
-def getFolders(db):
-
-    #-----------------Get all folders-----------------
-    query='''SELECT id, name, parentId
-    FROM Folders
-    '''
-    ret=db.execute(query)
-    data=ret.fetchall()
-
-    # dict, key: folderid, value: (folder_name, parent_id)
-    df=dict([(ii[0],ii[1:]) for ii in data])
-
-    return df
-
-
-
-
-
-
-#--------------Get folder id and name list in database----------------
-def getFolderList(db,folder,verbose=True):
-    '''Get folder id and name list in database
-
-    <folder>: select folder from database.
-              If None, select all folders/subfolders.
-              If str, select folder <folder>, and all subfolders. If folder
-              name conflicts, select the one with higher level.
-              If a tuple of (id, folder), select folder with name <folder>
-              and folder id <id>, to avoid name conflicts.
-
-    Return: <folders>: list, with elements of (id, folder_tree).
-            where <folder_tree> is a str of folder name with tree structure, e.g.
-            test/testsub/testsub2.
-
-    Update time: 2016-06-16 19:38:15.
-    '''
-
-    # get all folders with id, name, parentid
-    query=\
-    '''SELECT Folders.id,
-              Folders.name,
-              Folders.parentID
-       FROM Folders
-    '''
-    # get folder by name
-    query1=\
-    '''SELECT Folders.id,
-              Folders.name,
-              Folders.parentID
-       FROM Folders
-       WHERE (Folders.name="%s")
-    '''%folder
-
-    #-----------------Get all folders-----------------
-    ret=db.execute(query)
-    data=ret.fetchall()
-
-    # dict, key: folderid, value: (folder_name, parent_id)
-    df=dict([(ii[0],ii[1:]) for ii in data])
-
-    allfolderids=[ii[0] for ii in data]
-
-    #---------------Select target folder---------------
-    if folder is None:
-        folderids=allfolderids
-    if type(folder) is str:
-        folderids=db.execute(query1).fetchall()
-        folderids=[ii[0] for ii in folderids]
-    elif isinstance(folder, (tuple,list)):
-        # get folder from gui
-        #seldf=df[(df.folderid==folder[0]) & (df.folder==folder[1])]
-        #folderids=fetchField(seldf,'folderid')
-        folderids=[folder[0]]
-
-    #----------------Get all subfolders----------------
-    if folder is not None:
-        folderids2=[]
-        for ff in folderids:
-            folderids2.append(ff)
-            subfs=getSubFolders(df,ff)
-            folderids2.extend(subfs)
-    else:
-        folderids2=folderids
-
-    #---------------Remove empty folders---------------
-    folderids2=[ff for ff in folderids2 if not isFolderEmpty(db,ff)]
-
-    #---Get names and tree structure of all non-empty folders---
-    folders=[]
-    for ff in folderids2:
-        folders.append(getFolderTree(df,ff))
-
-    #----------------------Return----------------------
-    if folder is None:
-        return folders
-    else:
-        if len(folders)==0:
-            print("Given folder name not found in database or folder is empty.")
-            return []
-        else:
-            return folders
-
-
-#--------------------Check a folder is empty or not--------------------
-def isFolderEmpty(db,folderid,verbose=True):
-    '''Check a folder is empty or not
-    '''
-
-    query=\
-    '''SELECT Documents.title,
-              DocumentFolders.folderid,
-              Folders.name
-       FROM Documents
-       LEFT JOIN DocumentFolders
-           ON Documents.id=DocumentFolders.documentId
-       LEFT JOIN Folders
-           ON Folders.id=DocumentFolders.folderid
-    '''
-
-    fstr='(Folders.id="%s")' %folderid
-    fstr='WHERE '+fstr
-    query=query+' '+fstr
-
-    ret=db.execute(query)
-    data=ret.fetchall()
-    if len(data)==0:
-        return True
-    else:
-        return False
-
-#-------------------Get subfolders of a given folder-------------------
-def getChildFolders(df,folderid,verbose=True):
-    '''Get subfolders of a given folder
-
-    <df>: dict, key: folderid, value: (folder_name, parent_id).
-    <folderid>: int, folder id
-    '''
-    results=[]
-    for idii in df:
-        fii,pii=df[idii]
-        if pii==folderid:
-            results.append(idii)
-    results.sort()
-    return results
-
-#-------------------Get subfolders of a given folder-------------------
-def getSubFolders(df,folderid,verbose=True):
-    '''Get subfolders of a given folder
-
-    <df>: dict, key: folderid, value: (folder_name, parent_id).
-    <folderid>: int, folder id
-    '''
-
-    getParentId=lambda df,id: df[id][1]
-    results=[]
-
-    for idii in df:
-        fii,pii=df[idii]
-        cid=idii
-        while True:
-            pid=getParentId(df,cid)
-            if pid==-1 or pid==0:
-                break
-            if pid==folderid:
-                results.append(idii)
-                break
-            else:
-                cid=pid
-
-    results.sort()
-    return results
-
-#-------------Get folder tree structure of a given folder-------------
-def getFolderTree(df,folderid,verbose=True):
-    '''Get folder tree structure of a given folder
-
-    <df>: dict, key: folderid, value: (folder_name, parent_id).
-    <folderid>: int, folder id
-    '''
-
-    getFolderName=lambda df,id: df[id][0]
-    getParentId=lambda df,id: df[id][1]
-
-    folder=getFolderName(df,folderid)
-
-    #------------Back track tree structure------------
-    cid=folderid
-    while True:
-        pid=getParentId(df,cid)
-        if pid==-1 or pid==0:
-            break
-        else:
-            pfolder=getFolderName(df,pid)
-            folder=u'%s/%s' %(pfolder,folder)
-        cid=pid
-
-    return folderid,folder
-
-
-#----------Get a list of docids from a folder--------------
-def getFolderDocList(db,folderid,verbose=True):
-    '''Get a list of docids from a folder
-
-    Update time: 2018-07-28 20:11:09.
-    '''
-
-    query=\
-    '''SELECT Documents.id
-       FROM Documents
-       LEFT JOIN DocumentFolders
-           ON Documents.id=DocumentFolders.documentId
-       WHERE (DocumentFolders.folderid=%s)
-    ''' %folderid
-
-    ret=db.execute(query)
-    data=ret.fetchall()
-    docids=[ii[0] for ii in data]
-    docids.sort()
-    return docids
-
+        self.settings.sync()
 
 
 
