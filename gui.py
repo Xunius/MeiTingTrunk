@@ -327,7 +327,6 @@ class MainFrame(QtWidgets.QWidget):
         self.font_dict={
             'meta_title': self.settings.value('display/fonts/meta_title',QFont),
             'meta_authors': self.settings.value('display/fonts/meta_authors',QFont),
-            'meta_publication': self.settings.value('display/fonts/meta_publication',QFont),
             'meta_keywords': self.settings.value('display/fonts/meta_keywords',QFont)
             }
 
@@ -350,9 +349,7 @@ class MainFrame(QtWidgets.QWidget):
 
         #--------------------Load data--------------------
         self.loadLibTree()
-        self.loadDocTable(None)
-
-        self.show()
+        #self.loadDocTable(None)
 
 
     def initUI(self):
@@ -484,7 +481,7 @@ class MainFrame(QtWidgets.QWidget):
         for fnameii,idii in folders1:
             self.addFolder(self.libtree,idii,self.folder_dict)
         
-        #self.libtree.setCurrentItem(allitem)
+        self.libtree.setCurrentItem(allitem)
         return 
 
     def addFolder(self,parent,folderid,folder_dict):
@@ -548,6 +545,8 @@ class MainFrame(QtWidgets.QWidget):
         return tabs
 
     def createMetaTab(self):
+
+        label_color='color: rgb(0,0,140)'
         
         frame=QtWidgets.QWidget()
         frame.setStyleSheet('background-color:white')
@@ -558,53 +557,57 @@ class MainFrame(QtWidgets.QWidget):
 
         fields_dict={}
 
-        #--------------------Add title--------------------
-        lineii=QtWidgets.QTextEdit()
-        lineii.setFrameStyle(QtWidgets.QFrame.NoFrame)
-        lineii.textChanged.connect(self.resizeTextEdit)
-        lineii.setFont(self.font_dict['meta_title'])
-        fields_dict['title']=lineii
-        v_layout.addWidget(lineii)
-
-        #-------------------Add authors-------------------
-        lineii=QtWidgets.QTextEdit()
-        lineii.setFrameStyle(QtWidgets.QFrame.NoFrame)
-        lineii.textChanged.connect(self.resizeTextEdit)
-        lineii.setFont(self.font_dict['meta_authors'])
-        fields_dict['authors']=lineii
-
-        hlayout=QtWidgets.QHBoxLayout()
-        labelii=QtWidgets.QLabel('Authors')
-        hlayout.addWidget(labelii)
-        hlayout.addWidget(lineii)
-        v_layout.addLayout(hlayout)
-
-        #-----Add journal, year, volume, issue, pages-----
-        for fii in ['publication','year','volume','issue','pages']:
+        def createOneLineField(label,key,font_name,field_dict):
             hlayout=QtWidgets.QHBoxLayout()
             lineii=QtWidgets.QTextEdit()
-            labelii=QtWidgets.QLabel(fii)
+            labelii=QtWidgets.QLabel(label)
+            labelii.setStyleSheet(label_color)
             lineii.textChanged.connect(self.resizeTextEdit)
 
-            if 'meta_%s' %fii in self.font_dict:
-                lineii.setFont(self.font_dict['meta_%s' %fii])
+            if font_name in self.font_dict:
+                lineii.setFont(self.font_dict[font_name])
 
             hlayout.addWidget(labelii)
             hlayout.addWidget(lineii)
             v_layout.addLayout(hlayout)
-            fields_dict[fii]=lineii
+            fields_dict[key]=lineii
 
-        #-------------------Add keywords-------------------
-        lineii=QtWidgets.QTextEdit()
-        lineii.setFrameStyle(QtWidgets.QFrame.NoFrame)
-        lineii.textChanged.connect(self.resizeTextEdit)
-        lineii.setFont(self.font_dict['meta_keywords'])
-        fields_dict['keywords']=lineii
+            return
 
-        labelii=QtWidgets.QLabel('Keywords')
-        labelii.setFont(QFont('Serif',12,QFont.Bold))
-        v_layout.addWidget(labelii)
-        v_layout.addWidget(lineii)
+        def createMultiLineField(label,key,font_name,field_dict):
+            lineii=QtWidgets.QTextEdit()
+            lineii.setFrameStyle(QtWidgets.QFrame.NoFrame)
+            lineii.textChanged.connect(self.resizeTextEdit)
+            lineii.setFont(self.font_dict[font_name])
+            fields_dict[key]=lineii
+
+            if len(label)>0:
+                labelii=QtWidgets.QLabel(label)
+                labelii.setStyleSheet(label_color)
+                labelii.setFont(QFont('Serif',12,QFont.Bold))
+                v_layout.addWidget(labelii)
+            v_layout.addWidget(lineii)
+
+            return
+
+
+        #--------------------Add title--------------------
+        createMultiLineField('','title','meta_title',fields_dict)
+        v_layout.addWidget(getHLine(self))
+
+        #-------------------Add authors-------------------
+        createMultiLineField('Authors','authors','meta_authors',fields_dict)
+
+        #-----Add journal, year, volume, issue, pages-----
+        for fii in ['publication','year','volume','issue','pages','publisher',
+                'citationkey']:
+            createOneLineField(fii,fii,'meta_keywords',fields_dict)
+
+        #---------------------Add tags---------------------
+        createMultiLineField('Tags','tags','meta_keywords',fields_dict)
+        createMultiLineField('Abstract','abstract','meta_keywords',fields_dict)
+        createMultiLineField('Keywords','keywords','meta_keywords',fields_dict)
+        createMultiLineField('Files','files','meta_keywords',fields_dict)
 
         v_layout.addStretch()
         frame.setLayout(v_layout)
@@ -632,7 +635,9 @@ class MainFrame(QtWidgets.QWidget):
 
         #fields=['title','authors','publication','year','month','keywords']
         fields=['title','authors','publication','year','volume','issue',
-                'pages','keywords']
+                'pages','abstract','tags','keywords','citationkey','publisher',
+                'files'
+                ]
 
         metaii=self.meta[docid]
         def deu(text):
@@ -750,10 +755,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 QFont('Times', 14, QFont.Bold | QFont.Capitalize))
             settings.setValue('display/fonts/meta_authors',
                 QFont('Serif', 12))
-            settings.setValue('display/fonts/meta_publication',
-                QFont('Times', 10, QFont.StyleItalic))
             settings.setValue('display/fonts/meta_keywords',
-                QFont('Times', 10, QFont.StyleItalic))
+                QFont('Times', 11, QFont.StyleItalic))
 
             settings.sync()
 

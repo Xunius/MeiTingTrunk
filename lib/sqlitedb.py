@@ -83,6 +83,13 @@ def getMetaData(db, docid):
     WHERE (DocumentFolders.docid=?)
     '''
 
+    query_files=\
+    '''
+    SELECT DocumentFiles.abspath
+    FROM DocumentFiles
+    WHERE (DocumentFiles.docid=?)
+    '''
+
 
     def fetchField(db,query,values,ncol=1):
         aa=db.execute(query,values).fetchall()
@@ -113,6 +120,7 @@ def getMetaData(db, docid):
     result['firstNames']=fetchField(db,query_firstnames,(docid,))
     result['lastName']=fetchField(db,query_lastnames,(docid,))
     result['keywords']=fetchField(db,query_keywords,(docid,))
+    result['files']=fetchField(db,query_files,(docid,))
     #result['folder']=fetchField(db,query_folder,(docid,),2)
     result['folder']=db.execute(query_folder,(docid,)).fetchall()
 
