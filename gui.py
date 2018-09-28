@@ -6,7 +6,6 @@ from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, QSettings
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics
 #import tempfile
 #import subprocess
-import json
 from lib import sqlitedb
 
 __version__='v0.1'
@@ -14,6 +13,11 @@ __version__='v0.1'
 FILE_IN='new.sqlite'
 
 
+# TODO:
+# show docs in sub folders?
+# fold long fields in meta data tab?
+# create bib texts when clicking into the bibtex tab and changing doc
+# add icons to folders
 
 
 
@@ -185,7 +189,11 @@ class TableModel(QAbstractTableModel):
 
     def sort(self,col,order):
         self.layoutAboutToBeChanged.emit()
-        self.arraydata=sorted(self.arraydata,key=operator.itemgetter(col))
+
+        #NOTE that python3 doesn't support mixed type sorting (e.g. 1<None,
+        # 'a' > 2. So convert everything to str.
+        self.arraydata=sorted(self.arraydata,key=lambda x: \
+                str(operator.itemgetter(col)(x)) or '')
         if order==Qt.DescendingOrder:
             self.arraydata.reverse()
         self.layoutChanged.emit()
@@ -316,7 +324,7 @@ class MyTextEdit(QtWidgets.QTextEdit):
         self.setMinimumHeight(texth)
         '''
 
-        docheight=self.document().size().height()+3
+        docheight=self.document().size().height()+1
         self.setMinimumHeight(docheight)
         self.setMaximumHeight(docheight+1)
         #print('sender',sender,'docheight',docheight,'sizehint',docheight2, sender.height())
@@ -409,6 +417,8 @@ class MainFrame(QtWidgets.QWidget):
         h_split.addWidget(v_split)
 
         v_split.setSizes([3,1])
+        h=v_split.size().height()
+        v_split.setSizes([h*0.65,h*0.35])
 
         #------------------Add doc table------------------
         self.doc_table=self.createDocTable()
@@ -577,14 +587,14 @@ class MainFrame(QtWidgets.QWidget):
         tabs=QtWidgets.QTabWidget()
         #self.t_meta=_createPage()
         self.t_notes=_createPage()
-        self.t_topics=_createPage()
+        self.t_bib=_createPage()
         self.t_scratchpad=_createPage()
 
         self.t_meta=self.createMetaTab()
 
         tabs.addTab(self.t_meta,'Meta Data')
         tabs.addTab(self.t_notes,'Notes')
-        tabs.addTab(self.t_topics,'Topics')
+        tabs.addTab(self.t_bib,'Bibtex')
         tabs.addTab(self.t_scratchpad,'Strach Pad')
 
 
@@ -592,7 +602,7 @@ class MainFrame(QtWidgets.QWidget):
 
     def createMetaTab(self):
 
-        label_color='color: rgb(0,0,140)'
+        label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
         
         frame=QtWidgets.QWidget()
         frame.setStyleSheet('background-color:white')
@@ -604,7 +614,7 @@ class MainFrame(QtWidgets.QWidget):
         fields_dict={}
 
         def createOneLineField(label,key,font_name,field_dict):
-            hlayout=QtWidgets.QHBoxLayout()
+            #hlayout=QtWidgets.QHBoxLayout()
             #lineii=QtWidgets.QTextEdit()
             lineii=MyTextEdit()
             labelii=QtWidgets.QLabel(label)
@@ -614,9 +624,12 @@ class MainFrame(QtWidgets.QWidget):
             if font_name in self.font_dict:
                 lineii.setFont(self.font_dict[font_name])
 
-            hlayout.addWidget(labelii)
-            hlayout.addWidget(lineii)
-            v_layout.addLayout(hlayout)
+            #hlayout.addWidget(labelii)
+            #hlayout.addWidget(lineii)
+            rnow=grid_layout.rowCount()
+            grid_layout.addWidget(labelii,rnow,0)
+            grid_layout.addWidget(lineii,rnow,1)
+            #v_layout.addLayout(hlayout)
             fields_dict[key]=lineii
 
             return
@@ -647,9 +660,13 @@ class MainFrame(QtWidgets.QWidget):
         createMultiLineField('Authors','authors','meta_authors',fields_dict)
 
         #-----Add journal, year, volume, issue, pages-----
+        grid_layout=QtWidgets.QGridLayout()
+
         for fii in ['publication','year','volume','issue','pages','publisher',
                 'citationkey']:
             createOneLineField(fii,fii,'meta_keywords',fields_dict)
+
+        v_layout.addLayout(grid_layout)
 
         #---------------------Add tags---------------------
         createMultiLineField('Tags','tags','meta_keywords',fields_dict)
@@ -790,11 +807,11 @@ class MainWindow(QtWidgets.QMainWindow):
             settings=QSettings(settings_path,QSettings.IniFormat)
 
             settings.setValue('display/fonts/meta_title',
-                QFont('Times', 14, QFont.Bold | QFont.Capitalize))
+                QFont('Serif', 15, QFont.Bold | QFont.Capitalize))
             settings.setValue('display/fonts/meta_authors',
                 QFont('Serif', 12))
             settings.setValue('display/fonts/meta_keywords',
-                QFont('Times', 11, QFont.StyleItalic))
+                QFont('Times', 12, QFont.StyleItalic))
             settings.setValue('display/folder/highlight_color_br',
                     QBrush(QColor(200,200,255)))
 
