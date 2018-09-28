@@ -3,7 +3,7 @@ import operator
 import sqlite3
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, QSettings
-from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor
+from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics
 #import tempfile
 #import subprocess
 import json
@@ -287,29 +287,39 @@ class MyTextEdit(QtWidgets.QTextEdit):
     def __init__(self,parent=None):
         super(MyTextEdit,self).__init__(parent)
 
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        #self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+
         self.textChanged.connect(self.resizeTextEdit)
+        self.document().documentLayout().documentSizeChanged.connect(self.resizeTextEdit)
 
-    #def sizeHint(self):
-        #h=self.document().size().height()
-        #w=self.document().size().width()
-        #print 'sizehint', w,h
-        #return QtCore.QSize(w,h)
-
-    #def resizeEvent(self,event):
-        #self.updateGeometry()
-        #super(QtWidgets.QTextEdit,self).resizeEvent(event)
 
     def resizeTextEdit(self):
-        #h=self.sizeHint()
-        docheight=self.document().size().height()+10
-        #print sender.toPlainText()
+        '''
+        self.setAttribute(103)
+        self.show()
+        docheight=self.document().size().height()+3
+        print('docheight',docheight)
+        self.setFixedHeight(docheight)
+        '''
+
+        '''
+        f=self.currentFont()
+        fm=QFontMetrics(f)
+        text=self.toPlainText()
+        print('fm',fm)
+        print('text',text)
+        textsize=fm.size(0,text)
+        textw=textsize.width()+1
+        texth=textsize.height()+4
+        self.setMinimumHeight(texth)
+        '''
+
+        docheight=self.document().size().height()+3
         self.setMinimumHeight(docheight)
-        self.setMaximumHeight(docheight+10)
-        #self.resize(self.width(),docheight)
-        print('hei',docheight)
-        print('h',self.height())
-        #super(QtWidgets.QHeaderView, self).resizeEvent(event)
-        #self.updateGeometry()
+        self.setMaximumHeight(docheight+1)
+        #print('sender',sender,'docheight',docheight,'sizehint',docheight2, sender.height())
 
 class MainFrame(QtWidgets.QWidget):
 
@@ -454,6 +464,42 @@ class MainFrame(QtWidgets.QWidget):
         docid=self.tabledata[rowid][0]
         self.loadMetaTab(docid)
 
+        #-------------------Get folders-------------------
+        metaii=self.meta[docid]
+        folders=metaii['folder']
+        folders=[fii[1] for fii in folders]
+        print('folders of docid', folders, docid)
+
+        def iterItems(treewidget, root):
+            if root is not None:
+                stack = [root]
+                while stack:
+                    parent = stack.pop(0)
+                    for row in range(parent.childCount()):
+                        child = parent.child(row)
+                        yield child
+                        if child.childCount()>0:
+                            stack.append(child)
+
+        #------------Remove highlights for all------------
+        ori_color=QBrush(QColor(255,255,255))
+        hi_color=self.settings.value('display/folder/highlight_color_br',
+                QBrush)
+
+        root=self.libtree.invisibleRootItem()
+        for item in iterItems(self.libtree, root):
+            item.setBackground(0, ori_color)
+
+        #------------Search folders in libtree------------
+        for fii in folders:
+            mii=self.libtree.findItems(fii, Qt.MatchExactly | Qt.MatchRecursive)
+            if len(mii)>0:
+                for mjj in mii:
+                    mjj.setBackground(0, hi_color)
+
+
+        
+
 
 
 
@@ -559,10 +605,11 @@ class MainFrame(QtWidgets.QWidget):
 
         def createOneLineField(label,key,font_name,field_dict):
             hlayout=QtWidgets.QHBoxLayout()
-            lineii=QtWidgets.QTextEdit()
+            #lineii=QtWidgets.QTextEdit()
+            lineii=MyTextEdit()
             labelii=QtWidgets.QLabel(label)
             labelii.setStyleSheet(label_color)
-            lineii.textChanged.connect(self.resizeTextEdit)
+            #lineii.textChanged.connect(self.resizeTextEdit)
 
             if font_name in self.font_dict:
                 lineii.setFont(self.font_dict[font_name])
@@ -575,9 +622,10 @@ class MainFrame(QtWidgets.QWidget):
             return
 
         def createMultiLineField(label,key,font_name,field_dict):
-            lineii=QtWidgets.QTextEdit()
+            #lineii=QtWidgets.QTextEdit()
+            lineii=MyTextEdit()
             lineii.setFrameStyle(QtWidgets.QFrame.NoFrame)
-            lineii.textChanged.connect(self.resizeTextEdit)
+            #lineii.textChanged.connect(self.resizeTextEdit)
             lineii.setFont(self.font_dict[font_name])
             fields_dict[key]=lineii
 
@@ -616,16 +664,6 @@ class MainFrame(QtWidgets.QWidget):
         return scroll
 
 
-    def resizeTextEdit(self):
-        sender=self.sender()
-        sender.update()
-        docheight=sender.document().size().height()+3
-        docheight2=sender.sizeHint().height()+10
-        sender.setMinimumHeight(docheight)
-        sender.setMaximumHeight(docheight+1)
-        print('sender',sender,'docheight',docheight,'sizehint',docheight2, sender.height())
-        #print sender.toPlainText()
-        #sender.updateGeometry()
 
 
     def loadMetaTab(self,docid=None):
@@ -757,6 +795,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 QFont('Serif', 12))
             settings.setValue('display/fonts/meta_keywords',
                 QFont('Times', 11, QFont.StyleItalic))
+            settings.setValue('display/folder/highlight_color_br',
+                    QBrush(QColor(200,200,255)))
 
             settings.sync()
 
