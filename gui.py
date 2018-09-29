@@ -4,9 +4,14 @@ import sqlite3
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, QSettings
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics
-#import tempfile
-#import subprocess
 from lib import sqlitedb
+from lib import export2bib
+from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy,\
+        getXExpandYMinSizePolicy, getXExpandYExpandSizePolicy, getHSpacer, \
+        getVSpacer, getHLine, getVLine
+
+from lib.widgets import TableModel, MyHeaderView, MyTextEdit
+
 
 __version__='v0.1'
 
@@ -20,314 +25,70 @@ FILE_IN='new.sqlite'
 # add icons to folders
 
 
+class MainWindow(QtWidgets.QMainWindow):
 
+    def __init__(self,db):
+        super(MainWindow,self).__init__()
 
-def dirFind(string,obj,num=10,verbose=True):
-    '''Fuzzy search dir(obj)
+        self.db=db
+        meta,folder_data,folder_dict=sqlitedb.readSqlite(db)
+        self.settings=self.loadSettings()
 
-    <string>: string, keyword to search.
-    <obj>: python obj other than None.
-    <num>: int, number of best matches to display.
+        self.initUI()
 
-    Function takes the keyword and compares it with the strings in dir(obj).
-    Comparison is done using Levenshtein distance algorithm implemented in
-    the fuzzywuzzy module.
+        self.main_frame=MainFrame(db,meta,folder_data,folder_dict,self.settings)
+        self.setCentralWidget(self.main_frame)
 
-    Usage:
+    def initSettings(self):
+        folder_name=os.path.dirname(os.path.abspath(__file__))
+        settings_path=os.path.join(folder_name,'settings.ini')
 
-    To show all get functions of an instance:
-        dirFind('get',inst)
+        if not os.path.exists(settings_path):
+            settings=QSettings(settings_path,QSettings.IniFormat)
 
-    Update time: 2016-02-11 13:09:14.
-    '''
+            settings.setValue('display/fonts/meta_title',
+                QFont('Serif', 15, QFont.Bold | QFont.Capitalize))
+            settings.setValue('display/fonts/meta_authors',
+                QFont('Serif', 12))
+            settings.setValue('display/fonts/meta_keywords',
+                QFont('Times', 12, QFont.StyleItalic))
+            settings.setValue('display/folder/highlight_color_br',
+                    QBrush(QColor(200,200,255)))
 
-    import numpy
-    import warnings
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        from fuzzywuzzy import fuzz
+            settings.sync()
 
-    dirlist=numpy.array(dir(obj))
-    scores=numpy.array([fuzz.partial_ratio(string,ii) for ii in dirlist])
-    idx=numpy.argsort(scores)[::-1]
-    dirlist=dirlist[idx]
-    scores=numpy.sort(scores)[::-1]
-
-    #----Make sure all highly matched are included----
-    high=numpy.where(scores>=90)[0]
-
-    num=max([num,len(high)])
-
-    print('\n# <dirFind>: %-20.40s    %s' %('<obj> element:','Score:'))
-    print('-'*70)
-    for ii in range(num):
-        print('# <dirFind>: %-20.40s    %d' %(dirlist[ii],scores[ii]))
-
-    return
-
-def getMinSizePolicy():
-    sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Minimum)
-    return sizePolicy
-
-def getXMinYExpandSizePolicy():
-    sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Expanding)
-    return sizePolicy
-
-def getXExpandYMinSizePolicy():
-    sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-            QtWidgets.QSizePolicy.Minimum)
-    return sizePolicy
-
-def getXExpandYExpandSizePolicy():
-    sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-            QtWidgets.QSizePolicy.Expanding)
-    return sizePolicy
-
-def getHSpacer():
-    h_spacer = QtWidgets.QSpacerItem(0,0,QtWidgets.QSizePolicy.Expanding,
-            QtWidgets.QSizePolicy.Minimum)
-    return h_spacer
-
-def getVSpacer():
-    v_spacer = QtWidgets.QSpacerItem(0,0,QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Expanding)
-    return v_spacer
-
-def getVLine(parent):
-    v_line = QtWidgets.QFrame(parent)
-    v_line.setFrameShape(QtWidgets.QFrame.VLine)
-    v_line.setFrameShadow(QtWidgets.QFrame.Sunken)
-    return v_line
-
-def getHLine(parent):
-    h_line = QtWidgets.QFrame(parent)
-    h_line.setFrameShape(QtWidgets.QFrame.HLine)
-    h_line.setFrameShadow(QtWidgets.QFrame.Sunken)
-    return h_line
-
-
-class TableModel(QAbstractTableModel):
-    def __init__(self, parent, datain, headerdata):
-        QAbstractTableModel.__init__(self, parent)
-
-        self.ncol=len(headerdata)
-        if datain is None:
-            self.arraydata=[None]*self.ncol
         else:
-            self.arraydata=datain
-        self.headerdata=headerdata
+            settings=QSettings(settings_path,QSettings.IniFormat)
 
-        self.icon_section={
-                'favourite': QPixmap('./bf.jpg'),
-                'read': QPixmap('./read.jpg')
-                }
-        self.icon_sec_indices=[self.headerdata.index(kk) for kk
-                in self.icon_section.keys()]
-        print('icon sec',self.icon_sec_indices)
+        return settings
 
-    def rowCount(self,p):
-        return len(self.arraydata)
+    def loadSettings(self):
+        settings=self.initSettings()
+        print(settings.fileName())
 
-    def columnCount(self,p):
-        #if len(self.arraydata)>0:
-            #return len(self.arraydata[0])
-        #return 0
-        return self.ncol
+        aa=settings.value('display/fonts/meta_title')
+        print('settings',settings)
+        print('fonat',aa)
 
-    def data(self, index, role):
-        if not index.isValid():
-            return QVariant()
-        if role == Qt.BackgroundRole:
-            if index.row()%2==0:
-                return QBrush(QColor(230,230,249))
-        if role==Qt.DisplayRole:
-            return QVariant(self.arraydata[index.row()][index.column()])
-        if role==Qt.EditRole:
-            return QVariant(self.arraydata[index.row()][index.column()])
-
-        if index.column() in self.icon_sec_indices and role==Qt.CheckStateRole:
-            if self.arraydata[index.row()][index.column()].isChecked():
-                return Qt.Checked
-            else:
-                return Qt.Unchecked
-
-        if role != Qt.DisplayRole:
-            return QVariant()
-
-    def setData(self, index, value, role):
-        if not index.isValid():
-            return False
-        if index.column() in self.icon_sec_indices and role==Qt.CheckStateRole:
-            if value == Qt.Checked:
-                self.arraydata[index.row()][index.column()].setChecked(True)
-            else:
-                self.arraydata[index.row()][index.column()].setChecked(False)
-
-        self.dataChanged.emit(index,index)
-        return True
-
-    def flags(self, index):
-        if index.column() in self.icon_sec_indices:
-            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable\
-                    | QtCore.Qt.ItemIsUserCheckable
-        else:
-            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        return settings
 
 
-    def headerData(self, col, orientation, role):
+    def initUI(self):
+        self.setWindowTitle('Reference manager %s' %__version__)
+        self.setGeometry(100,100,1200,900)    #(x_left,y_top,w,h)
+        #self.setWindowIcon(QIcon('img.png'))
+        self.menu_bar=self.menuBar()
+        self.file_manu=self.menu_bar.addMenu('File')
+        self.edit_manu=self.menu_bar.addMenu('Edit')
+        self.view_manu=self.menu_bar.addMenu('View')
+        self.tool_manu=self.menu_bar.addMenu('Tool')
+        self.help_manu=self.menu_bar.addMenu('Help')
 
-        if col in self.icon_sec_indices:
-            label=self.headerdata[col]
-            if orientation==Qt.Horizontal and role==Qt.DecorationRole:
-                return self.icon_section[label]
-        else:
-            if orientation==Qt.Horizontal and role==Qt.DisplayRole:
-                return self.headerdata[col]
-        return None
-
-    def sort(self,col,order):
-        self.layoutAboutToBeChanged.emit()
-
-        #NOTE that python3 doesn't support mixed type sorting (e.g. 1<None,
-        # 'a' > 2. So convert everything to str.
-        self.arraydata=sorted(self.arraydata,key=lambda x: \
-                str(operator.itemgetter(col)(x)) or '')
-        if order==Qt.DescendingOrder:
-            self.arraydata.reverse()
-        self.layoutChanged.emit()
-
-class MyHeaderView(QtWidgets.QHeaderView):
-    def __init__(self,parent):
-        super(MyHeaderView,self).__init__(Qt.Horizontal,parent)
-
-        self.colSizes={'docid':0, 'favourite': 20, 'read': 20, 'author': 200, 'title': 500,
-                'journal':100,'year':50}
-
-
-    def initresizeSections(self):
-        model=self.model()
-        if model is None:
-            return
-        self.setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        headers=model.headerdata
-
-        for ii in range(self.count()):
-            lii=headers[ii]
-            sii=self.colSizes[lii]
-            if lii in self.colSizes:
-                self.setSectionResizeMode(ii, QtWidgets.QHeaderView.Fixed)
-                self.resizeSection(ii,sii)
-            else:
-                self.setSectionResizeMode(ii, QtWidgets.QHeaderView.Stretch)
-                wnow=self.sectionSize(ii)
-                self.resizeSection(ii,wnow)
-                self.setSectionResizeMode(ii,QtWidgets.QHeaderView.Interactive)
-
-
-
-    def myresize(self, *args):
-
-        model=self.model()
-        if model is None:
-            return
-        ws=[]
-        for c in range(self.count()):
-            wii=self.sectionSize(c)
-            ws.append(wii)
-
-        if args[0]>0 or args[0]<self.count():
-            for ii in range(args[0],self.count()):
-                lii=model.headerdata[ii]
-                if lii in ['favourite','read']:
-                    continue
-                if ii==args[0]:
-                    continue
-                if ii==self.count()-1:
-                    self.setSectionResizeMode(ii,QtWidgets.QHeaderView.Stretch)
-                else:
-                    pass
-
-
-    def resizeEvent(self, event):
-
-        super(QtWidgets.QHeaderView, self).resizeEvent(event)
-
-        model=self.model()
-        if model is None:
-            return
-
-        ws=[]
-        perc=[]
-        total_w=self.length() # width of the table
-        total_w2=self.size().width()   # new available space after resizing
-        print('resize', total_w, total_w2)
-        for c in range(self.count()):
-            wii=self.sectionSize(c)
-            ws.append(wii)
-            perc.append(float(wii)/total_w)
-
-        headers=model.headerdata
-
-        for ii in range(self.count()):
-            lii=headers[ii]
-            if lii in ['favourite','read']:
-                self.setSectionResizeMode(ii,QtWidgets.QHeaderView.Fixed)
-                continue
-            elif lii=='year':
-                self.setSectionResizeMode(ii,QtWidgets.QHeaderView.Stretch)
-                self.setSectionResizeMode(ii,QtWidgets.QHeaderView.Interactive)
-            else:
-                wnow=int(perc[ii]*total_w2)
-                self.resizeSection(ii,wnow)
-                self.setSectionResizeMode(ii,QtWidgets.QHeaderView.Interactive)
-
-        return
-
-    def columnFromLabel(self, label):
-        headers=self.model().headerdata
-        if label in headers:
-            return headers.index(label)
-        return -1
-
-class MyTextEdit(QtWidgets.QTextEdit):
-    def __init__(self,parent=None):
-        super(MyTextEdit,self).__init__(parent)
-
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        #self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-
-        self.textChanged.connect(self.resizeTextEdit)
-        self.document().documentLayout().documentSizeChanged.connect(self.resizeTextEdit)
-
-
-    def resizeTextEdit(self):
-        '''
-        self.setAttribute(103)
         self.show()
-        docheight=self.document().size().height()+3
-        print('docheight',docheight)
-        self.setFixedHeight(docheight)
-        '''
 
-        '''
-        f=self.currentFont()
-        fm=QFontMetrics(f)
-        text=self.toPlainText()
-        print('fm',fm)
-        print('text',text)
-        textsize=fm.size(0,text)
-        textw=textsize.width()+1
-        texth=textsize.height()+4
-        self.setMinimumHeight(texth)
-        '''
+    def closeEvent(self,event):
+        self.settings.sync()
 
-        docheight=self.document().size().height()+1
-        self.setMinimumHeight(docheight)
-        self.setMaximumHeight(docheight+1)
-        #print('sender',sender,'docheight',docheight,'sizehint',docheight2, sender.height())
 
 class MainFrame(QtWidgets.QWidget):
 
@@ -384,7 +145,7 @@ class MainFrame(QtWidgets.QWidget):
         self.add_button.setIcon(QIcon.fromTheme('list-add'))
         #self.add_button.setIcon(QIcon.fromTheme('edit-undo'))
         self.add_button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-        self.add_button.clicked.connect(self.add_button_clicked)
+        self.add_button.clicked.connect(self.addDocButtonClicked)
         h_layout0.addWidget(self.add_button)
 
         h_layout0.addStretch()
@@ -395,7 +156,7 @@ class MainFrame(QtWidgets.QWidget):
 
         self.search_bar.setFixedWidth(280)
         self.search_bar.setSizePolicy(getMinSizePolicy())
-        self.search_bar.returnPressed.connect(self.search_bar_pressed)
+        self.search_bar.returnPressed.connect(self.searchBarClicked)
 
         h_layout0.addWidget(self.search_bar)
 
@@ -403,7 +164,7 @@ class MainFrame(QtWidgets.QWidget):
         v_layout0.addWidget(getHLine(self))
 
         #-------------------Add lib tree-------------------
-        self.libtree=self.addLibTree()
+        self.libtree=self.createLibTree()
 
         h_split=QtWidgets.QSplitter(Qt.Horizontal)
         h_split.setSizePolicy(getXExpandYExpandSizePolicy())
@@ -473,6 +234,7 @@ class MainFrame(QtWidgets.QWidget):
         rowid=current.row()
         docid=self.tabledata[rowid][0]
         self.loadMetaTab(docid)
+        self.loadBibTab(docid)
 
         #-------------------Get folders-------------------
         metaii=self.meta[docid]
@@ -508,14 +270,8 @@ class MainFrame(QtWidgets.QWidget):
                     mjj.setBackground(0, hi_color)
 
 
-        
 
-
-
-
-
-
-    def addLibTree(self):
+    def createLibTree(self):
 
         libtree=QtWidgets.QTreeWidget()
         libtree.setHeaderHidden(True)
@@ -535,25 +291,11 @@ class MainFrame(QtWidgets.QWidget):
         self.libtree.addTopLevelItem(allitem)
 
         for fnameii,idii in folders1:
-            self.addFolder(self.libtree,idii,self.folder_dict)
+            addFolder(self.libtree,idii,self.folder_dict)
         
         self.libtree.setCurrentItem(allitem)
         return 
 
-    def addFolder(self,parent,folderid,folder_dict):
-
-        foldername,parentid=folder_dict[folderid]
-        fitem=QtWidgets.QTreeWidgetItem([foldername])
-        sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
-        if parentid<=0:
-            parent.addTopLevelItem(fitem)
-        else:
-            parent.addChild(fitem)
-        if len(sub_ids)>0:
-            for sii in sub_ids:
-                self.addFolder(fitem,sii,folder_dict)
-
-        return
 
     def clickSelFolder(self,item,column):
         '''Select folder by clicking'''
@@ -587,7 +329,8 @@ class MainFrame(QtWidgets.QWidget):
         tabs=QtWidgets.QTabWidget()
         #self.t_meta=_createPage()
         self.t_notes=_createPage()
-        self.t_bib=_createPage()
+        #self.t_bib=_createPage()
+        self.t_bib=self.createBiBTab()
         self.t_scratchpad=_createPage()
 
         self.t_meta=self.createMetaTab()
@@ -599,6 +342,50 @@ class MainFrame(QtWidgets.QWidget):
 
 
         return tabs
+
+    def createBiBTab(self):
+
+        frame=QtWidgets.QWidget()
+        #frame.setStyleSheet('background-color:white')
+        scroll=QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(frame)
+        v_layout=QtWidgets.QVBoxLayout()
+
+
+        # buttons
+        h_layout=QtWidgets.QHBoxLayout()
+
+        self.with_notes_button=QtWidgets.QToolButton(self)
+        self.with_notes_button.setText('+Notes')
+        self.with_notes_button.setIcon(QIcon.fromTheme('list-add'))
+        self.with_notes_button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+
+        self.copy_bib_button=QtWidgets.QToolButton(self)
+        self.copy_bib_button.setText('Copy')
+        self.copy_bib_button.setIcon(QIcon.fromTheme('edit-copy'))
+        self.copy_bib_button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+
+
+        h_layout.addWidget(self.with_notes_button)
+        h_layout.addWidget(self.copy_bib_button)
+
+
+        h_layout.addStretch()
+
+        self.bib_textedit=QtWidgets.QTextEdit(self)
+        self.bib_textedit.setFont(self.font_dict['meta_keywords'])
+        v_layout.addLayout(h_layout)
+        v_layout.addWidget(self.bib_textedit)
+        frame.setLayout(v_layout)
+        self.copy_bib_button.clicked.connect(self.copyBibButtonClicked)
+
+        return scroll
+
+
+
+
+
 
     def createMetaTab(self):
 
@@ -713,6 +500,25 @@ class MainFrame(QtWidgets.QWidget):
         return 
 
 
+    def loadBibTab(self,docid=None):
+        print('loadBibTab',docid)
+        if docid is None:
+            return
+
+        metaii=self.meta[docid]
+        #import bibtexparser
+        #bb=bibtexparser.bibdatabase.BibDatabase()
+
+        text=export2bib.parseMeta(metaii,'',metaii['folder'],True,False,
+                True)
+
+        self.bib_textedit.setText(text)
+
+        return 
+
+
+
+
 
 
 
@@ -779,75 +585,31 @@ class MainFrame(QtWidgets.QWidget):
 
 
 
-    def add_button_clicked(self):
+    def addDocButtonClicked(self):
         print('add')
 
-    def search_bar_pressed(self):
+    def searchBarClicked(self):
         print('search term:', self.search_bar.text())
 
-class MainWindow(QtWidgets.QMainWindow):
-
-    def __init__(self,db):
-        super(MainWindow,self).__init__()
-
-        self.db=db
-        meta,folder_data,folder_dict=sqlitedb.readSqlite(db)
-        self.settings=self.loadSettings()
-
-        self.initUI()
-
-        self.main_frame=MainFrame(db,meta,folder_data,folder_dict,self.settings)
-        self.setCentralWidget(self.main_frame)
-
-    def initSettings(self):
-        folder_name=os.path.dirname(os.path.abspath(__file__))
-        settings_path=os.path.join(folder_name,'settings.ini')
-
-        if not os.path.exists(settings_path):
-            settings=QSettings(settings_path,QSettings.IniFormat)
-
-            settings.setValue('display/fonts/meta_title',
-                QFont('Serif', 15, QFont.Bold | QFont.Capitalize))
-            settings.setValue('display/fonts/meta_authors',
-                QFont('Serif', 12))
-            settings.setValue('display/fonts/meta_keywords',
-                QFont('Times', 12, QFont.StyleItalic))
-            settings.setValue('display/folder/highlight_color_br',
-                    QBrush(QColor(200,200,255)))
-
-            settings.sync()
-
-        else:
-            settings=QSettings(settings_path,QSettings.IniFormat)
-
-        return settings
-
-    def loadSettings(self):
-        settings=self.initSettings()
-        print(settings.fileName())
-
-        aa=settings.value('display/fonts/meta_title')
-        print('settings',settings)
-        print('fonat',aa)
-
-        return settings
+    def copyBibButtonClicked(self):
+        self.bib_textedit.selectAll()
+        self.bib_textedit.copy()
 
 
-    def initUI(self):
-        self.setWindowTitle('Reference manager %s' %__version__)
-        self.setGeometry(100,100,1200,900)    #(x_left,y_top,w,h)
-        #self.setWindowIcon(QIcon('img.png'))
-        self.menu_bar=self.menuBar()
-        self.file_manu=self.menu_bar.addMenu('File')
-        self.edit_manu=self.menu_bar.addMenu('Edit')
-        self.view_manu=self.menu_bar.addMenu('View')
-        self.tool_manu=self.menu_bar.addMenu('Tool')
-        self.help_manu=self.menu_bar.addMenu('Help')
+def addFolder(parent,folderid,folder_dict):
 
-        self.show()
+    foldername,parentid=folder_dict[folderid]
+    fitem=QtWidgets.QTreeWidgetItem([foldername])
+    sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
+    if parentid<=0:
+        parent.addTopLevelItem(fitem)
+    else:
+        parent.addChild(fitem)
+    if len(sub_ids)>0:
+        for sii in sub_ids:
+            addFolder(fitem,sii,folder_dict)
 
-    def closeEvent(self,event):
-        self.settings.sync()
+    return
 
 
 
