@@ -2,7 +2,7 @@ import sys,os
 import operator
 import sqlite3
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, QSettings
+from PyQt5.QtCore import Qt, QVariant, QSettings
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics
 from lib import sqlitedb
 from lib import export2bib
@@ -328,10 +328,12 @@ class MainFrame(QtWidgets.QWidget):
 
         tabs=QtWidgets.QTabWidget()
         #self.t_meta=_createPage()
-        self.t_notes=_createPage()
+        #self.t_notes=_createPage()
+        self.t_notes=self.createNoteTab()
         #self.t_bib=_createPage()
         self.t_bib=self.createBiBTab()
-        self.t_scratchpad=_createPage()
+        #self.t_scratchpad=_createPage()
+        self.t_scratchpad=self.createScratchTab()
 
         self.t_meta=self.createMetaTab()
 
@@ -342,6 +344,59 @@ class MainFrame(QtWidgets.QWidget):
 
 
         return tabs
+
+
+    def createNoteTab(self):
+
+        scroll=QtWidgets.QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        frame=QtWidgets.QFrame()
+        v_layout=QtWidgets.QVBoxLayout()
+
+        '''
+        label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
+        label=QtWidgets.QLabel('Notes associated with document')
+        label.setStyleSheet(label_color)
+        label.setFont(QFont('Serif',12,QFont.Bold))
+        v_layout.addWidget(label)
+        '''
+
+        self.note_textedit=QtWidgets.QTextEdit(self)
+        self.note_textedit.setFont(self.font_dict['meta_keywords'])
+        self.note_textedit.setSizePolicy(getXExpandYExpandSizePolicy())
+
+        v_layout.addWidget(self.note_textedit)
+        frame.setLayout(v_layout)
+        scroll.setWidget(frame)
+
+        return scroll
+
+    def createScratchTab(self):
+
+        scroll=QtWidgets.QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        frame=QtWidgets.QFrame()
+        v_layout=QtWidgets.QVBoxLayout()
+
+        '''
+        label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
+        label=QtWidgets.QLabel('Notes associated with document')
+        label.setStyleSheet(label_color)
+        label.setFont(QFont('Serif',12,QFont.Bold))
+        v_layout.addWidget(label)
+        '''
+
+        self.scratchpad_textedit=QtWidgets.QTextEdit(self)
+        self.scratchpad_textedit.setFont(self.font_dict['meta_keywords'])
+        self.scratchpad_textedit.setSizePolicy(getXExpandYExpandSizePolicy())
+
+        v_layout.addWidget(self.scratchpad_textedit)
+        frame.setLayout(v_layout)
+        scroll.setWidget(frame)
+
+        return scroll
+
+
 
     def createBiBTab(self):
 
