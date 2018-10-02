@@ -31,12 +31,12 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow,self).__init__()
 
         self.db=db
-        meta,folder_data,folder_dict=sqlitedb.readSqlite(db)
+        meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
         self.settings=self.loadSettings()
 
         self.initUI()
 
-        self.main_frame=MainFrame(db,meta,folder_data,folder_dict,self.settings)
+        self.main_frame=MainFrame(db,meta_dict,folder_data,folder_dict,self.settings)
         self.setCentralWidget(self.main_frame)
 
     def initSettings(self):
@@ -92,11 +92,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
 class MainFrame(QtWidgets.QWidget):
 
-    def __init__(self,db,meta,folder_data,folder_dict,settings):
+    def __init__(self,db,meta_dict,folder_data,folder_dict,settings):
         super(MainFrame,self).__init__()
 
         self.db=db
-        self.meta=meta
+        self.meta_dict=meta_dict
         self.folder_data=folder_data
         self.folder_dict=folder_dict
         self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
@@ -142,8 +142,13 @@ class MainFrame(QtWidgets.QWidget):
         # Add button
         self.add_button=QtWidgets.QToolButton(self)
         self.add_button.setText('Add')
-        self.add_button.setIcon(QIcon.fromTheme('list-add'))
-        #self.add_button.setIcon(QIcon.fromTheme('edit-undo'))
+        self.add_button.setIcon(QIcon.fromTheme('edit-undo'))
+
+        for pp in QIcon.themeSearchPaths():
+            print('pp',pp,QIcon.themeName())
+
+        #self.add_button.setIcon(QtWidgets.QApplication.style().standardIcon(
+            #QtWidgets.QStyle.SP_FileIcon))
         self.add_button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
         self.add_button.clicked.connect(self.addDocButtonClicked)
         h_layout0.addWidget(self.add_button)
@@ -173,8 +178,9 @@ class MainFrame(QtWidgets.QWidget):
         v_layout0.addWidget(h_split)
 
         #----------------Add filter window----------------
-        self.filter_list=QtWidgets.QTextEdit(self)
-        v_split.addWidget(self.filter_list)
+        #self.filter_list=QtWidgets.QTextEdit(self)
+        filter_scroll=self.createFilterList()
+        v_split.addWidget(filter_scroll)
         h_split.addWidget(v_split)
 
         v_split.setSizes([3,1])
@@ -199,6 +205,78 @@ class MainFrame(QtWidgets.QWidget):
         h_split.setSizes([w*0.15,w*0.6,w*0.25])
 
         self.show()
+
+
+    def createFilterList(self):
+        frame=QtWidgets.QFrame()
+        scroll=QtWidgets.QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        v_layout=QtWidgets.QVBoxLayout()
+
+        self.filter_type_combbox=QtWidgets.QComboBox(self)
+        self.filter_type_combbox.addItem('Filter by authors')
+        self.filter_type_combbox.addItem('Filter by keywords')
+        self.filter_type_combbox.addItem('Filter by publications')
+        self.filter_type_combbox.addItem('Filter by tags')
+        self.filter_type_combbox.currentIndexChanged.connect(
+                self.filterTypeCombboxChange)
+        self.filter_type_combbox.setSizeAdjustPolicy(
+                QtWidgets.QComboBox.AdjustToMinimumContentsLength)
+
+        self.filter_item_list=QtWidgets.QListWidget(self)
+
+        v_layout.addWidget(self.filter_type_combbox)
+        v_layout.addWidget(self.filter_item_list)
+
+        frame.setLayout(v_layout)
+        scroll.setWidget(frame)
+
+        return scroll
+
+    def filterTypeCombboxChange(self,item):
+        sel=self.filter_type_combbox.currentText()
+        current_folder=self.libtree.selectedItems()
+        print('filter type cb select:',sel)
+        if current_folder:
+            current_folder=current_folder[0]
+            print('filtertypecombochange: currentfolder:',\
+                    current_folder.data(0,0), current_folder.data(1,0))
+
+            #---------------Get items in folder---------------
+            foldername=current_folder.data(0,0)
+            folderid=current_folder.data(1,0)
+            if foldername=='All' and folderid=='0':
+                docids=list(self.meta_dict.keys())
+            else:
+                docids=self.folder_data[current_folder.data(1,0)]
+
+            if sel=='Filter by keywords':
+                folderdata=fetchMetaData(self.meta_dict,'keywords',docids,
+                        unique=True,sort=True)
+            elif sel=='Filter by authors':
+                firsts=fetchMetaData(self.meta_dict,'firstNames',docids,
+                        unique=False,sort=False)
+                last=fetchMetaData(self.meta_dict,'lastName',docids,
+                        unique=False,sort=False)
+                folderdata=['%s, %s' %(last[ii],firsts[ii]) for ii in range(len(firsts))]
+                folderdata.sort()
+            elif sel=='Filter by publications':
+                folderdata=fetchMetaData(self.meta_dict,'publication',docids,
+                        unique=True,sort=True)
+            elif sel=='Filter by tags':
+                folderdata=fetchMetaData(self.meta_dict,'tags',docids,
+                        unique=True,sort=True)
+
+            print('filterTypeCombboxChange: folderdata',folderdata)
+
+        self.filter_item_list.clear()
+        self.filter_item_list.addItems(folderdata)
+
+        return
+
+
+
+
 
 
     def createDocTable(self):
@@ -231,13 +309,15 @@ class MainFrame(QtWidgets.QWidget):
 
 
     def selDoc(self,current,previous):
+        '''Actions on selecting a document in doc table
+        '''
         rowid=current.row()
         docid=self.tabledata[rowid][0]
         self.loadMetaTab(docid)
         self.loadBibTab(docid)
 
         #-------------------Get folders-------------------
-        metaii=self.meta[docid]
+        metaii=self.meta_dict[docid]
         folders=metaii['folder']
         folders=[fii[1] for fii in folders]
         print('folders of docid', folders, docid)
@@ -275,7 +355,9 @@ class MainFrame(QtWidgets.QWidget):
 
         libtree=QtWidgets.QTreeWidget()
         libtree.setHeaderHidden(True)
-        libtree.setColumnCount(1)
+        # column1: folder name, column2: folder id
+        libtree.setColumnCount(2)
+        libtree.hideColumn(1)
         libtree.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         libtree.itemClicked.connect(self.clickSelFolder)
         libtree.selectionModel().selectionChanged.connect(self.selFolder)
@@ -283,11 +365,17 @@ class MainFrame(QtWidgets.QWidget):
         return libtree
 
     def loadLibTree(self):
+
+        style=QtWidgets.QApplication.style()
+        diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+
         #-------------Get all level 1 folders-------------
-        folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if vv[1]<=0]
+        folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if\
+                vv[1]=='0' or vv[1]=='-1']
         folders1.sort()
 
-        allitem=QtWidgets.QTreeWidgetItem(['All'])
+        allitem=QtWidgets.QTreeWidgetItem(['All','0'])
+        allitem.setIcon(0,diropen_icon)
         self.libtree.addTopLevelItem(allitem)
 
         for fnameii,idii in folders1:
@@ -299,11 +387,18 @@ class MainFrame(QtWidgets.QWidget):
 
     def clickSelFolder(self,item,column):
         '''Select folder by clicking'''
-        folder=item.text(column)
-        self.status_bar.showMessage('Select folder %s' %folder)
-        if folder=='All':
-            folder=None
-        self.loadDocTable(folder)
+        folder=item.data(0,0)
+        folderid=item.data(1,0)
+        #folder=item.text(column)
+        #print('clickSelfolder:', 'item.data', item.data(0,0), item.data(1,0), 'colunm', column)
+        self.status_bar.showMessage('Select folder %s, id: %s' %(folder, folderid))
+        if folder=='All' and folderid=='0':
+            #folder=None
+            self.loadDocTable(None)
+        else:
+            self.loadDocTable((folder,folderid))
+
+        self.filterTypeCombboxChange(item)
 
 
     def selFolder(self,selected,deselected):
@@ -311,9 +406,11 @@ class MainFrame(QtWidgets.QWidget):
         item=self.libtree.selectedItems()
         if item:
             item=item[0]
-            print('item', item)
-            print(item.data(0,0))
-            column=selected.indexes()[0].column()
+            #print('selFolder:','item', item)
+            #column=selected.indexes()[0].column()
+            column=0
+            #print('selFolder:',item.data(0,0), item.data(1,0))
+            print('selFolder:','selected column', column)
             self.clickSelFolder(item,column)
 
 
@@ -407,25 +504,15 @@ class MainFrame(QtWidgets.QWidget):
         scroll.setWidget(frame)
         v_layout=QtWidgets.QVBoxLayout()
 
-
         # buttons
         h_layout=QtWidgets.QHBoxLayout()
-
-        self.with_notes_button=QtWidgets.QToolButton(self)
-        self.with_notes_button.setText('+Notes')
-        self.with_notes_button.setIcon(QIcon.fromTheme('list-add'))
-        self.with_notes_button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
 
         self.copy_bib_button=QtWidgets.QToolButton(self)
         self.copy_bib_button.setText('Copy')
         self.copy_bib_button.setIcon(QIcon.fromTheme('edit-copy'))
         self.copy_bib_button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
 
-
-        h_layout.addWidget(self.with_notes_button)
         h_layout.addWidget(self.copy_bib_button)
-
-
         h_layout.addStretch()
 
         self.bib_textedit=QtWidgets.QTextEdit(self)
@@ -536,7 +623,7 @@ class MainFrame(QtWidgets.QWidget):
                 'files'
                 ]
 
-        metaii=self.meta[docid]
+        metaii=self.meta_dict[docid]
         def deu(text):
             #if isinstance(text,(str,unicode)):
             if isinstance(text,(str)):
@@ -560,7 +647,7 @@ class MainFrame(QtWidgets.QWidget):
         if docid is None:
             return
 
-        metaii=self.meta[docid]
+        metaii=self.meta_dict[docid]
         #import bibtexparser
         #bb=bibtexparser.bibdatabase.BibDatabase()
 
@@ -587,7 +674,7 @@ class MainFrame(QtWidgets.QWidget):
         def prepareDocs(docids):
             data=[]
             for ii in docids:
-                entryii=self.meta[ii]
+                entryii=self.meta_dict[ii]
 
                 first=entryii['firstNames']
                 last=entryii['lastName']
@@ -611,10 +698,12 @@ class MainFrame(QtWidgets.QWidget):
             return data
 
         if folder is None:
-            docids=self.meta.keys()
+            docids=self.meta_dict.keys()
             data=prepareDocs(docids)
         else:
-            folderid=self.inv_folder_dict[folder]
+            folderid=self.inv_folder_dict[folder[0]]
+            folderid2=folder[1]
+            print('2 ways to get folder id, folderid = ',folderid, 'folderid2=',folderid2)
             if folderid in self.folder_data:
                 docids=self.folder_data[folderid]
                 data=prepareDocs(docids)
@@ -654,9 +743,12 @@ class MainFrame(QtWidgets.QWidget):
 def addFolder(parent,folderid,folder_dict):
 
     foldername,parentid=folder_dict[folderid]
-    fitem=QtWidgets.QTreeWidgetItem([foldername])
+    fitem=QtWidgets.QTreeWidgetItem([foldername,str(folderid)])
+    style=QtWidgets.QApplication.style()
+    diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+    fitem.setIcon(0,diropen_icon)
     sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
-    if parentid<=0:
+    if parentid=='0' or parentid=='-1':
         parent.addTopLevelItem(fitem)
     else:
         parent.addChild(fitem)
@@ -666,6 +758,27 @@ def addFolder(parent,folderid,folder_dict):
 
     return
 
+
+
+def fetchMetaData(meta_dict,key,docids,unique,sort):
+    if not isinstance(docids, (tuple,list)):
+        docids=[docids,]
+
+    result=[]
+    for idii in docids:
+        vv=meta_dict[idii].get(key,None)
+        if vv:
+            if isinstance(vv, (tuple,list)):
+                result.extend(vv)
+            else:
+                result.append(vv)
+
+    if unique:
+        result=list(set(result))
+    if sort:
+        result.sort()
+
+    return result
 
 
 

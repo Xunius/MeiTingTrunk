@@ -26,7 +26,9 @@ def readSqlite(dbin):
         meta[idii]=metaii
 
         folderii=metaii['folder']
-        folderids=[ff[0] for ff in folderii]
+        # note: convert folder id to str
+        # TODO: convert back to int when writing to sqlite
+        folderids=[str(ff[0]) for ff in folderii]
         for fii in folderids:
             if fii in folder_data:
                 folder_data[fii].append(idii)
@@ -186,7 +188,8 @@ def getFolders(db):
     data=ret.fetchall()
 
     # dict, key: folderid, value: (folder_name, parent_id)
-    df=dict([(ii[0],ii[1:]) for ii in data])
+    # note: convert id to str
+    df=dict([(str(ii[0]), (ii[1], str(ii[2]))) for ii in data])
 
     return df
 
