@@ -35,6 +35,11 @@ def readSqlite(dbin):
             else:
                 folder_data[fii]=[idii]
 
+    #----------------Add empty folders----------------
+    empty_folderids=list(set(folder_dict.keys()).difference(folder_data.keys()))
+    for fii in empty_folderids:
+        folder_data[fii]=[]
+
     return meta, folder_data, folder_dict
 
 
@@ -155,6 +160,7 @@ def getMetaData(db, docid):
         authors=' and '.join(authors)
 
     result['authors']=authors
+    result['has_file']=False if result['files'] is None else True
 
     '''
     first=result['firstNames']

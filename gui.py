@@ -21,8 +21,19 @@ FILE_IN='new.sqlite'
 # TODO:
 # show docs in sub folders?
 # fold long fields in meta data tab?
-# create bib texts when clicking into the bibtex tab and changing doc
-# add icons to folders
+# [y] create bib texts when clicking into the bibtex tab and changing doc
+# [y] add icons to folders
+# add a button to fold/unfold all fields in meta tab
+# doc types, books, generic etc
+# insert images to note?
+# add folder functionality
+# add add doc functionalities, by doi, bib, RIS
+# import from Mendeley, zotero, Endnote?
+# autosave, auto backup
+# export to text (clipboard, styles), bibtex, ris.
+# collapse side tab
+# seperate libraries
+# use resource file to load icons/images
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -47,11 +58,11 @@ class MainWindow(QtWidgets.QMainWindow):
             settings=QSettings(settings_path,QSettings.IniFormat)
 
             settings.setValue('display/fonts/meta_title',
-                QFont('Serif', 15, QFont.Bold | QFont.Capitalize))
+                QFont('Serif', 14, QFont.Bold | QFont.Capitalize))
             settings.setValue('display/fonts/meta_authors',
-                QFont('Serif', 12))
+                QFont('Serif', 11))
             settings.setValue('display/fonts/meta_keywords',
-                QFont('Times', 12, QFont.StyleItalic))
+                QFont('Times', 11, QFont.StyleItalic))
             settings.setValue('display/folder/highlight_color_br',
                     QBrush(QColor(200,200,255)))
 
@@ -143,9 +154,6 @@ class MainFrame(QtWidgets.QWidget):
         self.add_button=QtWidgets.QToolButton(self)
         self.add_button.setText('Add')
         self.add_button.setIcon(QIcon.fromTheme('edit-undo'))
-
-        for pp in QIcon.themeSearchPaths():
-            print('pp',pp,QIcon.themeName())
 
         #self.add_button.setIcon(QtWidgets.QApplication.style().standardIcon(
             #QtWidgets.QStyle.SP_FileIcon))
@@ -267,8 +275,6 @@ class MainFrame(QtWidgets.QWidget):
                 folderdata=fetchMetaData(self.meta_dict,'tags',docids,
                         unique=True,sort=True)
 
-            print('filterTypeCombboxChange: folderdata',folderdata)
-
         self.filter_item_list.clear()
         self.filter_item_list.addItems(folderdata)
 
@@ -295,7 +301,8 @@ class MainFrame(QtWidgets.QWidget):
         tv.setSortingEnabled(True)
         hh.setSectionsMovable(True)
 
-        header=['docid', 'favourite','read','author', 'title','journal','year']
+        header=['docid','favourite','read','has_file','author','title',
+                'journal','year']
         tablemodel=TableModel(self,[],header)
         tv.setModel(tablemodel)
         hh.setModel(tablemodel)
@@ -361,6 +368,11 @@ class MainFrame(QtWidgets.QWidget):
         libtree.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         libtree.itemClicked.connect(self.clickSelFolder)
         libtree.selectionModel().selectionChanged.connect(self.selFolder)
+        libtree.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        libtree.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        # make horziontal scroll bar appear
+        libtree.header().setStretchLastSection(False)
+        libtree.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
         return libtree
 
@@ -398,6 +410,7 @@ class MainFrame(QtWidgets.QWidget):
         else:
             self.loadDocTable((folder,folderid))
 
+        # Refresh filter list
         self.filterTypeCombboxChange(item)
 
 
@@ -516,6 +529,7 @@ class MainFrame(QtWidgets.QWidget):
         h_layout.addStretch()
 
         self.bib_textedit=QtWidgets.QTextEdit(self)
+        self.bib_textedit.setReadOnly(True)
         self.bib_textedit.setFont(self.font_dict['meta_keywords'])
         v_layout.addLayout(h_layout)
         v_layout.addWidget(self.bib_textedit)
@@ -638,8 +652,32 @@ class MainFrame(QtWidgets.QWidget):
             if isinstance(tii,(list,tuple)):
                 tii=u'; '.join(tii)
             self.t_meta.fields_dict[fii].setText(deu(tii))
+            #self.t_meta.fields_dict[fii].setReadOnly(False)
 
         return 
+
+    def clearMetaTab(self):
+        for kk,vv in self.t_meta.fields_dict.items():
+            vv.clear()
+            vv.setReadOnly(True)
+
+        for tii in [self.note_textedit, self.bib_textedit]:
+            tii.clear()
+            tii.setReadOnly(True)
+
+        return
+
+    def enableMetaTab(self):
+        for kk,vv in self.t_meta.fields_dict.items():
+            vv.setReadOnly(False)
+
+        for tii in [self.note_textedit, ]:
+            tii.setReadOnly(False)
+
+        return
+
+
+
 
 
     def loadBibTab(self,docid=None):
@@ -689,6 +727,7 @@ class MainFrame(QtWidgets.QWidget):
                 aii=[ii,
                     QtWidgets.QCheckBox(entryii['favourite']),
                     QtWidgets.QCheckBox(entryii['read']),
+                    entryii['has_file'],
                     authors,
                     entryii['title'],
                     entryii['publication'],
@@ -701,9 +740,7 @@ class MainFrame(QtWidgets.QWidget):
             docids=self.meta_dict.keys()
             data=prepareDocs(docids)
         else:
-            folderid=self.inv_folder_dict[folder[0]]
-            folderid2=folder[1]
-            print('2 ways to get folder id, folderid = ',folderid, 'folderid2=',folderid2)
+            folderid=folder[1]
             if folderid in self.folder_data:
                 docids=self.folder_data[folderid]
                 data=prepareDocs(docids)
@@ -712,19 +749,31 @@ class MainFrame(QtWidgets.QWidget):
 
 
         if len(data)==0:
-            return
+            print('loadDocTable: no doc in folder, clear')
+            #self.doc_table.clearSpans()
+            #self.doc_table.setRowCount(0)
+            #return
+            data=[]
 
         print('num in folder',len(docids))
         tablemodel.arraydata=data
         tablemodel.sort(4,Qt.AscendingOrder)
         self.tabledata=tablemodel.arraydata
 
-        self.doc_table.selectRow(0)
-        current_row=self.doc_table.currentIndex().row()
-        docid=self.tabledata[current_row][0]
-        print('current_row',current_row, docid)
-        print(self.tabledata[current_row])
-        self.loadMetaTab(docid)
+        #------------Load meta data on 1st row------------
+        if len(data)>0:
+            self.doc_table.selectRow(0)
+            current_row=self.doc_table.currentIndex().row()
+            docid=self.tabledata[current_row][0]
+            print('current_row',current_row, docid)
+            print(self.tabledata[current_row])
+            self.loadMetaTab(docid)
+            self.enableMetaTab()
+        else:
+            # clear meta tab
+            #self.loadMetaTab(None)
+            self.clearMetaTab()
+
 
 
 

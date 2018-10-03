@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
-from PyQt5.QtGui import QPixmap, QBrush, QColor
+from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon
 import operator
 
 class TableModel(QAbstractTableModel):
@@ -15,20 +15,23 @@ class TableModel(QAbstractTableModel):
         self.headerdata=headerdata
 
         self.icon_section={
+                #'favourite': QPixmap('./bf.jpg'),
+                #'read': QPixmap('./read.jpg'),
+                'has_file': QIcon('./has_file.png')
+                }
+        self.check_section={
                 'favourite': QPixmap('./bf.jpg'),
                 'read': QPixmap('./read.jpg')
                 }
         self.icon_sec_indices=[self.headerdata.index(kk) for kk
                 in self.icon_section.keys()]
-        print('icon sec',self.icon_sec_indices)
+        self.check_sec_indices=[self.headerdata.index(kk) for kk
+                in self.check_section.keys()]
 
     def rowCount(self,p):
         return len(self.arraydata)
 
     def columnCount(self,p):
-        #if len(self.arraydata)>0:
-            #return len(self.arraydata[0])
-        #return 0
         return self.ncol
 
     def data(self, index, role):
@@ -38,15 +41,24 @@ class TableModel(QAbstractTableModel):
             if index.row()%2==0:
                 return QBrush(QColor(230,230,249))
         if role==Qt.DisplayRole:
-            return QVariant(self.arraydata[index.row()][index.column()])
+            if index.column() not in self.icon_sec_indices:
+                return QVariant(self.arraydata[index.row()][index.column()])
+            else:
+                return
         if role==Qt.EditRole:
             return QVariant(self.arraydata[index.row()][index.column()])
 
-        if index.column() in self.icon_sec_indices and role==Qt.CheckStateRole:
+        if index.column() in self.check_sec_indices and role==Qt.CheckStateRole:
             if self.arraydata[index.row()][index.column()].isChecked():
                 return Qt.Checked
             else:
                 return Qt.Unchecked
+        if index.column() in self.icon_sec_indices and role==Qt.DecorationRole:
+            if self.arraydata[index.row()][index.column()]:
+                return self.icon_section['has_file']
+                #return QIcon('./has_file.png')
+            else:
+                return None
 
         if role != Qt.DisplayRole:
             return QVariant()
@@ -54,7 +66,7 @@ class TableModel(QAbstractTableModel):
     def setData(self, index, value, role):
         if not index.isValid():
             return False
-        if index.column() in self.icon_sec_indices and role==Qt.CheckStateRole:
+        if index.column() in self.check_sec_indices and role==Qt.CheckStateRole:
             if value == Qt.Checked:
                 self.arraydata[index.row()][index.column()].setChecked(True)
             else:
@@ -64,7 +76,7 @@ class TableModel(QAbstractTableModel):
         return True
 
     def flags(self, index):
-        if index.column() in self.icon_sec_indices:
+        if index.column() in self.check_sec_indices:
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable\
                     | QtCore.Qt.ItemIsUserCheckable
         else:
@@ -77,6 +89,10 @@ class TableModel(QAbstractTableModel):
             label=self.headerdata[col]
             if orientation==Qt.Horizontal and role==Qt.DecorationRole:
                 return self.icon_section[label]
+        elif col in self.check_sec_indices:
+            label=self.headerdata[col]
+            if orientation==Qt.Horizontal and role==Qt.DecorationRole:
+                return self.check_section[label]
         else:
             if orientation==Qt.Horizontal and role==Qt.DisplayRole:
                 return self.headerdata[col]
@@ -97,9 +113,8 @@ class MyHeaderView(QtWidgets.QHeaderView):
     def __init__(self,parent):
         super(MyHeaderView,self).__init__(Qt.Horizontal,parent)
 
-        self.colSizes={'docid':0, 'favourite': 20, 'read': 20, 'author': 200, 'title': 500,
-                'journal':100,'year':50}
-
+        self.colSizes={'docid':0, 'favourite': 20, 'read': 20, 'has_file': 20,
+                'author': 200, 'title': 500, 'journal':100,'year':50}
 
     def initresizeSections(self):
         model=self.model()
@@ -135,7 +150,7 @@ class MyHeaderView(QtWidgets.QHeaderView):
         if args[0]>0 or args[0]<self.count():
             for ii in range(args[0],self.count()):
                 lii=model.headerdata[ii]
-                if lii in ['favourite','read']:
+                if lii in ['favourite','read','has_file']:
                     continue
                 if ii==args[0]:
                     continue
@@ -167,7 +182,7 @@ class MyHeaderView(QtWidgets.QHeaderView):
 
         for ii in range(self.count()):
             lii=headers[ii]
-            if lii in ['favourite','read']:
+            if lii in ['favourite','read','has_file']:
                 self.setSectionResizeMode(ii,QtWidgets.QHeaderView.Fixed)
                 continue
             elif lii=='year':
