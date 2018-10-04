@@ -34,6 +34,7 @@ FILE_IN='new.sqlite'
 # collapse side tab
 # seperate libraries
 # use resource file to load icons/images
+# in note tab, add time stamps at left margin
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -181,6 +182,7 @@ class MainFrame(QtWidgets.QWidget):
 
         h_split=QtWidgets.QSplitter(Qt.Horizontal)
         h_split.setSizePolicy(getXExpandYExpandSizePolicy())
+        h_split.setCollapsible(2,True)
         v_split=QtWidgets.QSplitter(Qt.Vertical)
         v_split.addWidget(self.libtree)
         v_layout0.addWidget(h_split)
@@ -196,8 +198,28 @@ class MainFrame(QtWidgets.QWidget):
         v_split.setSizes([h*0.65,h*0.35])
 
         #------------------Add doc table------------------
+        frame=QtWidgets.QFrame()
+        h_layout=QtWidgets.QHBoxLayout()
+        h_layout.setContentsMargins(0,0,0,0)
+        h_layout.setSpacing(0)
+
         self.doc_table=self.createDocTable()
-        h_split.addWidget(self.doc_table)
+
+        #--------------Add fold/unfold button--------------
+        self.fold_tab_button=QtWidgets.QToolButton(self)
+        self.fold_tab_button.setArrowType(Qt.RightArrow)
+        self.fold_tab_button.clicked.connect(self.foldTabButtonClicked)
+        self.fold_tab_button.setFixedWidth(10)
+        self.fold_tab_button.setFixedHeight(200)
+        self.fold_tab_button.setStyleSheet(
+                ''''border-radius: 0; border-width: 1px;
+                border-style: solid; border-color:grey''')
+
+        h_layout.addWidget(self.doc_table)
+        h_layout.addWidget(self.fold_tab_button)
+        frame.setLayout(h_layout)
+
+        h_split.addWidget(frame)
 
         #---------------------Add tabs---------------------
         self.tabs=self.createTabs()
@@ -208,11 +230,35 @@ class MainFrame(QtWidgets.QWidget):
         v_layout0.addWidget(self.status_bar)
         self.status_bar.showMessage('etest')
 
-        h_split.setHandleWidth(10)
+        h_split.setHandleWidth(3)
         w=h_split.size().width()
         h_split.setSizes([w*0.15,w*0.6,w*0.25])
 
+        self.tab_max_width=w*0.25
+
         self.show()
+
+    def foldTabButtonClicked(self):
+        #print('foldTabButtonClicked: is checked:', self.fold_tab_button.isChecked())
+        #height=self.tabs.height()
+        #self.tab_max_width=max(width,self.tab_max_width)
+        #print('tabs width',width,'tab_max_width',self.tab_max_width)
+        width=self.tabs.width()
+        if width>0:
+            #self.tabs.setMinimumWidth(0)
+            #self.tabs.setMaximumWidth(0)
+            #self.tabs.resize(0,height)
+            self.tabs.setVisible(not self.tabs.isVisible())
+            self.fold_tab_button.setArrowType(Qt.LeftArrow)
+        else:
+            #self.tabs.resize(self.tab_max_width,height)
+            self.tabs.setVisible(not self.tabs.isVisible())
+            self.fold_tab_button.setArrowType(Qt.RightArrow)
+            #self.tabs.setMinimumWidth(self.tab_max_width)
+            #self.tabs.setMaximumWidth(self.tab_max_width)
+            #self.tabs.setFixedWidth(self.tab_max_width)
+            #self.tabs.setFixedWidth(self.tabs.maximumWidth())
+        return
 
 
     def createFilterList(self):
@@ -437,21 +483,15 @@ class MainFrame(QtWidgets.QWidget):
             return scroll
 
         tabs=QtWidgets.QTabWidget()
-        #self.t_meta=_createPage()
-        #self.t_notes=_createPage()
         self.t_notes=self.createNoteTab()
-        #self.t_bib=_createPage()
         self.t_bib=self.createBiBTab()
-        #self.t_scratchpad=_createPage()
         self.t_scratchpad=self.createScratchTab()
-
         self.t_meta=self.createMetaTab()
 
         tabs.addTab(self.t_meta,'Meta Data')
         tabs.addTab(self.t_notes,'Notes')
         tabs.addTab(self.t_bib,'Bibtex')
         tabs.addTab(self.t_scratchpad,'Strach Pad')
-
 
         return tabs
 
@@ -462,14 +502,6 @@ class MainFrame(QtWidgets.QWidget):
         scroll.setWidgetResizable(True)
         frame=QtWidgets.QFrame()
         v_layout=QtWidgets.QVBoxLayout()
-
-        '''
-        label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
-        label=QtWidgets.QLabel('Notes associated with document')
-        label.setStyleSheet(label_color)
-        label.setFont(QFont('Serif',12,QFont.Bold))
-        v_layout.addWidget(label)
-        '''
 
         self.note_textedit=QtWidgets.QTextEdit(self)
         self.note_textedit.setFont(self.font_dict['meta_keywords'])
@@ -487,14 +519,6 @@ class MainFrame(QtWidgets.QWidget):
         scroll.setWidgetResizable(True)
         frame=QtWidgets.QFrame()
         v_layout=QtWidgets.QVBoxLayout()
-
-        '''
-        label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
-        label=QtWidgets.QLabel('Notes associated with document')
-        label.setStyleSheet(label_color)
-        label.setFont(QFont('Serif',12,QFont.Bold))
-        v_layout.addWidget(label)
-        '''
 
         self.scratchpad_textedit=QtWidgets.QTextEdit(self)
         self.scratchpad_textedit.setFont(self.font_dict['meta_keywords'])
