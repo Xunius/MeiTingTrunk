@@ -238,6 +238,10 @@ class MainFrame(QtWidgets.QWidget):
 
         self.show()
 
+
+
+
+
     def foldTabButtonClicked(self):
         #print('foldTabButtonClicked: is checked:', self.fold_tab_button.isChecked())
         #height=self.tabs.height()
@@ -278,6 +282,7 @@ class MainFrame(QtWidgets.QWidget):
                 QtWidgets.QComboBox.AdjustToMinimumContentsLength)
 
         self.filter_item_list=QtWidgets.QListWidget(self)
+        self.filter_item_list.itemClicked.connect(self.filterItemClicked)
 
         v_layout.addWidget(self.filter_type_combbox)
         v_layout.addWidget(self.filter_item_list)
@@ -286,6 +291,26 @@ class MainFrame(QtWidgets.QWidget):
         scroll.setWidget(frame)
 
         return scroll
+
+    def filterItemClicked(self,item):
+
+        print('filteritemclicked:, item:', item, item.text())
+        #print(dir(item))
+        #print(item.data(0))
+        filter_type=self.filter_type_combbox.currentText()
+        filter_text=item.text()
+        current_folder=self.libtree.selectedItems()
+        if current_folder:
+            folderid=current_folder[0].data(1,0)
+
+            filter_docids=sqlitedb.filterDocs(self.meta_dict,self.folder_data,
+                    filter_type,filter_text,folderid)
+
+            if len(filter_docids)>0:
+                self.loadDocTable(None,filter_docids)
+
+
+        return
 
     def filterTypeCombboxChange(self,item):
         sel=self.filter_type_combbox.currentText()
@@ -305,22 +330,23 @@ class MainFrame(QtWidgets.QWidget):
                 docids=self.folder_data[current_folder.data(1,0)]
 
             if sel=='Filter by keywords':
-                folderdata=fetchMetaData(self.meta_dict,'keywords',docids,
+                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'keywords',docids,
                         unique=True,sort=True)
             elif sel=='Filter by authors':
-                firsts=fetchMetaData(self.meta_dict,'firstNames',docids,
+                firsts=sqlitedb.fetchMetaData(self.meta_dict,'firstNames',docids,
                         unique=False,sort=False)
-                last=fetchMetaData(self.meta_dict,'lastName',docids,
+                last=sqlitedb.fetchMetaData(self.meta_dict,'lastName',docids,
                         unique=False,sort=False)
                 folderdata=['%s, %s' %(last[ii],firsts[ii]) for ii in range(len(firsts))]
-                folderdata.sort()
             elif sel=='Filter by publications':
-                folderdata=fetchMetaData(self.meta_dict,'publication',docids,
+                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'publication',docids,
                         unique=True,sort=True)
             elif sel=='Filter by tags':
-                folderdata=fetchMetaData(self.meta_dict,'tags',docids,
+                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'tags',docids,
                         unique=True,sort=True)
 
+        folderdata=list(set(folderdata))
+        folderdata.sort()
         self.filter_item_list.clear()
         self.filter_item_list.addItems(folderdata)
 
@@ -726,7 +752,7 @@ class MainFrame(QtWidgets.QWidget):
 
 
 
-    def loadDocTable(self,folder=None):
+    def loadDocTable(self,folder=None,docids=None):
         '''Load doc table given folder'''
 
         tablemodel=self.doc_table.model()
@@ -760,16 +786,19 @@ class MainFrame(QtWidgets.QWidget):
 
             return data
 
-        if folder is None:
-            docids=self.meta_dict.keys()
-            data=prepareDocs(docids)
-        else:
-            folderid=folder[1]
-            if folderid in self.folder_data:
-                docids=self.folder_data[folderid]
+        if docids is None:
+            if folder is None:
+                docids=self.meta_dict.keys()
                 data=prepareDocs(docids)
             else:
-                data=[]
+                folderid=folder[1]
+                if folderid in self.folder_data:
+                    docids=self.folder_data[folderid]
+                    data=prepareDocs(docids)
+                else:
+                    data=[]
+        else:
+            data=prepareDocs(docids)
 
 
         if len(data)==0:
@@ -833,25 +862,6 @@ def addFolder(parent,folderid,folder_dict):
 
 
 
-def fetchMetaData(meta_dict,key,docids,unique,sort):
-    if not isinstance(docids, (tuple,list)):
-        docids=[docids,]
-
-    result=[]
-    for idii in docids:
-        vv=meta_dict[idii].get(key,None)
-        if vv:
-            if isinstance(vv, (tuple,list)):
-                result.extend(vv)
-            else:
-                result.append(vv)
-
-    if unique:
-        result=list(set(result))
-    if sort:
-        result.sort()
-
-    return result
 
 
 

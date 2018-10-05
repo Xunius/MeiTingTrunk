@@ -199,6 +199,67 @@ def getFolders(db):
 
     return df
 
+def fetchMetaData(meta_dict,key,docids,unique,sort):
+    if not isinstance(docids, (tuple,list)):
+        docids=[docids,]
+
+    result=[]
+    for idii in docids:
+        vv=meta_dict[idii].get(key,None)
+        if vv:
+            if isinstance(vv, (tuple,list)):
+                result.extend(vv)
+            else:
+                result.append(vv)
+
+    if unique:
+        result=list(set(result))
+    if sort:
+        result.sort()
+
+    return result
+
+def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
+
+    results=[]
+    if current_folder==0:
+        docids=meta_dict.keys()
+    else:
+        docids=folder_data[current_folder]
+
+    print('docids',docids)
+
+    if filter_type=='Filter by authors':
+        t_last,t_first=map(str.strip,filter_text.split(','))
+        print('t_last',t_last,'t_first',t_first)
+        for kk in docids:
+            firsts=list(meta_dict[kk]['firstNames'])
+            lasts=list(meta_dict[kk]['lastName'])
+            if t_last in lasts and t_first in firsts and lasts.index(t_last)==\
+                    firsts.index(t_first):
+                results.append(kk)
+
+    elif filter_type=='Filter by tags':
+        for kk in docids:
+            tags=meta_dict[kk]['tags'] or []
+            if filter_text in tags:
+                results.append(kk)
+
+    elif filter_type=='Filter by publications':
+        for kk in docids:
+            pubs=meta_dict[kk]['publication'] or []
+            if filter_text in pubs:
+                results.append(kk)
+
+    elif filter_type=='Filter by keywords':
+        for kk in docids:
+            keywords=meta_dict[kk]['keywords'] or []
+            if filter_text in keywords:
+                results.append(kk)
+
+    print(results)
+
+    return results
 
 
 
