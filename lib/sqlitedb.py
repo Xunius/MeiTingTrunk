@@ -131,13 +131,9 @@ def getMetaData(db, docid):
     #result['folder']=fetchField(db,query_folder,(docid,),2)
     result['folder']=db.execute(query_folder,(docid,)).fetchall()
 
-    #-----------------Append user name-----------------
-    #result['user_name']=getUserName(db)
-
     #------------------Add local url------------------
     #result['path']=getFilePath(db,docid)  # None or list
 
-    #-----Add folder to tags, if not there already-----
     folder=result['folder']
     result['folder']=folder or [(-1, 'Canonical')] # if no folder name, a canonical doc
     tags=result['tags']
@@ -151,6 +147,7 @@ def getMetaData(db, docid):
 
     first=result['firstNames']
     last=result['lastName']
+
     if first is None or last is None:
         authors=''
     if type(first) is not list and type(last) is not list:
@@ -162,24 +159,6 @@ def getMetaData(db, docid):
     result['authors']=authors
     result['has_file']=False if result['files'] is None else True
 
-    '''
-    first=result['firstNames']
-    last=result['lastName']
-    if first is None or last is None:
-        authors=''
-    if type(first) is not list and type(last) is not list:
-        authors='%s, %s' %(last, first)
-    else:
-        authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
-        authors=' and '.join(authors)
-
-    data=[QtWidgets.QCheckBox(result['favourite']),
-            QtWidgets.QCheckBox(result['read']),
-            authors,
-            result['title'],
-            result['publication'],
-            result['year']]
-    '''
 
     return result
 
@@ -206,7 +185,9 @@ def fetchMetaData(meta_dict,key,docids,unique,sort):
     result=[]
     for idii in docids:
         vv=meta_dict[idii].get(key,None)
-        if vv:
+        # NOTE: don't use if vv:
+        # as there are '' entries that will also trigger the if
+        if vv is not None:
             if isinstance(vv, (tuple,list)):
                 result.extend(vv)
             else:
@@ -219,10 +200,53 @@ def fetchMetaData(meta_dict,key,docids,unique,sort):
 
     return result
 
+
+def getAuthors(meta_dict,docids):
+    if not isinstance(docids, (tuple,list)):
+        docids=[docids,]
+
+    result=[]
+    fs=[]
+    ls=[]
+    for idii in docids:
+        firsts=meta_dict[idii].get('firstNames',None)
+        lasts=meta_dict[idii].get('lastName',None)
+        
+        if firsts is None or lasts is None:
+            __import__('pdb').set_trace()
+
+        if isinstance(firsts, (tuple,list)) and not isinstance(lasts,(tuple,list)):
+            __import__('pdb').set_trace()
+
+        if not isinstance(firsts, (tuple,list)) and isinstance(lasts,(tuple,list)):
+            __import__('pdb').set_trace()
+        if firsts=='':
+            __import__('pdb').set_trace()
+        if isinstance(firsts, (tuple,list)) and isinstance(lasts,(tuple,list)):
+            fs.extend(firsts)
+            ls.extend(lasts)
+            #result.extend(vv)
+        else:
+            #result.append(vv)
+            fs.append(firsts)
+            ls.append(lasts)
+
+        if len(fs)!=len(ls):
+            __import__('pdb').set_trace()
+
+    result=['%s, %s' %(ls[ii],fs[ii]) for ii in range(len(fs))]
+
+    aa=fetchMetaData(meta_dict,'firstNames',docids,
+            unique=False,sort=False)
+    bb=fetchMetaData(meta_dict,'lastName',docids,
+            unique=False,sort=False)
+
+    return result
+
 def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
 
     results=[]
-    if current_folder==0:
+    if current_folder=='0':
         docids=meta_dict.keys()
     else:
         docids=folder_data[current_folder]
@@ -231,13 +255,27 @@ def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
 
     if filter_type=='Filter by authors':
         t_last,t_first=map(str.strip,filter_text.split(','))
-        print('t_last',t_last,'t_first',t_first)
+        print('t_last: %s, t_first: %s, text: %s' %(t_last,t_first,filter_text))
+        print(type(filter_text))
         for kk in docids:
-            firsts=list(meta_dict[kk]['firstNames'])
-            lasts=list(meta_dict[kk]['lastName'])
-            if t_last in lasts and t_first in firsts and lasts.index(t_last)==\
-                    firsts.index(t_first):
-                results.append(kk)
+            firsts=meta_dict[kk]['firstNames']
+            lasts=meta_dict[kk]['lastName']
+            #if firsts is not None and lasts is not None:
+                #print('none authroname:', kk)
+                #continue
+                #print('kk:',kk, firsts, lasts)
+            if isinstance(firsts,(tuple,list)):
+                if t_first in firsts:
+                    print('firsts',firsts)
+            if isinstance(lasts,(tuple,list)):
+                if t_last in lasts:
+                    print('lasts',lasts)
+            try:
+                if t_last in lasts and t_first in firsts and lasts.index(t_last)==\
+                        firsts.index(t_first):
+                    results.append(kk)
+            except:
+                pass
 
     elif filter_type=='Filter by tags':
         for kk in docids:
