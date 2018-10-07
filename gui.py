@@ -3,7 +3,8 @@ import operator
 import sqlite3
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import Qt, QVariant, QSettings
-from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics
+from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics,\
+        QCursor
 from lib import sqlitedb
 from lib import export2bib
 from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy,\
@@ -140,15 +141,13 @@ class MainFrame(QtWidgets.QWidget):
         v_layout0.addLayout(h_layout0)
 
         # Add button
-        self.add_button=QtWidgets.QToolButton(self)
-        self.add_button.setText('Add')
-        self.add_button.setIcon(QIcon.fromTheme('edit-undo'))
+        self.add_button=self.createAddMoreButton()
 
-        #self.add_button.setIcon(QtWidgets.QApplication.style().standardIcon(
-            #QtWidgets.QStyle.SP_FileIcon))
         self.add_button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-        self.add_button.clicked.connect(self.addDocButtonClicked)
+        #self.add_button.clicked.connect(self.addDocButtonClicked)
         h_layout0.addWidget(self.add_button)
+
+        #h_layout0.addWidget(self.add_more_button)
 
         h_layout0.addStretch()
 
@@ -252,6 +251,53 @@ class MainFrame(QtWidgets.QWidget):
     #######################################################################
 
 
+    def createAddMoreButton(self):
+
+        button=QtWidgets.QToolButton(self)
+        button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+
+        # create pupup menu
+        menu=QtWidgets.QMenu()
+        add_action1=menu.addAction('Add PDF file')
+        add_action2=menu.addAction('Add BibTex file')
+        add_action3=menu.addAction('Add Entry Manually')
+
+        button.setDefaultAction(add_action1)
+
+        # these has to happen after setDefaultAction()
+        button.setText('Add')
+        button.setIcon(QIcon.fromTheme('document-new'))
+
+        menu.triggered.connect(self.addActionTriggered)
+        button.triggered.connect(self.addActionTriggered)
+
+        button.setMenu(menu)
+        button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
+
+        return button
+
+    def addActionTriggered(self,action):
+        print('addActionTriggered:', action)
+        action_text=action.text()
+        print(action.text())
+
+        '''
+        if action_text=='Add Entry Manually':
+            dialog=QtWidgets.QDialog()
+            dialog.setWindowModality(Qt.ApplicationModal)
+            b_cancel=QtWidgets.QPushButton('Cancel', dialog)
+            b_cancel.
+        '''
+
+
+        return
+
+
+
+
+
+
+
 
     def createLibTree(self):
 
@@ -278,9 +324,9 @@ class MainFrame(QtWidgets.QWidget):
         #button.setFixedWidth(50)
         button.setSizePolicy(getXExpandYMinSizePolicy())
         button.setFixedHeight(10)
-        button.setStyleSheet(
-                ''''border-radius: 0; border-width: 1px;
-                border-style: solid; border-color:grey''')
+        #button.setStyleSheet(
+                #''''border-radius: 0; border-width: 1px;
+                #border-style: solid; border-color:grey''')
 
         return button
 
@@ -374,9 +420,9 @@ class MainFrame(QtWidgets.QWidget):
         button.clicked.connect(self.foldTabButtonClicked)
         button.setFixedWidth(10)
         button.setFixedHeight(200)
-        button.setStyleSheet(
-                ''''border-radius: 0; border-width: 1px;
-                border-style: solid; border-color:grey''')
+        #button.setStyleSheet(
+                #''''border-radius: 0; border-width: 1px;
+                #border-style: solid; border-color:grey''')
 
         return button
 
