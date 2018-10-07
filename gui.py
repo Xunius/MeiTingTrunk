@@ -23,18 +23,19 @@ FILE_IN='new.sqlite'
 # fold long fields in meta data tab?
 # [y] create bib texts when clicking into the bibtex tab and changing doc
 # [y] add icons to folders
-# add a button to fold/unfold all fields in meta tab
 # doc types, books, generic etc
 # insert images to note?
-# add folder functionality
+# add add folder functionality
 # add add doc functionalities, by doi, bib, RIS
 # import from Mendeley, zotero, Endnote?
 # autosave, auto backup
 # export to text (clipboard, styles), bibtex, ris.
-# collapse side tab
+# [y] collapse side tab
 # seperate libraries
-# use resource file to load icons/images
+# [y] use resource file to load icons/images
 # in note tab, add time stamps at left margin
+# change meta dict key naming convention to distinguish string and list types:
+#   e.g. authors -> authors_l, year -> year_s
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -64,6 +65,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 QFont('Serif', 11))
             settings.setValue('display/fonts/meta_keywords',
                 QFont('Times', 11, QFont.StyleItalic))
+            settings.setValue('display/fonts/statusbar',
+                QFont('Serif', 10)),
             settings.setValue('display/folder/highlight_color_br',
                     QBrush(QColor(200,200,255)))
 
@@ -163,39 +166,46 @@ class MainFrame(QtWidgets.QWidget):
         v_layout0.addWidget(getHLine(self))
 
         #-------------------Add lib tree-------------------
-        self.libtree=self.createLibTree()
-
         h_split=QtWidgets.QSplitter(Qt.Horizontal)
         h_split.setSizePolicy(getXExpandYExpandSizePolicy())
-        h_split.setCollapsible(2,True)
-        v_split=QtWidgets.QSplitter(Qt.Vertical)
-        v_split.addWidget(self.libtree)
         v_layout0.addWidget(h_split)
 
+        v_split=QtWidgets.QSplitter(Qt.Vertical)
+
+        v_la1=QtWidgets.QVBoxLayout()
+        v_la1.setContentsMargins(0,0,0,0)
+        v_la1.setSpacing(0)
+        fr=QtWidgets.QFrame()
+
+        self.libtree=self.createLibTree()
+        v_la1.addWidget(self.libtree)
+
+        #-----------Add fold filter list button-----------
+        self.fold_filter_button=self.createFoldFilterButton()
+        v_la1.addWidget(self.fold_filter_button)
+        fr.setLayout(v_la1)
+
+        #v_split.addWidget(self.libtree)
+        v_split.addWidget(fr)
+
+        #v_la1.addWidget(self.filter_list)
+
         #----------------Add filter window----------------
-        #self.filter_list=QtWidgets.QTextEdit(self)
-        filter_scroll=self.createFilterList()
-        v_split.addWidget(filter_scroll)
+        self.filter_list=self.createFilterList()
+
+        v_split.addWidget(self.filter_list)
+        #v_split.addWidget(fr)
         h_split.addWidget(v_split)
 
         v_split.setSizes([3,1])
         h=v_split.size().height()
         v_split.setSizes([h*0.65,h*0.35])
 
+        #------------Add clear filtering frame------------
+        self.clear_filter_frame=self.createClearFilterFrame()
+        
         #------------------Add doc table------------------
         frame=QtWidgets.QFrame()
-
-        self.clear_filter_frame=QtWidgets.QFrame()
-        h_la=QtWidgets.QHBoxLayout()
-        h_la.addWidget(QtWidgets.QLabel('clear selection'))
-
-        self.clear_filter_button=QtWidgets.QToolButton(self.clear_filter_frame)
-        self.clear_filter_button.setText('Clear')
-        self.clear_filter_button.clicked.connect(self.clearFilterButtonClicked)
-        h_la.addWidget(self.clear_filter_button)
-
-        self.clear_filter_frame.setLayout(h_la)
-        self.clear_filter_frame.setVisible(False)
 
         v_la=QtWidgets.QVBoxLayout()
         v_la.addWidget(self.clear_filter_frame)
@@ -204,18 +214,14 @@ class MainFrame(QtWidgets.QWidget):
 
         v_la.addWidget(self.doc_table)
 
-
         h_layout=QtWidgets.QHBoxLayout()
         h_layout.setContentsMargins(0,0,0,0)
         h_layout.setSpacing(0)
 
         h_layout.addLayout(v_la)
 
-
         #--------------Add fold/unfold button--------------
         self.fold_tab_button=self.createFoldTabButton()
-
-        #h_layout.addWidget(self.doc_table)
         h_layout.addWidget(self.fold_tab_button)
         frame.setLayout(h_layout)
 
@@ -227,11 +233,14 @@ class MainFrame(QtWidgets.QWidget):
 
         #------------------Add status bar------------------
         self.status_bar=QtWidgets.QStatusBar()
+        self.status_bar.setFixedHeight(11)
+        self.status_bar.setFont(self.settings.value('display/fonts/statusbar',QFont))
         v_layout0.addWidget(self.status_bar)
         self.status_bar.showMessage('etest')
 
         h_split.setHandleWidth(4)
         w=h_split.size().width()
+        h_split.setCollapsible(2,True)
         h_split.setSizes([w*0.15,w*0.6,w*0.25])
 
 
@@ -262,6 +271,20 @@ class MainFrame(QtWidgets.QWidget):
 
         return libtree
 
+    def createFoldFilterButton(self):
+        button=QtWidgets.QToolButton(self)
+        button.setArrowType(Qt.DownArrow)
+        button.clicked.connect(self.foldFilterButtonClicked)
+        #button.setFixedWidth(50)
+        button.setSizePolicy(getXExpandYMinSizePolicy())
+        button.setFixedHeight(10)
+        button.setStyleSheet(
+                ''''border-radius: 0; border-width: 1px;
+                border-style: solid; border-color:grey''')
+
+        return button
+
+
 
 
     def createFilterList(self):
@@ -269,6 +292,7 @@ class MainFrame(QtWidgets.QWidget):
         scroll=QtWidgets.QScrollArea(self)
         scroll.setWidgetResizable(True)
         v_layout=QtWidgets.QVBoxLayout()
+        v_layout.setContentsMargins(0,0,0,0)
 
         self.filter_type_combbox=QtWidgets.QComboBox(self)
         self.filter_type_combbox.addItem('Filter by authors')
@@ -291,6 +315,28 @@ class MainFrame(QtWidgets.QWidget):
 
         return scroll
 
+
+    def createClearFilterFrame(self):
+
+        frame=QtWidgets.QFrame()
+        frame.setStyleSheet('background: rgb(235,225,190)')
+        h_la=QtWidgets.QHBoxLayout()
+
+        # clear fitlering button
+        self.clear_filter_button=QtWidgets.QToolButton(self)
+        self.clear_filter_button.setText('Clear')
+        self.clear_filter_button.clicked.connect(self.clearFilterButtonClicked)
+
+        self.clear_filter_label=QtWidgets.QLabel('  Clear current filtering')
+        h_la.addWidget(self.clear_filter_label)
+        h_la.addWidget(self.clear_filter_button)
+
+        frame.setLayout(h_la)
+
+        # Start up as hidden
+        frame.setVisible(False)
+
+        return frame
 
 
     def createDocTable(self):
@@ -583,7 +629,6 @@ class MainFrame(QtWidgets.QWidget):
         if docid is None:
             return
 
-        #fields=['title','authors','publication','year','month','keywords']
         fields=['title','authors','publication','year','volume','issue',
                 'pages','abstract','tags','keywords','citationkey','publisher',
                 'files'
@@ -591,7 +636,6 @@ class MainFrame(QtWidgets.QWidget):
 
         metaii=self.meta_dict[docid]
         def deu(text):
-            #if isinstance(text,(str,unicode)):
             if isinstance(text,(str)):
                 return text
             else:
@@ -604,7 +648,6 @@ class MainFrame(QtWidgets.QWidget):
             if isinstance(tii,(list,tuple)):
                 tii=u'; '.join(tii)
             self.t_meta.fields_dict[fii].setText(deu(tii))
-            #self.t_meta.fields_dict[fii].setReadOnly(False)
 
         return 
 
@@ -686,11 +729,29 @@ class MainFrame(QtWidgets.QWidget):
             if len(filter_docids)>0:
                 self.loadDocTable(None,filter_docids)
 
+            sel=self.filter_type_combbox.currentText()
+
+            if sel=='Filter by keywords':
+                self.clear_filter_label.setText(
+                        'Showing documents with keyword "%s"' %filter_text)
+            elif sel=='Filter by authors':
+                self.clear_filter_label.setText(
+                        'Showing documents authored by "%s"' %filter_text)
+            elif sel=='Filter by publications':
+                self.clear_filter_label.setText(
+                        'Showing documents published in "%s"' %filter_text)
+            elif sel=='Filter by tags':
+                self.clear_filter_label.setText(
+                        'Showing documents tagged "%s"' %filter_text)
+
             self.clear_filter_frame.setVisible(True)
 
         return
 
     def filterTypeCombboxChange(self,item):
+        # clear current filtering first
+        self.clearFilterButtonClicked()
+
         sel=self.filter_type_combbox.currentText()
         current_folder=self.libtree.selectedItems()
         print('filter type cb select:',sel)
@@ -711,12 +772,22 @@ class MainFrame(QtWidgets.QWidget):
                 folderdata=sqlitedb.fetchMetaData(self.meta_dict,'keywords',docids,
                         unique=True,sort=True)
             elif sel=='Filter by authors':
+                '''
                 firsts=sqlitedb.fetchMetaData(self.meta_dict,'firstNames',docids,
                         unique=False,sort=False)
                 last=sqlitedb.fetchMetaData(self.meta_dict,'lastName',docids,
                         unique=False,sort=False)
                 folderdata=['%s, %s' %(last[ii],firsts[ii]) for ii in range(len(firsts))]
                 #folderdata=sqlitedb.getAuthors(self.meta_dict,docids)
+
+                '''
+                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'authors',docids,
+                        unique=False,sort=False)
+
+                #print('filterTypeCombboxChange:', folderdata)
+                #print('filterTypeCombboxChange:', aa)
+                #print(folderdata==aa)
+                #__import__('pdb').set_trace()
             elif sel=='Filter by publications':
                 folderdata=sqlitedb.fetchMetaData(self.meta_dict,'publication',docids,
                         unique=True,sort=True)
@@ -815,6 +886,17 @@ class MainFrame(QtWidgets.QWidget):
     #######################################################################
     #                             Other slots                             #
     #######################################################################
+
+
+    def foldFilterButtonClicked(self):
+        height=self.filter_list.height()
+        if height>0:
+            self.filter_list.setVisible(not self.filter_list.isVisible())
+            self.fold_filter_button.setArrowType(Qt.UpArrow)
+        else:
+            self.filter_list.setVisible(not self.filter_list.isVisible())
+            self.fold_filter_button.setArrowType(Qt.DownArrow)
+        return
     
 
     def foldTabButtonClicked(self):
@@ -896,23 +978,11 @@ def prepareDocs(meta_dict,docids):
     for ii in docids:
         entryii=meta_dict[ii]
 
-        '''
-        first=entryii['firstNames']
-        last=entryii['lastName']
-        if first is None or last is None:
-            authors=''
-        if type(first) is not list and type(last) is not list:
-            authors='%s, %s' %(last, first)
-        else:
-            authors=['%s, %s' %(jj[0],jj[1]) for jj in zip(last,first)]
-            authors=' and '.join(authors)
-        '''
-
         aii=[ii,
             QtWidgets.QCheckBox(entryii['favourite']),
             QtWidgets.QCheckBox(entryii['read']),
             entryii['has_file'],
-            entryii['authors'],
+            ' and '.join(entryii['authors']),
             entryii['title'],
             entryii['publication'],
             entryii['year']]

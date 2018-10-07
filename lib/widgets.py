@@ -2,6 +2,7 @@ from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon
 import operator
+import resources
 
 class TableModel(QAbstractTableModel):
     def __init__(self, parent, datain, headerdata):
@@ -14,14 +15,15 @@ class TableModel(QAbstractTableModel):
             self.arraydata=datain
         self.headerdata=headerdata
 
+        print('resources:', resources)
+        print(dir(resources))
+
         self.icon_section={
-                #'favourite': QPixmap('./bf.jpg'),
-                #'read': QPixmap('./read.jpg'),
-                'has_file': QIcon('./has_file.png')
+                'has_file': QIcon(':/has_file.png')
                 }
         self.check_section={
-                'favourite': QPixmap('./bf.jpg'),
-                'read': QPixmap('./read.jpg')
+                'favourite': QPixmap(':/bf.jpg'),
+                'read': QPixmap(':/read.jpg')
                 }
         self.icon_sec_indices=[self.headerdata.index(kk) for kk
                 in self.icon_section.keys()]
@@ -56,7 +58,6 @@ class TableModel(QAbstractTableModel):
         if index.column() in self.icon_sec_indices and role==Qt.DecorationRole:
             if self.arraydata[index.row()][index.column()]:
                 return self.icon_section['has_file']
-                #return QIcon('./has_file.png')
             else:
                 return None
 

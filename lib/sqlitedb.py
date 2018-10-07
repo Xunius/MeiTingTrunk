@@ -98,6 +98,7 @@ def getMetaData(db, docid):
     '''
 
 
+    '''
     def fetchField(db,query,values,ncol=1):
         aa=db.execute(query,values).fetchall()
         if len(aa)==0:
@@ -106,6 +107,29 @@ def getMetaData(db, docid):
             aa=[ii[0] for ii in aa]
         if len(aa)==1:
             return aa[0]
+        else:
+            return aa
+    '''
+
+    def fetchField(db,query,values,ncol=1,ret_type='str'):
+        if ret_type not in ['str','list']:
+            raise Exception("<ret_type> is one of ['str','list'].")
+
+        aa=db.execute(query,values).fetchall()
+
+        if len(aa)==0:
+            if ret_type=='str':
+                return None
+            else:
+                return []
+
+        if ncol==1:
+            aa=[ii[0] for ii in aa]
+        if ret_type=='str':
+            if len(aa)==1:
+                return aa[0]
+            else:
+                return '; '.join(aa)
         else:
             return aa
 
@@ -123,41 +147,23 @@ def getMetaData(db, docid):
         vii=fetchField(db,query_base %(kii), (docid,))
         result[kii]=vii
 
-    result['tags']=fetchField(db,query_tags,(docid,))
-    result['firstNames']=fetchField(db,query_firstnames,(docid,))
-    result['lastName']=fetchField(db,query_lastnames,(docid,))
-    result['keywords']=fetchField(db,query_keywords,(docid,))
-    result['files']=fetchField(db,query_files,(docid,))
-    #result['folder']=fetchField(db,query_folder,(docid,),2)
-    result['folder']=db.execute(query_folder,(docid,)).fetchall()
-
-    #------------------Add local url------------------
-    #result['path']=getFilePath(db,docid)  # None or list
+    # query list fields, .e.g firstnames, tags
+    result['firstNames']=fetchField(db,query_firstnames,(docid,),1,'list')
+    result['lastName']=fetchField(db,query_lastnames,(docid,),1,'list')
+    result['keywords']=fetchField(db,query_keywords,(docid,),1,'list')
+    result['files']=fetchField(db,query_files,(docid,),1,'list')
+    result['folder']=fetchField(db,query_folder,(docid,),2,'list')
+    result['tags']=fetchField(db,query_tags,(docid,),1,'list')
 
     folder=result['folder']
     result['folder']=folder or [(-1, 'Canonical')] # if no folder name, a canonical doc
-    tags=result['tags']
-    tags=tags or []
-
-    if not isinstance(tags,list):
-        tags=[tags,]
-    tags.sort()
-
-    result['tags']=tags
 
     first=result['firstNames']
     last=result['lastName']
-
-    if first is None or last is None:
-        authors=''
-    if type(first) is not list and type(last) is not list:
-        authors='%s, %s' %(last, first)
-    else:
-        authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
-        authors=' and '.join(authors)
-
+    authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
     result['authors']=authors
-    result['has_file']=False if result['files'] is None else True
+
+    result['has_file']=False if len(result['files'])==0 else True
 
 
     return result
@@ -256,26 +262,10 @@ def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
     if filter_type=='Filter by authors':
         t_last,t_first=map(str.strip,filter_text.split(','))
         print('t_last: %s, t_first: %s, text: %s' %(t_last,t_first,filter_text))
-        print(type(filter_text))
         for kk in docids:
-            firsts=meta_dict[kk]['firstNames']
-            lasts=meta_dict[kk]['lastName']
-            #if firsts is not None and lasts is not None:
-                #print('none authroname:', kk)
-                #continue
-                #print('kk:',kk, firsts, lasts)
-            if isinstance(firsts,(tuple,list)):
-                if t_first in firsts:
-                    print('firsts',firsts)
-            if isinstance(lasts,(tuple,list)):
-                if t_last in lasts:
-                    print('lasts',lasts)
-            try:
-                if t_last in lasts and t_first in firsts and lasts.index(t_last)==\
-                        firsts.index(t_first):
-                    results.append(kk)
-            except:
-                pass
+            authors=meta_dict[kk]['authors']
+            if filter_text in authors:
+                results.append(kk)
 
     elif filter_type=='Filter by tags':
         for kk in docids:
