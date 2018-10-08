@@ -1,18 +1,19 @@
 import sys,os
-import operator
+#import operator
 import sqlite3
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import Qt, QVariant, QSettings
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics,\
         QCursor
 from lib import sqlitedb
-from lib import export2bib
 from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy,\
         getXExpandYMinSizePolicy, getXExpandYExpandSizePolicy, getHSpacer, \
         getVSpacer, getHLine, getVLine
 
 from lib.widgets import TableModel, MyHeaderView, MyTextEdit
 
+import _MainFrameLoadData
+import _MainFrameSlots
 
 __version__='v0.1'
 
@@ -106,7 +107,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings.sync()
 
 
-class MainFrame(QtWidgets.QWidget):
+class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
+        _MainFrameSlots.MainFrameSlots):
 
     def __init__(self,db,meta_dict,folder_data,folder_dict,settings):
         super(MainFrame,self).__init__()
@@ -385,33 +387,6 @@ class MainFrame(QtWidgets.QWidget):
         return frame
 
 
-    def createDocTable(self):
-
-        tv=QtWidgets.QTableView(self)
-
-        hh=MyHeaderView(self)
-        hh.setSectionsClickable(True)
-        hh.setHighlightSections(True)
-        hh.sectionResized.connect(hh.myresize)
-        hh.setStretchLastSection(False)
-
-        tv.setHorizontalHeader(hh)
-        tv.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        tv.setShowGrid(True)
-        tv.setSortingEnabled(True)
-        hh.setSectionsMovable(True)
-
-        header=['docid','favourite','read','has_file','author','title',
-                'journal','year']
-        tablemodel=TableModel(self,[],header)
-        tv.setModel(tablemodel)
-        hh.setModel(tablemodel)
-        hh.initresizeSections()
-        tv.setColumnHidden(0,True)
-
-        tv.selectionModel().currentChanged.connect(self.selDoc)
-
-        return tv
 
 
     def createFoldTabButton(self):
@@ -600,122 +575,6 @@ class MainFrame(QtWidgets.QWidget):
 
 
 
-    #######################################################################
-    #                        Load data to widgets                         #
-    #######################################################################
-
-
-    def loadLibTree(self):
-
-        style=QtWidgets.QApplication.style()
-        diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
-
-        #-------------Get all level 1 folders-------------
-        folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if\
-                vv[1]=='0' or vv[1]=='-1']
-        folders1.sort()
-
-        allitem=QtWidgets.QTreeWidgetItem(['All','0'])
-        allitem.setIcon(0,diropen_icon)
-        self.libtree.addTopLevelItem(allitem)
-
-        for fnameii,idii in folders1:
-            addFolder(self.libtree,idii,self.folder_dict)
-
-        self.libtree.setCurrentItem(allitem)
-
-        return
-
-
-
-    def loadDocTable(self,folder=None,docids=None):
-        '''Load doc table given folder'''
-
-        tablemodel=self.doc_table.model()
-        #hh=self.doc_table.horizontalHeader()
-        print('load tabel', folder)
-
-        if docids is None:
-            if folder is None:
-                docids=self.meta_dict.keys()
-                #data=prepareDocs(self.meta_dict,docids)
-            else:
-                folderid=folder[1]
-                #if folderid in self.folder_data:
-                docids=self.folder_data[folderid]
-                #else:
-                    #data=[]
-            data=prepareDocs(self.meta_dict,docids)
-        else:
-            data=prepareDocs(self.meta_dict,docids)
-
-
-        print('num in folder',len(docids))
-        tablemodel.arraydata=data
-        tablemodel.sort(4,Qt.AscendingOrder)
-        self.tabledata=tablemodel.arraydata
-
-        #------------Load meta data on 1st row------------
-        if len(data)>0:
-            self.doc_table.selectRow(0)
-            current_row=self.doc_table.currentIndex().row()
-            docid=self.tabledata[current_row][0]
-            print('current_row',current_row, docid)
-            print(self.tabledata[current_row])
-            self.loadMetaTab(docid)
-            self.enableMetaTab()
-        else:
-            # clear meta tab
-            self.clearMetaTab()
-
-
-
-    def loadMetaTab(self,docid=None):
-        print('loadMetaTab',docid)
-        if docid is None:
-            return
-
-        fields=['title','authors','publication','year','volume','issue',
-                'pages','abstract','tags','keywords','citationkey','publisher',
-                'files'
-                ]
-
-        metaii=self.meta_dict[docid]
-        def deu(text):
-            if isinstance(text,(str)):
-                return text
-            else:
-                return str(text)
-
-        for fii in fields:
-            tii=metaii[fii]
-            if tii is None:
-                continue
-            if isinstance(tii,(list,tuple)):
-                tii=u'; '.join(tii)
-            self.t_meta.fields_dict[fii].setText(deu(tii))
-
-        return 
-
-
-
-
-    def loadBibTab(self,docid=None):
-        print('loadBibTab',docid)
-        if docid is None:
-            return
-
-        metaii=self.meta_dict[docid]
-        #import bibtexparser
-        #bb=bibtexparser.bibdatabase.BibDatabase()
-
-        text=export2bib.parseMeta(metaii,'',metaii['folder'],True,False,
-                True)
-
-        self.bib_textedit.setText(text)
-
-        return 
-
 
 
 
@@ -726,315 +585,8 @@ class MainFrame(QtWidgets.QWidget):
 
 
 
-    def clickSelFolder(self,item,column):
-        '''Select folder by clicking'''
-        folder=item.data(0,0)
-        folderid=item.data(1,0)
-        #folder=item.text(column)
-        #print('clickSelfolder:', 'item.data', item.data(0,0), item.data(1,0), 'colunm', column)
-        self.status_bar.showMessage('Select folder %s, id: %s' %(folder, folderid))
-        if folder=='All' and folderid=='0':
-            #folder=None
-            self.loadDocTable(None)
-        else:
-            self.loadDocTable((folder,folderid))
 
-        # Refresh filter list
-        self.filterTypeCombboxChange(item)
 
-
-    def selFolder(self,selected,deselected):
-        '''Select folder by changing current'''
-        item=self.libtree.selectedItems()
-        if item:
-            item=item[0]
-            #print('selFolder:','item', item)
-            #column=selected.indexes()[0].column()
-            column=0
-            #print('selFolder:',item.data(0,0), item.data(1,0))
-            print('selFolder:','selected column', column)
-            self.clickSelFolder(item,column)
-
-
-    #######################################################################
-    #                          Filter list slots                          #
-    #######################################################################
-    
-    def filterItemClicked(self,item):
-
-        print('filteritemclicked:, item:', item, item.text())
-        filter_type=self.filter_type_combbox.currentText()
-        filter_text=item.text()
-        current_folder=self.libtree.selectedItems()
-        if current_folder:
-            folderid=current_folder[0].data(1,0)
-
-            filter_docids=sqlitedb.filterDocs(self.meta_dict,self.folder_data,
-                    filter_type,filter_text,folderid)
-
-            if len(filter_docids)>0:
-                self.loadDocTable(None,filter_docids)
-
-            sel=self.filter_type_combbox.currentText()
-
-            if sel=='Filter by keywords':
-                self.clear_filter_label.setText(
-                        'Showing documents with keyword "%s"' %filter_text)
-            elif sel=='Filter by authors':
-                self.clear_filter_label.setText(
-                        'Showing documents authored by "%s"' %filter_text)
-            elif sel=='Filter by publications':
-                self.clear_filter_label.setText(
-                        'Showing documents published in "%s"' %filter_text)
-            elif sel=='Filter by tags':
-                self.clear_filter_label.setText(
-                        'Showing documents tagged "%s"' %filter_text)
-
-            self.clear_filter_frame.setVisible(True)
-
-        return
-
-    def filterTypeCombboxChange(self,item):
-        # clear current filtering first
-        self.clearFilterButtonClicked()
-
-        sel=self.filter_type_combbox.currentText()
-        current_folder=self.libtree.selectedItems()
-        print('filter type cb select:',sel)
-        if current_folder:
-            current_folder=current_folder[0]
-            print('filtertypecombochange: currentfolder:',\
-                    current_folder.data(0,0), current_folder.data(1,0))
-
-            #---------------Get items in folder---------------
-            foldername=current_folder.data(0,0)
-            folderid=current_folder.data(1,0)
-            if foldername=='All' and folderid=='0':
-                docids=list(self.meta_dict.keys())
-            else:
-                docids=self.folder_data[current_folder.data(1,0)]
-
-            if sel=='Filter by keywords':
-                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'keywords',docids,
-                        unique=True,sort=True)
-            elif sel=='Filter by authors':
-                '''
-                firsts=sqlitedb.fetchMetaData(self.meta_dict,'firstNames',docids,
-                        unique=False,sort=False)
-                last=sqlitedb.fetchMetaData(self.meta_dict,'lastName',docids,
-                        unique=False,sort=False)
-                folderdata=['%s, %s' %(last[ii],firsts[ii]) for ii in range(len(firsts))]
-                #folderdata=sqlitedb.getAuthors(self.meta_dict,docids)
-
-                '''
-                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'authors',docids,
-                        unique=False,sort=False)
-
-                #print('filterTypeCombboxChange:', folderdata)
-                #print('filterTypeCombboxChange:', aa)
-                #print(folderdata==aa)
-                #__import__('pdb').set_trace()
-            elif sel=='Filter by publications':
-                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'publication',docids,
-                        unique=True,sort=True)
-            elif sel=='Filter by tags':
-                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'tags',docids,
-                        unique=True,sort=True)
-
-        folderdata=list(set(folderdata))
-        folderdata.sort()
-        self.filter_item_list.clear()
-        self.filter_item_list.addItems(folderdata)
-
-        return
-
-
-
-
-    #######################################################################
-    #                           Doc table slots                           #
-    #######################################################################
-    
-
-    def selDoc(self,current,previous):
-        '''Actions on selecting a document in doc table
-        '''
-        rowid=current.row()
-        docid=self.tabledata[rowid][0]
-        self.loadMetaTab(docid)
-        self.loadBibTab(docid)
-
-        #-------------------Get folders-------------------
-        metaii=self.meta_dict[docid]
-        folders=metaii['folder']
-        folders=[fii[1] for fii in folders]
-        print('folders of docid', folders, docid)
-
-        def iterItems(treewidget, root):
-            if root is not None:
-                stack = [root]
-                while stack:
-                    parent = stack.pop(0)
-                    for row in range(parent.childCount()):
-                        child = parent.child(row)
-                        yield child
-                        if child.childCount()>0:
-                            stack.append(child)
-
-        #------------Remove highlights for all------------
-        ori_color=QBrush(QColor(255,255,255))
-        hi_color=self.settings.value('display/folder/highlight_color_br',
-                QBrush)
-
-        root=self.libtree.invisibleRootItem()
-        for item in iterItems(self.libtree, root):
-            item.setBackground(0, ori_color)
-
-        #------------Search folders in libtree------------
-        for fii in folders:
-            mii=self.libtree.findItems(fii, Qt.MatchExactly | Qt.MatchRecursive)
-            if len(mii)>0:
-                for mjj in mii:
-                    mjj.setBackground(0, hi_color)
-
-
-
-
-
-
-    #######################################################################
-    #                            Meta tab slots                           #
-    #######################################################################
-
-    def clearMetaTab(self):
-        for kk,vv in self.t_meta.fields_dict.items():
-            vv.clear()
-            vv.setReadOnly(True)
-
-        for tii in [self.note_textedit, self.bib_textedit]:
-            tii.clear()
-            tii.setReadOnly(True)
-
-        return
-
-    def enableMetaTab(self):
-        for kk,vv in self.t_meta.fields_dict.items():
-            vv.setReadOnly(False)
-
-        for tii in [self.note_textedit, ]:
-            tii.setReadOnly(False)
-
-        return
-
-
-
-    
-    #######################################################################
-    #                             Other slots                             #
-    #######################################################################
-
-
-    def foldFilterButtonClicked(self):
-        height=self.filter_list.height()
-        if height>0:
-            self.filter_list.setVisible(not self.filter_list.isVisible())
-            self.fold_filter_button.setArrowType(Qt.UpArrow)
-        else:
-            self.filter_list.setVisible(not self.filter_list.isVisible())
-            self.fold_filter_button.setArrowType(Qt.DownArrow)
-        return
-    
-
-    def foldTabButtonClicked(self):
-        #print('foldTabButtonClicked: is checked:', self.fold_tab_button.isChecked())
-        #height=self.tabs.height()
-        #self.tab_max_width=max(width,self.tab_max_width)
-        #print('tabs width',width,'tab_max_width',self.tab_max_width)
-        width=self.tabs.width()
-        if width>0:
-            #self.tabs.setMinimumWidth(0)
-            #self.tabs.setMaximumWidth(0)
-            #self.tabs.resize(0,height)
-            self.tabs.setVisible(not self.tabs.isVisible())
-            self.fold_tab_button.setArrowType(Qt.LeftArrow)
-        else:
-            #self.tabs.resize(self.tab_max_width,height)
-            self.tabs.setVisible(not self.tabs.isVisible())
-            self.fold_tab_button.setArrowType(Qt.RightArrow)
-            #self.tabs.setMinimumWidth(self.tab_max_width)
-            #self.tabs.setMaximumWidth(self.tab_max_width)
-            #self.tabs.setFixedWidth(self.tab_max_width)
-            #self.tabs.setFixedWidth(self.tabs.maximumWidth())
-        return
-
-    def clearFilterButtonClicked(self):
-
-        self.clear_filter_frame.setVisible(False)
-
-        current_folder=self.libtree.selectedItems()
-        if current_folder:
-            folderid=current_folder[0].data(1,0)
-            folder=current_folder[0].data(0,0)
-
-            if folder=='All' and folderid=='0':
-                self.loadDocTable(None)
-            else:
-                self.loadDocTable((folder,folderid))
-
-        return
-
-
-
-
-
-
-    def addDocButtonClicked(self):
-        print('add')
-
-    def searchBarClicked(self):
-        print('search term:', self.search_bar.text())
-
-    def copyBibButtonClicked(self):
-        self.bib_textedit.selectAll()
-        self.bib_textedit.copy()
-
-
-def addFolder(parent,folderid,folder_dict):
-
-    foldername,parentid=folder_dict[folderid]
-    fitem=QtWidgets.QTreeWidgetItem([foldername,str(folderid)])
-    style=QtWidgets.QApplication.style()
-    diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
-    fitem.setIcon(0,diropen_icon)
-    sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
-    if parentid=='0' or parentid=='-1':
-        parent.addTopLevelItem(fitem)
-    else:
-        parent.addChild(fitem)
-    if len(sub_ids)>0:
-        for sii in sub_ids:
-            addFolder(fitem,sii,folder_dict)
-
-    return
-
-
-def prepareDocs(meta_dict,docids):
-
-    data=[]
-    for ii in docids:
-        entryii=meta_dict[ii]
-
-        aii=[ii,
-            QtWidgets.QCheckBox(entryii['favourite']),
-            QtWidgets.QCheckBox(entryii['read']),
-            entryii['has_file'],
-            ' and '.join(entryii['authors']),
-            entryii['title'],
-            entryii['publication'],
-            entryii['year']]
-        data.append(aii)
-
-    return data
 
 
 
