@@ -1,8 +1,9 @@
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
-from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon
+from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont
 import operator
 import resources
+from .tools import getHLine
 
 class TableModel(QAbstractTableModel):
     def __init__(self, parent, datain, headerdata):
@@ -239,3 +240,133 @@ class MyTextEdit(QtWidgets.QTextEdit):
         self.setMinimumHeight(docheight)
         self.setMaximumHeight(docheight+1)
         #print('sender',sender,'docheight',docheight,'sizehint',docheight2, sender.height())
+
+
+
+class MetaTabScroll(QtWidgets.QScrollArea):
+
+    def __init__(self,font_dict,parent=None):
+        super(MetaTabScroll,self).__init__(parent)
+
+        self.font_dict=font_dict
+
+        label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
+        
+        frame=QtWidgets.QWidget()
+        frame.setStyleSheet('background-color:white')
+        #scroll=QtWidgets.QScrollArea()
+        self.setWidgetResizable(True)
+        self.setWidget(frame)
+        v_layout=QtWidgets.QVBoxLayout()
+
+        fields_dict={}
+
+        def createOneLineField(label,key,font_name,field_dict):
+            #hlayout=QtWidgets.QHBoxLayout()
+            #lineii=QtWidgets.QTextEdit()
+            lineii=MyTextEdit()
+            labelii=QtWidgets.QLabel(label)
+            labelii.setStyleSheet(label_color)
+            #lineii.textChanged.connect(self.resizeTextEdit)
+
+            if font_name in self.font_dict:
+                lineii.setFont(self.font_dict[font_name])
+
+            #hlayout.addWidget(labelii)
+            #hlayout.addWidget(lineii)
+            rnow=grid_layout.rowCount()
+            grid_layout.addWidget(labelii,rnow,0)
+            grid_layout.addWidget(lineii,rnow,1)
+            #v_layout.addLayout(hlayout)
+            fields_dict[key]=lineii
+
+            return
+
+        def createMultiLineField(label,key,font_name,field_dict):
+            #lineii=QtWidgets.QTextEdit()
+            lineii=MyTextEdit()
+            lineii.setFrameStyle(QtWidgets.QFrame.NoFrame)
+            #lineii.textChanged.connect(self.resizeTextEdit)
+            lineii.setFont(self.font_dict[font_name])
+            fields_dict[key]=lineii
+
+            if len(label)>0:
+                labelii=QtWidgets.QLabel(label)
+                labelii.setStyleSheet(label_color)
+                labelii.setFont(QFont('Serif',12,QFont.Bold))
+                v_layout.addWidget(labelii)
+            v_layout.addWidget(lineii)
+
+            return
+
+
+        #--------------------Add title--------------------
+        createMultiLineField('','title','meta_title',fields_dict)
+        v_layout.addWidget(getHLine(self))
+
+        #-------------------Add authors-------------------
+        createMultiLineField('Authors','authors','meta_authors',fields_dict)
+
+        #-----Add journal, year, volume, issue, pages-----
+        grid_layout=QtWidgets.QGridLayout()
+
+        for fii in ['publication','year','volume','issue','pages','publisher',
+                'citationkey']:
+            createOneLineField(fii,fii,'meta_keywords',fields_dict)
+
+        v_layout.addLayout(grid_layout)
+
+        #---------------------Add tags---------------------
+        createMultiLineField('Tags','tags','meta_keywords',fields_dict)
+        createMultiLineField('Abstract','abstract','meta_keywords',fields_dict)
+        createMultiLineField('Keywords','keywords','meta_keywords',fields_dict)
+        createMultiLineField('Files','files','meta_keywords',fields_dict)
+
+        v_layout.addStretch()
+        frame.setLayout(v_layout)
+
+        #return scroll, fields_dict
+
+        self.fields_dict=fields_dict
+
+
+
+class MetaDataEntryDialog(QtWidgets.QDialog):
+
+    def __init__(self,font_dict,parent=None):
+        super(MetaDataEntryDialog,self).__init__(parent)
+
+        self.resize(500,700)
+        self.setWindowTitle('Add New Entry')
+        self.setWindowModality(Qt.ApplicationModal)
+
+        v_layout=QtWidgets.QVBoxLayout()
+
+        scroll=MetaTabScroll(font_dict,self)
+
+        self.return_value=scroll.fields_dict
+
+        self.buttons=QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
+            Qt.Horizontal, self)
+
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+
+        v_layout.addWidget(scroll)
+        v_layout.addWidget(self.buttons)
+
+        self.setLayout(v_layout)
+
+
+
+    def exec_(self):
+        super(MetaDataEntryDialog,self).exec_()
+        return self.return_value
+
+
+
+
+
+
+

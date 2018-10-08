@@ -10,7 +10,7 @@ from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy,\
         getXExpandYMinSizePolicy, getXExpandYExpandSizePolicy, getHSpacer, \
         getVSpacer, getHLine, getVLine
 
-from lib.widgets import TableModel, MyHeaderView, MyTextEdit
+from lib.widgets import TableModel, MyHeaderView, MyTextEdit, MetaTabScroll
 
 import _MainFrameLoadData
 import _MainFrameSlots
@@ -144,10 +144,12 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
         # Add button
         self.add_button=self.createAddMoreButton()
+        self.add_folder_button=self.createAddFolderButton()
+        self.duplicate_check_button=self.createDuplicateCheckButton()
 
-        self.add_button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-        #self.add_button.clicked.connect(self.addDocButtonClicked)
         h_layout0.addWidget(self.add_button)
+        h_layout0.addWidget(self.add_folder_button)
+        h_layout0.addWidget(self.duplicate_check_button)
 
         #h_layout0.addWidget(self.add_more_button)
 
@@ -260,8 +262,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
         # create pupup menu
         menu=QtWidgets.QMenu()
-        add_action1=menu.addAction('Add PDF file')
-        add_action2=menu.addAction('Add BibTex file')
+        add_action1=menu.addAction('Add PDF File')
+        add_action2=menu.addAction('Add BibTex File')
         add_action3=menu.addAction('Add Entry Manually')
 
         button.setDefaultAction(add_action1)
@@ -271,34 +273,29 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         button.setIcon(QIcon.fromTheme('document-new'))
 
         menu.triggered.connect(self.addActionTriggered)
-        button.triggered.connect(self.addActionTriggered)
+        #button.triggered.connect(self.addActionTriggered)
 
         button.setMenu(menu)
         button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
 
         return button
 
-    def addActionTriggered(self,action):
-        print('addActionTriggered:', action)
-        action_text=action.text()
-        print(action.text())
+    def createAddFolderButton(self):
+        button=QtWidgets.QToolButton(self)
+        button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+        button.setText('Create Folder')
+        button.setIcon(QIcon.fromTheme('files-open'))
 
-        '''
-        if action_text=='Add Entry Manually':
-            dialog=QtWidgets.QDialog()
-            dialog.setWindowModality(Qt.ApplicationModal)
-            b_cancel=QtWidgets.QPushButton('Cancel', dialog)
-            b_cancel.
-        '''
+        return button
 
+    def createDuplicateCheckButton(self):
+        button=QtWidgets.QToolButton(self)
+        button.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
+        print(dir(QtCore.Qt))
+        button.setText('Check Duplicates')
+        #button.setIcon(QIcon.fromTheme('files-open'))
 
-        return
-
-
-
-
-
-
+        return button
 
 
     def createLibTree(self):
@@ -415,7 +412,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         self.t_notes=self.createNoteTab()
         self.t_bib=self.createBiBTab()
         self.t_scratchpad=self.createScratchTab()
-        self.t_meta=self.createMetaTab()
+        self.t_meta=MetaTabScroll(self.font_dict,self)
 
         tabs.addTab(self.t_meta,'Meta Data')
         tabs.addTab(self.t_notes,'Notes')
@@ -441,6 +438,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         scroll.setWidget(frame)
 
         return scroll
+
 
     def createScratchTab(self):
 
@@ -490,102 +488,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         self.copy_bib_button.clicked.connect(self.copyBibButtonClicked)
 
         return scroll
-
-
-    def createMetaTab(self):
-
-        label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
-        
-        frame=QtWidgets.QWidget()
-        frame.setStyleSheet('background-color:white')
-        scroll=QtWidgets.QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(frame)
-        v_layout=QtWidgets.QVBoxLayout()
-
-        fields_dict={}
-
-        def createOneLineField(label,key,font_name,field_dict):
-            #hlayout=QtWidgets.QHBoxLayout()
-            #lineii=QtWidgets.QTextEdit()
-            lineii=MyTextEdit()
-            labelii=QtWidgets.QLabel(label)
-            labelii.setStyleSheet(label_color)
-            #lineii.textChanged.connect(self.resizeTextEdit)
-
-            if font_name in self.font_dict:
-                lineii.setFont(self.font_dict[font_name])
-
-            #hlayout.addWidget(labelii)
-            #hlayout.addWidget(lineii)
-            rnow=grid_layout.rowCount()
-            grid_layout.addWidget(labelii,rnow,0)
-            grid_layout.addWidget(lineii,rnow,1)
-            #v_layout.addLayout(hlayout)
-            fields_dict[key]=lineii
-
-            return
-
-        def createMultiLineField(label,key,font_name,field_dict):
-            #lineii=QtWidgets.QTextEdit()
-            lineii=MyTextEdit()
-            lineii.setFrameStyle(QtWidgets.QFrame.NoFrame)
-            #lineii.textChanged.connect(self.resizeTextEdit)
-            lineii.setFont(self.font_dict[font_name])
-            fields_dict[key]=lineii
-
-            if len(label)>0:
-                labelii=QtWidgets.QLabel(label)
-                labelii.setStyleSheet(label_color)
-                labelii.setFont(QFont('Serif',12,QFont.Bold))
-                v_layout.addWidget(labelii)
-            v_layout.addWidget(lineii)
-
-            return
-
-
-        #--------------------Add title--------------------
-        createMultiLineField('','title','meta_title',fields_dict)
-        v_layout.addWidget(getHLine(self))
-
-        #-------------------Add authors-------------------
-        createMultiLineField('Authors','authors','meta_authors',fields_dict)
-
-        #-----Add journal, year, volume, issue, pages-----
-        grid_layout=QtWidgets.QGridLayout()
-
-        for fii in ['publication','year','volume','issue','pages','publisher',
-                'citationkey']:
-            createOneLineField(fii,fii,'meta_keywords',fields_dict)
-
-        v_layout.addLayout(grid_layout)
-
-        #---------------------Add tags---------------------
-        createMultiLineField('Tags','tags','meta_keywords',fields_dict)
-        createMultiLineField('Abstract','abstract','meta_keywords',fields_dict)
-        createMultiLineField('Keywords','keywords','meta_keywords',fields_dict)
-        createMultiLineField('Files','files','meta_keywords',fields_dict)
-
-        v_layout.addStretch()
-        frame.setLayout(v_layout)
-        scroll.fields_dict=fields_dict
-
-        return scroll
-
-
-
-
-
-
-
-
-    #######################################################################
-    #                            Libtree slots                            #
-    #######################################################################
-
-
-
-
 
 
 

@@ -1,9 +1,67 @@
+import os
 from PyQt5.QtCore import Qt
+from PyQt5 import QtWidgets
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics,\
         QCursor
 from lib import sqlitedb
+from lib import widgets
+import bibtexparser
+
+
+
+def readBibFile(bibfile):
+
+    bibfile=os.path.abspath(bibfile)
+    if not os.path.exists(bibfile):
+        return None
+
+    with open(bibfile,'r') as fin:
+        bib=bibtexparser.load(fin)
+        print('bib',bib)
+
+    entries=bib.entries
+
+    return entries
+
+
 
 class MainFrameSlots:
+
+    #######################################################################
+    #                        Tool bar button slots                        #
+    #######################################################################
+    
+
+    def addActionTriggered(self,action):
+        print('addActionTriggered:', action)
+        action_text=action.text()
+        print(action.text())
+
+
+        if action_text=='Add PDF File':
+            fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a PDF file',
+         '',"PDF files (*.pdf);; All files (*)")
+            print('addActionTriggered: chosen PDF file:', fname)
+
+        elif action_text=='Add BibTex File':
+            fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a bibtex file',
+         '',"Bibtex files (*.bib);; All files (*)")
+            print('addActionTriggered: chosen bib file:', fname)
+            if fname:
+                try:
+                    bib_entry=readBibFile(fname[0])
+                    print('parsed bib file:', bib_entry)
+                except:
+                    print('failed to parse bib file')
+
+        elif action_text=='Add Entry Manually':
+            dialog=widgets.MetaDataEntryDialog(self.font_dict,self)
+            ret=dialog.exec_()
+            print('addActionTriggered: return value:',ret)
+            print(ret['title'].toPlainText())
+
+        return
+
 
     def clickSelFolder(self,item,column):
         '''Select folder by clicking'''
@@ -264,11 +322,6 @@ class MainFrameSlots:
 
 
 
-
-
-
-    def addDocButtonClicked(self):
-        print('add')
 
     def searchBarClicked(self):
         print('search term:', self.search_bar.text())
