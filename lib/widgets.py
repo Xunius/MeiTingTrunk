@@ -212,7 +212,39 @@ class MyTextEdit(QtWidgets.QTextEdit):
 
         self.textChanged.connect(self.resizeTextEdit)
         self.document().documentLayout().documentSizeChanged.connect(self.resizeTextEdit)
+        self.is_fold=False
+        self.fold_above_nl=3
 
+        self.fold_button=QtWidgets.QPushButton()
+        #self.fold_button.setArrowType(Qt.RightArrow)
+        self.fold_button.setText('-')
+        self.fold_button.setFixedWidth(20)
+        self.fold_button.setFixedHeight(20)
+        self.fold_button.setStyleSheet('''
+        QPushButton {
+            color: #333;
+            border: 2px solid #555;
+            border-radius: 10px;
+            border-style: outset;
+            padding: 5px;
+            }
+
+        QPushButton:pressed {
+            border-style: inset;
+            } 
+        ''')
+
+        self.fold_button.clicked.connect(self.toggleFold)
+
+
+    def getCurrentLineNum(self):
+        fm=self.fontMetrics()
+        doc=self.document()
+        docheight=doc.size().height()
+        margin=doc.documentMargin()
+        nlines=(docheight-2*margin)/fm.height()
+
+        return nlines
 
     def resizeTextEdit(self):
         '''
@@ -234,11 +266,44 @@ class MyTextEdit(QtWidgets.QTextEdit):
         texth=textsize.height()+4
         self.setMinimumHeight(texth)
         '''
+        if self.getCurrentLineNum()<self.fold_above_nl:
+            self.fold_button.setVisible(False)
+            self.unfoldText()
+        else:
+            self.fold_button.setVisible(True)
+            if self.is_fold:
+                self.foldText()
+            else:
+                self.unfoldText()
 
+        return
+
+
+    def toggleFold(self):
+        self.unfoldText() if self.is_fold else self.foldText()
+        return
+
+    def foldText(self):
+        nlines=self.getCurrentLineNum()
+        if nlines>=self.fold_above_nl:
+            fontheight=self.fontMetrics().height()
+            margin=self.document().documentMargin()
+            self.setMinimumHeight(fontheight+2*margin)
+            self.setMaximumHeight(fontheight+2*margin)
+            self.is_fold=True
+            self.fold_button.setText('+')
+        return
+
+    def unfoldText(self):
         docheight=self.document().size().height()
-        self.setMinimumHeight(docheight)
-        self.setMaximumHeight(docheight+1)
-        #print('sender',sender,'docheight',docheight,'sizehint',docheight2, sender.height())
+        margin=self.document().documentMargin()
+        self.setMinimumHeight(docheight+2*margin)
+        self.setMaximumHeight(docheight+2*margin)
+        self.is_fold=False
+        #self.fold_button.setArrowType(Qt.RightArrow)
+        self.fold_button.setText('-')
+        return
+
 
 
 
@@ -289,11 +354,20 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             lineii.setFont(self.font_dict[font_name])
             fields_dict[key]=lineii
 
+            fold_button=lineii.fold_button
+
+            h_layout=QtWidgets.QHBoxLayout()
+
+
             if len(label)>0:
                 labelii=QtWidgets.QLabel(label)
                 labelii.setStyleSheet(label_color)
                 labelii.setFont(QFont('Serif',12,QFont.Bold))
-                v_layout.addWidget(labelii)
+                h_layout.addWidget(labelii)
+                h_layout.addWidget(fold_button)
+
+            v_layout.addLayout(h_layout)
+
             v_layout.addWidget(lineii)
 
             return
