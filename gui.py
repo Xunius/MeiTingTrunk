@@ -284,16 +284,15 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         button=QtWidgets.QToolButton(self)
         button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
         button.setText('Create Folder')
-        button.setIcon(QIcon.fromTheme('files-open'))
+        button.setIcon(QIcon.fromTheme('folder-new'))
 
         return button
 
     def createDuplicateCheckButton(self):
         button=QtWidgets.QToolButton(self)
-        button.setToolButtonStyle(QtCore.Qt.ToolButtonTextUnderIcon)
-        print(dir(QtCore.Qt))
+        button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
         button.setText('Check Duplicates')
-        #button.setIcon(QIcon.fromTheme('files-open'))
+        button.setIcon(QIcon.fromTheme('scanner'))
 
         return button
 

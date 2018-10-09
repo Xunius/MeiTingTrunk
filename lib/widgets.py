@@ -17,7 +17,6 @@ class TableModel(QAbstractTableModel):
         self.headerdata=headerdata
 
         print('resources:', resources)
-        print(dir(resources))
 
         self.icon_section={
                 'has_file': QIcon(':/has_file.png')
