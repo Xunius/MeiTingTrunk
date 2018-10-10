@@ -10,7 +10,7 @@ from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy,\
         getXExpandYMinSizePolicy, getXExpandYExpandSizePolicy, getHSpacer, \
         getVSpacer, getHLine, getVLine
 
-from lib.widgets import TableModel, MyHeaderView, MyTextEdit, MetaTabScroll
+from lib.widgets import TableModel, MyHeaderView, AdjustableTextEdit, MetaTabScroll
 
 import _MainFrameLoadData
 import _MainFrameSlots

@@ -202,49 +202,17 @@ class MyHeaderView(QtWidgets.QHeaderView):
             return headers.index(label)
         return -1
 
-class MyTextEdit(QtWidgets.QTextEdit):
+class AdjustableTextEdit(QtWidgets.QTextEdit):
     def __init__(self,parent=None):
-        super(MyTextEdit,self).__init__(parent)
+        super(AdjustableTextEdit,self).__init__(parent)
 
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        #self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-
         self.textChanged.connect(self.resizeTextEdit)
-        self.document().documentLayout().documentSizeChanged.connect(self.resizeTextEdit)
-        self.is_fold=False
-        self.fold_above_nl=3
-
-        self.fold_button=QtWidgets.QPushButton()
-        #self.fold_button.setArrowType(Qt.RightArrow)
-        self.fold_button.setText('-')
-        self.fold_button.setFixedWidth(20)
-        self.fold_button.setFixedHeight(20)
-        self.fold_button.setStyleSheet('''
-        QPushButton {
-            color: #333;
-            border: 2px solid #555;
-            border-radius: 10px;
-            border-style: outset;
-            padding: 5px;
-            }
-
-        QPushButton:pressed {
-            border-style: inset;
-            } 
-        ''')
-
-        self.fold_button.clicked.connect(self.toggleFold)
+        self.document().documentLayout().documentSizeChanged.connect(
+                self.resizeTextEdit)
 
 
-    def getCurrentLineNum(self):
-        fm=self.fontMetrics()
-        doc=self.document()
-        docheight=doc.size().height()
-        margin=doc.documentMargin()
-        nlines=(docheight-2*margin)/fm.height()
-
-        return nlines
 
     def resizeTextEdit(self):
         '''
@@ -266,7 +234,64 @@ class MyTextEdit(QtWidgets.QTextEdit):
         texth=textsize.height()+4
         self.setMinimumHeight(texth)
         '''
-        if self.getCurrentLineNum()<self.fold_above_nl:
+        '''
+        if self.getNumberOfLines()<self.fold_above_nl:
+            self.fold_button.setVisible(False)
+            self.unfoldText()
+        else:
+            self.fold_button.setVisible(True)
+            if self.is_fold:
+                self.foldText()
+            else:
+                self.unfoldText()
+
+        '''
+        docheight=self.document().size().height()
+        margin=self.document().documentMargin()
+        self.setMinimumHeight(docheight+2*margin)
+        self.setMaximumHeight(docheight+2*margin)
+
+
+        return
+
+
+
+
+class AdjustableTextEditWithFold(AdjustableTextEdit):
+    def __init__(self,parent=None):
+        super(AdjustableTextEditWithFold,self).__init__(parent)
+
+        self.is_fold=False
+        self.fold_above_nl=3
+
+        self.fold_button=QtWidgets.QPushButton()
+        self.fold_button.setText('-')
+        font_height=self.fontMetrics().height()
+        self.fold_button.setFixedWidth(int(font_height))
+        self.fold_button.setFixedHeight(int(font_height))
+        self.fold_button.clicked.connect(self.toggleFold)
+        self.fold_button.setStyleSheet('''
+        QPushButton {
+            border: 1px solid #555;
+            border-radius: %dpx;
+            }
+
+        QPushButton:pressed {
+            border-style: inset;
+            } 
+        ''' %(int(font_height/2)))
+
+    def getNumberOfLines(self):
+        fm=self.fontMetrics()
+        doc=self.document()
+        docheight=doc.size().height()
+        margin=doc.documentMargin()
+        nlines=(docheight-2*margin)/fm.height()
+
+        return nlines
+
+    def resizeTextEdit(self):
+        if self.getNumberOfLines()<self.fold_above_nl:
             self.fold_button.setVisible(False)
             self.unfoldText()
         else:
@@ -278,13 +303,12 @@ class MyTextEdit(QtWidgets.QTextEdit):
 
         return
 
-
     def toggleFold(self):
         self.unfoldText() if self.is_fold else self.foldText()
         return
 
     def foldText(self):
-        nlines=self.getCurrentLineNum()
+        nlines=self.getNumberOfLines()
         if nlines>=self.fold_above_nl:
             fontheight=self.fontMetrics().height()
             margin=self.document().documentMargin()
@@ -300,10 +324,8 @@ class MyTextEdit(QtWidgets.QTextEdit):
         self.setMinimumHeight(docheight+2*margin)
         self.setMaximumHeight(docheight+2*margin)
         self.is_fold=False
-        #self.fold_button.setArrowType(Qt.RightArrow)
         self.fold_button.setText('-')
         return
-
 
 
 
@@ -326,55 +348,47 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         fields_dict={}
 
         def createOneLineField(label,key,font_name,field_dict):
-            #hlayout=QtWidgets.QHBoxLayout()
-            #lineii=QtWidgets.QTextEdit()
-            lineii=MyTextEdit()
+            lineii=AdjustableTextEdit()
             labelii=QtWidgets.QLabel(label)
             labelii.setStyleSheet(label_color)
-            #lineii.textChanged.connect(self.resizeTextEdit)
 
             if font_name in self.font_dict:
                 lineii.setFont(self.font_dict[font_name])
 
-            #hlayout.addWidget(labelii)
-            #hlayout.addWidget(lineii)
             rnow=grid_layout.rowCount()
             grid_layout.addWidget(labelii,rnow,0)
             grid_layout.addWidget(lineii,rnow,1)
-            #v_layout.addLayout(hlayout)
             fields_dict[key]=lineii
 
             return
 
         def createMultiLineField(label,key,font_name,field_dict):
-            #lineii=QtWidgets.QTextEdit()
-            lineii=MyTextEdit()
+            lineii=AdjustableTextEditWithFold()
             lineii.setFrameStyle(QtWidgets.QFrame.NoFrame)
-            #lineii.textChanged.connect(self.resizeTextEdit)
             lineii.setFont(self.font_dict[font_name])
             fields_dict[key]=lineii
 
-            fold_button=lineii.fold_button
-
             h_layout=QtWidgets.QHBoxLayout()
 
-
-            if len(label)>0:
-                labelii=QtWidgets.QLabel(label)
-                labelii.setStyleSheet(label_color)
-                labelii.setFont(QFont('Serif',12,QFont.Bold))
-                h_layout.addWidget(labelii)
-                h_layout.addWidget(fold_button)
+            labelii=QtWidgets.QLabel(label)
+            labelii.setStyleSheet(label_color)
+            labelii.setFont(QFont('Serif',12,QFont.Bold))
+            h_layout.addWidget(labelii)
+            h_layout.addWidget(lineii.fold_button)
 
             v_layout.addLayout(h_layout)
-
             v_layout.addWidget(lineii)
 
             return
 
 
         #--------------------Add title--------------------
-        createMultiLineField('','title','meta_title',fields_dict)
+        title_te=AdjustableTextEdit()
+        title_te.setFrameStyle(QtWidgets.QFrame.NoFrame)
+        title_te.setFont(self.font_dict['meta_title'])
+        fields_dict['title']=title_te
+        v_layout.addWidget(title_te)
+
         v_layout.addWidget(getHLine(self))
 
         #-------------------Add authors-------------------
@@ -397,8 +411,6 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         v_layout.addStretch()
         frame.setLayout(v_layout)
-
-        #return scroll, fields_dict
 
         self.fields_dict=fields_dict
 
