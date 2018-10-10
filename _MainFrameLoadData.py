@@ -1,8 +1,10 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
+from datetime import datetime
 from lib.widgets import TableModel, MyHeaderView
 from lib import sqlitedb
 from lib import export2bib
+
 
 
 
@@ -29,6 +31,15 @@ def prepareDocs(meta_dict,docids):
     data=[]
     for ii in docids:
         entryii=meta_dict[ii]
+        # convert timestamp to str
+        added=entryii['added']
+        if added:
+            added=int(entryii['added'][:10])
+            added=datetime.fromtimestamp(added)
+            if added.year==datetime.today().year:
+                added=added.strftime('%b-%d')
+            else:
+                added=added.strftime('%b-%d-%y')
 
         aii=[ii,
             QtWidgets.QCheckBox(entryii['favourite']),
@@ -37,7 +48,10 @@ def prepareDocs(meta_dict,docids):
             ' and '.join(entryii['authors']),
             entryii['title'],
             entryii['publication'],
-            entryii['year']]
+            entryii['year'],
+            added
+            ]
+
         data.append(aii)
 
     return data
@@ -63,7 +77,7 @@ class MainFrameLoadData:
         hh.setSectionsMovable(True)
 
         header=['docid','favourite','read','has_file','author','title',
-                'journal','year']
+                'journal','year','added']
         tablemodel=TableModel(self,[],header)
         tv.setModel(tablemodel)
         hh.setModel(tablemodel)
@@ -145,11 +159,7 @@ class MainFrameLoadData:
         if docid is None:
             return
 
-        fields=['title','authors','publication','year','volume','issue',
-                'pages','abstract','tags','keywords','citationkey','publisher',
-                'files'
-                ]
-
+        fields=self.t_meta.fields_dict.keys()
         metaii=self.meta_dict[docid]
         def deu(text):
             if isinstance(text,(str)):

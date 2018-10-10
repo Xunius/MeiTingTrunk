@@ -17,12 +17,12 @@ import _MainFrameSlots
 
 __version__='v0.1'
 
-FILE_IN='new.sqlite'
+FILE_IN='new2.sqlite'
 
 
 # TODO:
 # show docs in sub folders?
-# fold long fields in meta data tab?
+# [y] fold long fields in meta data tab?
 # [y] create bib texts when clicking into the bibtex tab and changing doc
 # [y] add icons to folders
 # doc types, books, generic etc
@@ -38,6 +38,7 @@ FILE_IN='new.sqlite'
 # in note tab, add time stamps at left margin
 # change meta dict key naming convention to distinguish string and list types:
 #   e.g. authors -> authors_l, year -> year_s
+# possible issue with local time with added time
 
 
 class MainWindow(QtWidgets.QMainWindow):

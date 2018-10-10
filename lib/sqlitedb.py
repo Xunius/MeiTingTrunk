@@ -138,7 +138,7 @@ def getMetaData(db, docid):
             'publication','volume','year','doi','abstract',\
             'arxivId','chapter','city','country','edition','institution',\
             'isbn','issn','month','day','publisher','series','type',\
-            'read','favourite']
+            'read','favourite','pmid','added']
 
     result={}
 

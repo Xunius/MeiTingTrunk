@@ -18,7 +18,7 @@ else:
     from urllib import unquote
     from urlparse import urlparse
 
-FILE_OUT_NAME='new.sqlite'
+FILE_OUT_NAME='new2.sqlite'
 FILE_IN_NAME='mendeley.sqlite'
 LIB_FOLDER='~/Papers2'
 FILE_FOLDER=os.path.join(LIB_FOLDER,'collections')
@@ -27,7 +27,7 @@ FILE_FOLDER=os.path.join(LIB_FOLDER,'collections')
 DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',
 'deduplicated', 'deletionPending', 'favourite', 'note',
-'abstract', 'advisor',
+'abstract', 'advisor', 'added',
 'arxivId', 'title', 'pmid',
 'publication', 'publicLawNumber', 'month',
 'pages', 'sections', 'seriesEditor', 'series', 'seriesNumber',

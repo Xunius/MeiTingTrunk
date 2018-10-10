@@ -115,7 +115,7 @@ class MyHeaderView(QtWidgets.QHeaderView):
         super(MyHeaderView,self).__init__(Qt.Horizontal,parent)
 
         self.colSizes={'docid':0, 'favourite': 20, 'read': 20, 'has_file': 20,
-                'author': 200, 'title': 500, 'journal':100,'year':50}
+            'author': 200, 'title': 500, 'journal':100,'year':50,'added':50}
 
     def initresizeSections(self):
         model=self.model()
@@ -347,7 +347,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         fields_dict={}
 
-        def createOneLineField(label,key,font_name,field_dict):
+        def createOneLineField(label,key,font_name,field_dict,grid_layout):
             lineii=AdjustableTextEdit()
             labelii=QtWidgets.QLabel(label)
             labelii.setStyleSheet(label_color)
@@ -397,16 +397,35 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         #-----Add journal, year, volume, issue, pages-----
         grid_layout=QtWidgets.QGridLayout()
 
-        for fii in ['publication','year','volume','issue','pages','publisher',
+        for fii in ['publication','year','volume','issue','pages',
                 'citationkey']:
-            createOneLineField(fii,fii,'meta_keywords',fields_dict)
+            createOneLineField(fii,fii,'meta_keywords',fields_dict,grid_layout)
 
         v_layout.addLayout(grid_layout)
 
         #---------------------Add tags---------------------
         createMultiLineField('Tags','tags','meta_keywords',fields_dict)
+
+        #-------------------Add abstract-------------------
         createMultiLineField('Abstract','abstract','meta_keywords',fields_dict)
+
+        #-------------------Add keywords-------------------
         createMultiLineField('Keywords','keywords','meta_keywords',fields_dict)
+
+        #-----------------Add catalog ids-----------------
+        labelii=QtWidgets.QLabel('Catalog IDs')
+        labelii.setStyleSheet(label_color)
+        labelii.setFont(QFont('Serif',12,QFont.Bold))
+        v_layout.addWidget(labelii)
+
+        grid_layout=QtWidgets.QGridLayout()
+
+        for fii in ['arxivId','doi','issn','pmid']:
+            createOneLineField(fii,fii,'meta_keywords',fields_dict,grid_layout)
+
+        v_layout.addLayout(grid_layout)
+
+        #--------------------Add files--------------------
         createMultiLineField('Files','files','meta_keywords',fields_dict)
 
         v_layout.addStretch()
