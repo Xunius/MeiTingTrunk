@@ -138,7 +138,7 @@ def getMetaData(db, docid):
             'publication','volume','year','doi','abstract',\
             'arxivId','chapter','city','country','edition','institution',\
             'isbn','issn','month','day','publisher','series','type',\
-            'read','favourite','pmid','added']
+            'read','favourite','pmid','added','confirmed']
 
     result={}
 
@@ -164,6 +164,8 @@ def getMetaData(db, docid):
     result['authors']=authors
 
     result['has_file']=False if len(result['files'])==0 else True
+    if len(result['files'])>1:
+        print('loadMetaTab: >1 files doc:',docid,result['title'])
 
 
     return result

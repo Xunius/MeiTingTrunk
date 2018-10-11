@@ -1,7 +1,7 @@
+import os
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from datetime import datetime
-from lib.widgets import TableModel, MyHeaderView
 from lib import sqlitedb
 from lib import export2bib
 
@@ -60,33 +60,6 @@ def prepareDocs(meta_dict,docids):
 
 class MainFrameLoadData:
 
-    def createDocTable(self):
-
-        tv=QtWidgets.QTableView(self)
-
-        hh=MyHeaderView(self)
-        hh.setSectionsClickable(True)
-        hh.setHighlightSections(True)
-        hh.sectionResized.connect(hh.myresize)
-        hh.setStretchLastSection(False)
-
-        tv.setHorizontalHeader(hh)
-        tv.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        tv.setShowGrid(True)
-        tv.setSortingEnabled(True)
-        hh.setSectionsMovable(True)
-
-        header=['docid','favourite','read','has_file','author','title',
-                'journal','year','added']
-        tablemodel=TableModel(self,[],header)
-        tv.setModel(tablemodel)
-        hh.setModel(tablemodel)
-        hh.initresizeSections()
-        tv.setColumnHidden(0,True)
-
-        tv.selectionModel().currentChanged.connect(self.selDoc)
-
-        return tv
 
 
     def loadLibTree(self):
@@ -112,6 +85,14 @@ class MainFrameLoadData:
 
 
 
+    @property
+    def tabledata(self):
+        if hasattr(self,'doc_table'):
+            return self.doc_table.model().arraydata
+        else:
+            return None
+
+
     def loadDocTable(self,folder=None,docids=None):
         '''Load doc table given folder'''
 
@@ -133,11 +114,9 @@ class MainFrameLoadData:
         else:
             data=prepareDocs(self.meta_dict,docids)
 
-
-        print('num in folder',len(docids))
+        print('num of docs in folder',len(docids))
         tablemodel.arraydata=data
         tablemodel.sort(4,Qt.AscendingOrder)
-        self.tabledata=tablemodel.arraydata
 
         #------------Load meta data on 1st row------------
         if len(data)>0:
@@ -173,6 +152,9 @@ class MainFrameLoadData:
                 self.t_meta.fields_dict[fii].clear()
                 continue
             if isinstance(tii,(list,tuple)):
+                if fii=='files':
+                    # show only file name
+                    tii=[os.path.split(jj)[1] for jj in tii]
                 tii=u'; '.join(tii)
             self.t_meta.fields_dict[fii].setText(deu(tii))
 

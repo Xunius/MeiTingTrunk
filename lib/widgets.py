@@ -3,7 +3,7 @@ from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont
 import operator
 import resources
-from .tools import getHLine
+from .tools import getHLine, getXExpandYMinSizePolicy
 
 class TableModel(QAbstractTableModel):
     def __init__(self, parent, datain, headerdata):
@@ -328,6 +328,25 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
         return
 
 
+class ElideLineEdit(QtWidgets.QLineEdit):
+    def __init__(self,parent=None):
+        super(ElideLineEdit,self).__init__(parent)
+
+    def setText(self,text,elide=True):
+        self.full_text=text
+
+        if elide:
+            super(ElideLineEdit,self).setText(
+                self.fontMetrics().elidedText(text,Qt.ElideRight,self.width()))
+        else:
+            super(ElideLineEdit,self).setText(text)
+
+        return
+
+    def resizeEvent(self,event):
+        if hasattr(self,'full_text'):
+            self.setText(self.full_text,elide=True)
+
 
 class MetaTabScroll(QtWidgets.QScrollArea):
 
@@ -345,7 +364,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.setWidget(frame)
         v_layout=QtWidgets.QVBoxLayout()
 
-        fields_dict={}
+        self.fields_dict={}
 
         def createOneLineField(label,key,font_name,field_dict,grid_layout):
             lineii=AdjustableTextEdit()
@@ -358,7 +377,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             rnow=grid_layout.rowCount()
             grid_layout.addWidget(labelii,rnow,0)
             grid_layout.addWidget(lineii,rnow,1)
-            fields_dict[key]=lineii
+            self.fields_dict[key]=lineii
 
             return
 
@@ -366,7 +385,8 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             lineii=AdjustableTextEditWithFold()
             lineii.setFrameStyle(QtWidgets.QFrame.NoFrame)
             lineii.setFont(self.font_dict[font_name])
-            fields_dict[key]=lineii
+
+            self.fields_dict[key]=lineii
 
             h_layout=QtWidgets.QHBoxLayout()
 
@@ -386,31 +406,31 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         title_te=AdjustableTextEdit()
         title_te.setFrameStyle(QtWidgets.QFrame.NoFrame)
         title_te.setFont(self.font_dict['meta_title'])
-        fields_dict['title']=title_te
+        self.fields_dict['title']=title_te
         v_layout.addWidget(title_te)
 
         v_layout.addWidget(getHLine(self))
 
         #-------------------Add authors-------------------
-        createMultiLineField('Authors','authors','meta_authors',fields_dict)
+        createMultiLineField('Authors','authors','meta_authors',self.fields_dict)
 
         #-----Add journal, year, volume, issue, pages-----
         grid_layout=QtWidgets.QGridLayout()
 
         for fii in ['publication','year','volume','issue','pages',
                 'citationkey']:
-            createOneLineField(fii,fii,'meta_keywords',fields_dict,grid_layout)
+            createOneLineField(fii,fii,'meta_keywords',self.fields_dict,grid_layout)
 
         v_layout.addLayout(grid_layout)
 
         #---------------------Add tags---------------------
-        createMultiLineField('Tags','tags','meta_keywords',fields_dict)
+        createMultiLineField('Tags','tags','meta_keywords',self.fields_dict)
 
         #-------------------Add abstract-------------------
-        createMultiLineField('Abstract','abstract','meta_keywords',fields_dict)
+        createMultiLineField('Abstract','abstract','meta_keywords',self.fields_dict)
 
         #-------------------Add keywords-------------------
-        createMultiLineField('Keywords','keywords','meta_keywords',fields_dict)
+        createMultiLineField('Keywords','keywords','meta_keywords',self.fields_dict)
 
         #-----------------Add catalog ids-----------------
         labelii=QtWidgets.QLabel('Catalog IDs')
@@ -421,17 +441,70 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         grid_layout=QtWidgets.QGridLayout()
 
         for fii in ['arxivId','doi','issn','pmid']:
-            createOneLineField(fii,fii,'meta_keywords',fields_dict,grid_layout)
+            createOneLineField(fii,fii,'meta_keywords',self.fields_dict,grid_layout)
 
         v_layout.addLayout(grid_layout)
 
         #--------------------Add files--------------------
-        createMultiLineField('Files','files','meta_keywords',fields_dict)
+        #createMultiLineField('Files','files','meta_keywords',fields_dict)
+        #fields_dict['files'].setReadOnly(True)
+        #lineii=QtWidgets.QLineEdit()
+        lineii=ElideLineEdit()
+
+        lineii.setReadOnly(True)
+        #lineii.setFrameStyle(QtWidgets.QFrame.NoFrame)
+        lineii.setFont(self.font_dict['meta_keywords'])
+
+        self.fields_dict['files']=lineii
+
+        h_layout=QtWidgets.QHBoxLayout()
+
+        labelii=QtWidgets.QLabel('Files')
+        labelii.setStyleSheet(label_color)
+        labelii.setFont(QFont('Serif',12,QFont.Bold))
+        h_layout.addWidget(labelii)
+        #h_layout.addWidget(lineii.fold_button)
+
+        v_layout.addLayout(h_layout)
+        v_layout.addWidget(lineii)
+
+        add_file_button=QtWidgets.QPushButton()
+        add_file_button.setText('Add File...')
+        add_file_button.setSizePolicy(getXExpandYMinSizePolicy())
+        add_file_button.setStyleSheet('''
+        QPushButton {
+            border: 1px solid #555;
+            border-radius: 2px;
+            }
+
+        QPushButton:pressed {
+            border-style: inset;
+            } 
+        ''')
+        add_file_button.clicked.connect(lambda: self.addFileButtonClicked(
+            self.fields_dict))
+        v_layout.addWidget(add_file_button)
+
+
 
         v_layout.addStretch()
         frame.setLayout(v_layout)
 
-        self.fields_dict=fields_dict
+        #self.fields_dict=fields_dict
+
+    def addFileButtonClicked(self,fields_dict):
+        fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a PDF file',
+         '',"PDF files (*.pdf);; All files (*)")[0]
+
+        if fname:
+            print('addFileButtonClicked: new file', fname)
+            files=fields_dict['files']
+            print('files',files)
+            #files.append(fname)
+            #fields_dict['files']=files
+
+        #return fields_dict
+
 
 
 

@@ -138,6 +138,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
     def initUI(self):
 
         v_layout0=QtWidgets.QVBoxLayout(self)
+        v_layout0.setContentsMargins(2,5,2,1)
 
         #-------------------Tool bar row-------------------
         h_layout0=QtWidgets.QHBoxLayout()
@@ -237,7 +238,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
         #------------------Add status bar------------------
         self.status_bar=QtWidgets.QStatusBar()
-        self.status_bar.setFixedHeight(11)
+        #self.status_bar.setFixedHeight(12)
         self.status_bar.setFont(self.settings.value('display/fonts/statusbar',QFont))
         v_layout0.addWidget(self.status_bar)
         self.status_bar.showMessage('etest')
@@ -384,6 +385,34 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         return frame
 
 
+    def createDocTable(self):
+
+        tv=QtWidgets.QTableView(self)
+
+        hh=MyHeaderView(self)
+        hh.setSectionsClickable(True)
+        hh.setHighlightSections(True)
+        hh.sectionResized.connect(hh.myresize)
+        hh.setStretchLastSection(False)
+
+        tv.setHorizontalHeader(hh)
+        tv.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        tv.setShowGrid(True)
+        tv.setSortingEnabled(True)
+        hh.setSectionsMovable(True)
+
+        header=['docid','favourite','read','has_file','author','title',
+                'journal','year','added']
+        tablemodel=TableModel(self,[],header)
+        tv.setModel(tablemodel)
+        hh.setModel(tablemodel)
+        hh.initresizeSections()
+        tv.setColumnHidden(0,True)
+
+        tv.selectionModel().currentChanged.connect(self.selDoc)
+
+        return tv
+
 
 
     def createFoldTabButton(self):
@@ -409,6 +438,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
             return scroll
 
         tabs=QtWidgets.QTabWidget()
+        #tabs.setMinimumWidth(250)
         self.t_notes=self.createNoteTab()
         self.t_bib=self.createBiBTab()
         self.t_scratchpad=self.createScratchTab()

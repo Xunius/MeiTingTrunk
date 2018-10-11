@@ -198,6 +198,8 @@ class MainFrameSlots:
         '''
         rowid=current.row()
         docid=self.tabledata[rowid][0]
+        print('selDoc: rowid', rowid, 'docid', docid)
+        print(id(self.tabledata))
         self.loadMetaTab(docid)
         self.loadBibTab(docid)
 
@@ -256,7 +258,8 @@ class MainFrameSlots:
 
     def enableMetaTab(self):
         for kk,vv in self.t_meta.fields_dict.items():
-            vv.setReadOnly(False)
+            if kk!='files':
+                vv.setReadOnly(False)
 
         for tii in [self.note_textedit, ]:
             tii.setReadOnly(False)
