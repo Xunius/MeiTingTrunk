@@ -1,7 +1,6 @@
 import os
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
-from datetime import datetime
 from lib import sqlitedb
 from lib import export2bib
 
@@ -31,16 +30,6 @@ def prepareDocs(meta_dict,docids):
     data=[]
     for ii in docids:
         entryii=meta_dict[ii]
-        # convert timestamp to str
-        added=entryii['added']
-        if added:
-            added=int(entryii['added'][:10])
-            added=datetime.fromtimestamp(added)
-            if added.year==datetime.today().year:
-                added=added.strftime('%b-%d')
-            else:
-                added=added.strftime('%b-%d-%y')
-
         aii=[ii,
             QtWidgets.QCheckBox(entryii['favourite']),
             QtWidgets.QCheckBox(entryii['read']),
@@ -49,7 +38,7 @@ def prepareDocs(meta_dict,docids):
             entryii['title'],
             entryii['publication'],
             entryii['year'],
-            added
+            entryii['added']
             ]
 
         data.append(aii)
@@ -151,12 +140,15 @@ class MainFrameLoadData:
             if tii is None:
                 self.t_meta.fields_dict[fii].clear()
                 continue
-            if isinstance(tii,(list,tuple)):
-                if fii=='files':
-                    # show only file name
-                    tii=[os.path.split(jj)[1] for jj in tii]
-                tii=u'; '.join(tii)
-            self.t_meta.fields_dict[fii].setText(deu(tii))
+            elif fii=='files':
+                # show only file name
+                self.t_meta.delFileField()
+                for fjj in tii:
+                    self.t_meta.createFileField(os.path.split(fjj)[1])
+            else:
+                if isinstance(tii,(list,tuple)):
+                    tii=u'; '.join(tii)
+                self.t_meta.fields_dict[fii].setText(deu(tii))
 
         return 
 
