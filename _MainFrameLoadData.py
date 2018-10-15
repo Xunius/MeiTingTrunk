@@ -34,7 +34,7 @@ def prepareDocs(meta_dict,docids):
             QtWidgets.QCheckBox(entryii['favourite']),
             QtWidgets.QCheckBox(entryii['read']),
             entryii['has_file'],
-            ' and '.join(entryii['authors']),
+            '; '.join(entryii['authors']),
             entryii['title'],
             entryii['publication'],
             entryii['year'],
@@ -144,12 +144,15 @@ class MainFrameLoadData:
                 # show only file name
                 self.t_meta.delFileField()
                 for fjj in tii:
-                    self.t_meta.createFileField(os.path.split(fjj)[1])
+                    #self.t_meta.createFileField(os.path.split(fjj)[1])
+                    self.t_meta.createFileField(fjj)
             else:
                 if isinstance(tii,(list,tuple)):
                     tii=u'; '.join(tii)
                 self.t_meta.fields_dict[fii].setText(deu(tii))
 
+        dd=self.t_meta.retrieveMetaData()
+        print('retrieved meta data:', dd)
         return 
 
 

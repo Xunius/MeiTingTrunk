@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 import operator
 from PyQt5 import QtWidgets, QtCore
@@ -61,6 +62,8 @@ class TableModel(QAbstractTableModel):
         if role==Qt.EditRole:
             return QVariant(self.arraydata[index.row()][index.column()])
 
+        #if role==Qt.TextAlignmentRole:
+            #return Qt.AlignCenter
         if index.column() in self.check_sec_indices and role==Qt.CheckStateRole:
             if self.arraydata[index.row()][index.column()].isChecked():
                 return Qt.Checked
@@ -275,21 +278,21 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
         self.is_fold=False
         self.fold_above_nl=3
 
-        self.fold_button=QtWidgets.QToolButton()
+        self.fold_button=QtWidgets.QPushButton()
         self.fold_button.setText('-')
         font_height=self.fontMetrics().height()
         self.fold_button.setFixedWidth(int(font_height))
         self.fold_button.setFixedHeight(int(font_height))
         self.fold_button.clicked.connect(self.toggleFold)
         self.fold_button.setStyleSheet('''
-        QToolButton {
+        QPushButton {
             border: 1px solid rgb(190,190,190);
             background-color: rgb(190,190,190);
             border-radius: %dpx;
             font: bold %dpx;
             color: white;
-            text-align: bottom;
-            padding-bottom: 1px;
+            text-align: center;
+            padding-bottom: 2px;
             }
 
         QPushButton:pressed {
@@ -346,30 +349,31 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
         return
 
 
-class ElideLineEdit(QtWidgets.QLineEdit):
+class FileLineEdit(QtWidgets.QLineEdit):
     def __init__(self,parent=None):
-        super(ElideLineEdit,self).__init__(parent)
+        super(FileLineEdit,self).__init__(parent)
 
-        #self.textChanged.connect(self.resizeTextEdit)
-        #self.document().documentLayout().documentSizeChanged.connect(
-                #self.resizeTextEdit)
         self.fm=QFontMetrics(self.font())
 
     def setText(self,text,elide=True):
         self.full_text=text
+        self.short_text=os.path.split(self.full_text)[1]
 
         if elide:
-            super(ElideLineEdit,self).setText(
-                self.fm.elidedText(text,Qt.ElideRight,self.width()))
+            super(FileLineEdit,self).setText(
+                self.fm.elidedText(self.short_text,Qt.ElideRight,self.width()))
         else:
-            super(ElideLineEdit,self).setText(text)
+            super(FileLineEdit,self).setText(self.short_text)
 
         return
+
+    def text(self):
+        return self.full_text
 
     def resizeEvent(self,event):
         super(QtWidgets.QLineEdit, self).resizeEvent(event)
         if hasattr(self,'full_text'):
-            self.setText(self.full_text,elide=True)
+            self.setText(self.short_text,elide=True)
 
 
 class MetaTabScroll(QtWidgets.QScrollArea):
@@ -451,7 +455,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         add_file_button.setSizePolicy(getXExpandYMinSizePolicy())
         add_file_button.setStyleSheet('''
         QPushButton {
-            border: 1px solid #555;
+            background-color: rgb(220,220,220);
             border-radius: 2px;
             }
 
@@ -506,7 +510,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
     def createFileField(self,text=None,font_name='meta_keywords'):
 
-        le=ElideLineEdit()
+        h_layout=QtWidgets.QHBoxLayout()
+
+        le=FileLineEdit()
         le.setReadOnly(True)
 
         if font_name in self.font_dict:
@@ -517,8 +523,38 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         self.fields_dict['files'].append(le)
         #self.v_layout.addWidget(le)
+
+        # create a del file button
+        button=QtWidgets.QPushButton()
+        font_height=le.fm.height()
+        button.setFixedWidth(int(font_height))
+        button.setFixedHeight(int(font_height))
+        button.setText('\u2715')
+        button.setStyleSheet('''
+        QPushButton {
+            border: 1px solid rgb(190,190,190);
+            background-color: rgb(190,190,190);
+            border-radius: %dpx;
+            font: bold %dpx;
+            color: white;
+            text-align: center;
+            padding-bottom: 2px;
+            }
+
+        QPushButton:pressed {
+            border-style: inset;
+            } 
+        ''' %(int(font_height/2), max(1,font_height-2))
+        )
+        button.clicked.connect(lambda: self.delFileField(
+            self.fields_dict['files'].index(le)))
+
+        le.del_button=button
+        h_layout.addWidget(le)
+        h_layout.addWidget(button)
+
         print('createFileField: insert at',self.file_insert_idx)
-        self.v_layout.insertWidget(self.file_insert_idx,le)
+        self.v_layout.insertLayout(self.file_insert_idx,h_layout)
         self.file_insert_idx+=1
 
         return
@@ -529,17 +565,23 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             #for ii in range(len(self.fields_dict['files'])):
             for leii in self.fields_dict['files']:
                 print('delFileField',leii,self.file_insert_idx)
+                self.v_layout.removeWidget(leii.del_button)
                 self.v_layout.removeWidget(leii)
+                leii.del_button.deleteLater()
                 leii.deleteLater()
                 self.fields_dict['files'].remove(leii)
                 self.file_insert_idx-=1
         else:
             if idx in range(len(self.fields_dict['files'])):
                 leii=self.fields_dict['files'][idx]
+                self.v_layout.removeWidget(leii.del_button)
                 self.v_layout.removeWidget(leii)
                 leii.deleteLater()
+                leii.del_button.deleteLater()
                 self.fields_dict['files'].remove(leii)
                 self.file_insert_idx-=1
+
+        print('metadata after del',self.retrieveMetaData())
 
         return
 
@@ -552,12 +594,26 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             print('addFileButtonClicked: new file', fname)
             leii=self.createFileField(fname)
             fields_dict['files'].append(leii)
-            #print('files',files)
-            #files.append(fname)
-            #fields_dict['files']=files
 
-        #return fields_dict
         return
+
+
+    def retrieveMetaData(self):
+
+        result_dict={}
+        for kk,vv in self.fields_dict.items():
+            if isinstance(vv,(tuple,list)):
+                vlist=[]
+                for vii in vv:
+                    if isinstance(vii,QtWidgets.QLineEdit):
+                        vlist.append(vii.text())
+                result_dict[kk]=vlist
+
+            else:
+                if isinstance(vv,QtWidgets.QTextEdit):
+                    result_dict[kk]=vv.toPlainText()
+
+        return result_dict
 
 
 
