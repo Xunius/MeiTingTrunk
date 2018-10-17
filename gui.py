@@ -153,8 +153,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         h_layout0.addWidget(self.add_folder_button)
         h_layout0.addWidget(self.duplicate_check_button)
 
-        #h_layout0.addWidget(self.add_more_button)
-
         h_layout0.addStretch()
 
         # seach bar
@@ -170,36 +168,33 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         #-------------Add hline below tool bar-------------
         v_layout0.addWidget(getHLine(self))
 
-        #-------------------Add lib tree-------------------
+        #---------------------H split---------------------
         h_split=QtWidgets.QSplitter(Qt.Horizontal)
         h_split.setSizePolicy(getXExpandYExpandSizePolicy())
         v_layout0.addWidget(h_split)
 
+        #---------------------V split---------------------
         v_split=QtWidgets.QSplitter(Qt.Vertical)
-
         v_la1=QtWidgets.QVBoxLayout()
         v_la1.setContentsMargins(0,0,0,0)
         v_la1.setSpacing(0)
         fr=QtWidgets.QFrame()
 
+        #-------------------Add lib tree-------------------
         self.libtree=self.createLibTree()
         v_la1.addWidget(self.libtree)
 
         #-----------Add fold filter list button-----------
         self.fold_filter_button=self.createFoldFilterButton()
         v_la1.addWidget(self.fold_filter_button)
-        fr.setLayout(v_la1)
 
-        #v_split.addWidget(self.libtree)
+        fr.setLayout(v_la1)
         v_split.addWidget(fr)
 
-        #v_la1.addWidget(self.filter_list)
-
-        #----------------Add filter window----------------
+        #----------------Add filter list----------------
         self.filter_list=self.createFilterList()
 
         v_split.addWidget(self.filter_list)
-        #v_split.addWidget(fr)
         h_split.addWidget(v_split)
 
         v_split.setSizes([3,1])
@@ -208,28 +203,24 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
         #------------Add clear filtering frame------------
         self.clear_filter_frame=self.createClearFilterFrame()
-        
-        #------------------Add doc table------------------
-        frame=QtWidgets.QFrame()
 
+        frame=QtWidgets.QFrame()
         v_la=QtWidgets.QVBoxLayout()
         v_la.addWidget(self.clear_filter_frame)
 
+        #------------------Add doc table------------------
         self.doc_table=self.createDocTable()
-
         v_la.addWidget(self.doc_table)
 
         h_layout=QtWidgets.QHBoxLayout()
         h_layout.setContentsMargins(0,0,0,0)
         h_layout.setSpacing(0)
-
         h_layout.addLayout(v_la)
 
         #--------------Add fold/unfold button--------------
         self.fold_tab_button=self.createFoldTabButton()
         h_layout.addWidget(self.fold_tab_button)
         frame.setLayout(h_layout)
-
         h_split.addWidget(frame)
 
         #---------------------Add tabs---------------------
@@ -262,7 +253,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         button=QtWidgets.QToolButton(self)
         button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
 
-        # create pupup menu
+        # create popup menu
         menu=QtWidgets.QMenu()
         add_action1=menu.addAction('Add PDF File')
         add_action2=menu.addAction('Add BibTex File')
@@ -273,12 +264,10 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         # these has to happen after setDefaultAction()
         button.setText('Add')
         button.setIcon(QIcon.fromTheme('document-new'))
-
-        menu.triggered.connect(self.addActionTriggered)
-        #button.triggered.connect(self.addActionTriggered)
-
         button.setMenu(menu)
         button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
+
+        menu.triggered.connect(self.addActionTriggered)
 
         return button
 
@@ -329,8 +318,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
                 #border-style: solid; border-color:grey''')
 
         return button
-
-
 
 
     def createFilterList(self):
@@ -394,12 +381,12 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         hh.setHighlightSections(True)
         hh.sectionResized.connect(hh.myresize)
         hh.setStretchLastSection(False)
+        hh.setSectionsMovable(True)
 
         tv.setHorizontalHeader(hh)
         tv.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         tv.setShowGrid(True)
         tv.setSortingEnabled(True)
-        hh.setSectionsMovable(True)
 
         header=['docid','favourite','read','has_file','author','title',
                 'journal','year','added']
@@ -429,13 +416,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
 
     def createTabs(self):
-        def _createPage():
-            scroll=QtWidgets.QScrollArea(self)
-            frame=QtWidgets.QWidget()
-            v_layout=QtWidgets.QVBoxLayout()
-            frame.setLayout(v_layout)
-            scroll.setWidget(frame)
-            return scroll
 
         tabs=QtWidgets.QTabWidget()
         #tabs.setMinimumWidth(250)

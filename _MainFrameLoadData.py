@@ -49,6 +49,37 @@ def prepareDocs(meta_dict,docids):
 
 class MainFrameLoadData:
 
+    @property
+    def _tabledata(self):
+        if hasattr(self,'doc_table'):
+            return self.doc_table.model().arraydata
+        else:
+            return None
+
+    @property
+    def _current_doc(self):
+        if hasattr(self,'doc_table'):
+            current_row=self.doc_table.currentIndex().row()
+            docid=self._tabledata[current_row][0]
+            return docid
+        else:
+            return None
+
+    @property
+    def _current_meta_dict(self):
+        if hasattr(self,'t_meta'):
+            if hasattr(self.t_meta,'fields_dict'):
+                return self.t_meta.fields_dict
+        return None
+
+    @property
+    def _current_folder(self):
+        if hasattr(self,'libtree'):
+            item=self.libtree.selectedItems()
+            if item:
+                item=item[0]
+                return item.data(0,0), item.data(1,0) # folder name, folderid
+        return None
 
 
     def loadLibTree(self):
@@ -74,14 +105,6 @@ class MainFrameLoadData:
 
 
 
-    @property
-    def tabledata(self):
-        if hasattr(self,'doc_table'):
-            return self.doc_table.model().arraydata
-        else:
-            return None
-
-
     def loadDocTable(self,folder=None,docids=None):
         '''Load doc table given folder'''
 
@@ -92,13 +115,9 @@ class MainFrameLoadData:
         if docids is None:
             if folder is None:
                 docids=self.meta_dict.keys()
-                #data=prepareDocs(self.meta_dict,docids)
             else:
                 folderid=folder[1]
-                #if folderid in self.folder_data:
                 docids=self.folder_data[folderid]
-                #else:
-                    #data=[]
             data=prepareDocs(self.meta_dict,docids)
         else:
             data=prepareDocs(self.meta_dict,docids)
@@ -111,9 +130,8 @@ class MainFrameLoadData:
         if len(data)>0:
             self.doc_table.selectRow(0)
             current_row=self.doc_table.currentIndex().row()
-            docid=self.tabledata[current_row][0]
+            docid=self._current_doc
             print('current_row',current_row, docid)
-            print(self.tabledata[current_row])
             self.loadMetaTab(docid)
             self.enableMetaTab()
         else:
@@ -127,9 +145,12 @@ class MainFrameLoadData:
         if docid is None:
             return
 
-        fields=self.t_meta.fields_dict.keys()
+        fields=self._current_meta_dict.keys()
+        if fields is None:
+            return
+
         metaii=self.meta_dict[docid]
-        def deu(text):
+        def conv(text):
             if isinstance(text,(str)):
                 return text
             else:
@@ -138,22 +159,20 @@ class MainFrameLoadData:
         for fii in fields:
             tii=metaii[fii]
             if tii is None:
-                self.t_meta.fields_dict[fii].clear()
+                #self.t_meta.fields_dict[fii].clear()
+                self._current_meta_dict[fii].clear()
                 continue
             elif fii=='files':
                 # show only file name
                 self.t_meta.delFileField()
                 for fjj in tii:
-                    #self.t_meta.createFileField(os.path.split(fjj)[1])
                     self.t_meta.createFileField(fjj)
             else:
                 if isinstance(tii,(list,tuple)):
                     tii=u'; '.join(tii)
-                self.t_meta.fields_dict[fii].setText(deu(tii))
+                self._current_meta_dict[fii].setText(conv(tii))
 
-        dd=self.t_meta.retrieveMetaData()
-        print('retrieved meta data:', dd)
-        return 
+        return
 
 
 
@@ -172,6 +191,6 @@ class MainFrameLoadData:
 
         self.bib_textedit.setText(text)
 
-        return 
+        return
 
 

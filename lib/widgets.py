@@ -7,6 +7,8 @@ from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont, QFontMetrics
 import resources
 from .tools import getHLine, getXExpandYMinSizePolicy
 
+
+
 class TableModel(QAbstractTableModel):
     def __init__(self, parent, datain, headerdata):
         QAbstractTableModel.__init__(self, parent)
@@ -228,6 +230,12 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
 
 
+        #def focusOutEvent(self,event):
+#
+        #super(QtWidgets.QTextEdit,self).focusOutEvent(event)
+        #print('focus out event',event)
+        #print(dir(event))
+
     def resizeTextEdit(self):
         '''
         self.setAttribute(103)
@@ -267,6 +275,7 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
 
         return
+
 
 
 
@@ -372,7 +381,7 @@ class FileLineEdit(QtWidgets.QLineEdit):
 
     def resizeEvent(self,event):
         super(QtWidgets.QLineEdit, self).resizeEvent(event)
-        if hasattr(self,'full_text'):
+        if hasattr(self,'short_text'):
             self.setText(self.short_text,elide=True)
 
 
@@ -383,6 +392,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         self.font_dict=font_dict
         self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
+        self.label_font=QFont('Serif',12,QFont.Bold)
 
         frame=QtWidgets.QWidget()
         frame.setStyleSheet('background-color:white')
@@ -424,10 +434,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.createMultiLineField('Keywords','keywords','meta_keywords')
 
         #-----------------Add catalog ids-----------------
-        labelii=QtWidgets.QLabel('Catalog IDs')
-        labelii.setStyleSheet(self.label_color)
-        labelii.setFont(QFont('Serif',12,QFont.Bold))
-        self.v_layout.addWidget(labelii)
+        self.v_layout.addWidget(self.createLabel('Catalog IDs'))
 
         grid_layout=QtWidgets.QGridLayout()
 
@@ -438,16 +445,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         #--------------------Add files--------------------
         self.fields_dict['files']=[]
-
-        h_layout=QtWidgets.QHBoxLayout()
-        qlabel=QtWidgets.QLabel('Files')
-        qlabel.setStyleSheet(self.label_color)
-        qlabel.setFont(QFont('Serif',12,QFont.Bold))
-        h_layout.addWidget(qlabel)
-        self.v_layout.addLayout(h_layout)
-
-        print('MetaTabScroll: number of widgets in v_layout',self.v_layout.count())
+        self.v_layout.addWidget(self.createLabel('Files'))
         self.file_insert_idx=self.v_layout.count()
+        print('MetaTabScroll: number of widgets in v_layout',self.v_layout.count())
 
         #---------------Add add file button---------------
         add_file_button=QtWidgets.QPushButton()
@@ -463,13 +463,27 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             border-style: inset;
             } 
         ''')
-        add_file_button.clicked.connect(lambda: self.addFileButtonClicked(
-            self.fields_dict))
+        add_file_button.clicked.connect(self.addFileButtonClicked)
         self.v_layout.addWidget(add_file_button)
 
         self.v_layout.addStretch()
         frame.setLayout(self.v_layout)
 
+        '''
+        for kk,vv in self.fields_dict.items():
+            if isinstance(vv,(list,tuple)):
+                for vii in vv:
+                    vii.focusOutEvent=self.focusOutEvent
+            else:
+                vv.focusOutEvent=self.focusOutEvent
+        '''
+
+
+    def createLabel(self,label):
+        qlabel=QtWidgets.QLabel(label)
+        qlabel.setStyleSheet(self.label_color)
+        qlabel.setFont(self.label_font)
+        return qlabel
 
 
     def createOneLineField(self,label,key,font_name,grid_layout):
@@ -497,10 +511,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.fields_dict[key]=te
 
         h_layout=QtWidgets.QHBoxLayout()
-        qlabel=QtWidgets.QLabel(label)
-        qlabel.setStyleSheet(self.label_color)
-        qlabel.setFont(QFont('Serif',12,QFont.Bold))
-        h_layout.addWidget(qlabel)
+        h_layout.addWidget(self.createLabel(label))
         h_layout.addWidget(te.fold_button)
 
         self.v_layout.addLayout(h_layout)
@@ -561,44 +572,42 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
 
     def delFileField(self,idx=None):
+        def delFile(le):
+            self.v_layout.removeWidget(le.del_button)
+            self.v_layout.removeWidget(le)
+            le.deleteLater()
+            le.del_button.deleteLater()
+            self.fields_dict['files'].remove(le)
+            self.file_insert_idx-=1
+
         if idx is None:
             #for ii in range(len(self.fields_dict['files'])):
             for leii in self.fields_dict['files']:
                 print('delFileField',leii,self.file_insert_idx)
-                self.v_layout.removeWidget(leii.del_button)
-                self.v_layout.removeWidget(leii)
-                leii.del_button.deleteLater()
-                leii.deleteLater()
-                self.fields_dict['files'].remove(leii)
-                self.file_insert_idx-=1
+                delFile(leii)
         else:
             if idx in range(len(self.fields_dict['files'])):
                 leii=self.fields_dict['files'][idx]
-                self.v_layout.removeWidget(leii.del_button)
-                self.v_layout.removeWidget(leii)
-                leii.deleteLater()
-                leii.del_button.deleteLater()
-                self.fields_dict['files'].remove(leii)
-                self.file_insert_idx-=1
-
-        print('metadata after del',self.retrieveMetaData())
+                delFile(leii)
 
         return
 
 
-    def addFileButtonClicked(self,fields_dict):
+    def addFileButtonClicked(self):
         fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a PDF file',
          '',"PDF files (*.pdf);; All files (*)")[0]
 
         if fname:
             print('addFileButtonClicked: new file', fname)
             leii=self.createFileField(fname)
-            fields_dict['files'].append(leii)
+            self.fields_dict['files'].append(leii)
 
         return
 
 
-    def retrieveMetaData(self):
+
+    @property
+    def _meta_dict(self):
 
         result_dict={}
         for kk,vv in self.fields_dict.items():
@@ -629,9 +638,10 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
 
         v_layout=QtWidgets.QVBoxLayout()
 
-        scroll=MetaTabScroll(font_dict,self)
+        self.scroll=MetaTabScroll(font_dict,self)
 
-        self.return_value=scroll.fields_dict
+        #self.return_value=scroll.fields_dict
+        #self.return_value=scroll._meta_dict
 
         self.buttons=QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
@@ -640,7 +650,7 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
 
-        v_layout.addWidget(scroll)
+        v_layout.addWidget(self.scroll)
         v_layout.addWidget(self.buttons)
 
         self.setLayout(v_layout)
@@ -649,7 +659,7 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
 
     def exec_(self):
         super(MetaDataEntryDialog,self).exec_()
-        return self.return_value
+        return self.scroll._meta_dict
 
 
 
