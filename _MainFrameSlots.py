@@ -68,9 +68,10 @@ class MainFrameSlots:
         folder=item.data(0,0)
         folderid=item.data(1,0)
         if folder=='All' and folderid=='0':
-            self.loadDocTable(None)
+            self.loadDocTable(folder=None,sortidx=4)
         else:
-            self.loadDocTable((folder,folderid))
+            self.loadDocTable((folder,folderid),sortidx=4)
+        self.doc_table.selectRow(0)
 
         # Refresh filter list
         self.filterTypeCombboxChange(item)
@@ -103,7 +104,8 @@ class MainFrameSlots:
                     filter_type,filter_text,folderid)
 
             if len(filter_docids)>0:
-                self.loadDocTable(None,filter_docids)
+                self.loadDocTable(None,filter_docids,sortidx=4)
+                self.doc_table.selectRow(0)
 
             sel=self.filter_type_combbox.currentText()
 
@@ -280,9 +282,10 @@ class MainFrameSlots:
             folder,folderid=current_folder
 
             if folder=='All' and folderid=='0':
-                self.loadDocTable(None)
+                self.loadDocTable(None,sortidx=4)
             else:
-                self.loadDocTable((folder,folderid))
+                self.loadDocTable((folder,folderid),sortidx=4)
+            self.doc_table.selectRow(0)
 
         return
 

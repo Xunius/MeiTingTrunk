@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 import operator
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
+from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, pyqtSignal
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont, QFontMetrics
 import resources
 from .tools import getHLine, getXExpandYMinSizePolicy
@@ -219,6 +219,8 @@ class MyHeaderView(QtWidgets.QHeaderView):
         return -1
 
 class AdjustableTextEdit(QtWidgets.QTextEdit):
+
+    edited_signal=pyqtSignal()
     def __init__(self,parent=None):
         super(AdjustableTextEdit,self).__init__(parent)
 
@@ -228,13 +230,14 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
         self.document().documentLayout().documentSizeChanged.connect(
                 self.resizeTextEdit)
 
+    def focusOutEvent(self,event):
+        super(AdjustableTextEdit,self).focusOutEvent(event)
+        if self.document().isModified():
+            self.edited_signal.emit()
 
-
-        #def focusOutEvent(self,event):
-#
-        #super(QtWidgets.QTextEdit,self).focusOutEvent(event)
-        #print('focus out event',event)
-        #print(dir(event))
+    def setText(self,text):
+        super(AdjustableTextEdit,self).setText(text)
+        self.document().setModified(False)
 
     def resizeTextEdit(self):
         '''
@@ -387,6 +390,7 @@ class FileLineEdit(QtWidgets.QLineEdit):
 
 class MetaTabScroll(QtWidgets.QScrollArea):
 
+    meta_edited=pyqtSignal()
     def __init__(self,font_dict,parent=None):
         super(MetaTabScroll,self).__init__(parent)
 
@@ -469,15 +473,19 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.v_layout.addStretch()
         frame.setLayout(self.v_layout)
 
-        '''
+        #-------------Connect focus out events-------------
         for kk,vv in self.fields_dict.items():
             if isinstance(vv,(list,tuple)):
                 for vii in vv:
-                    vii.focusOutEvent=self.focusOutEvent
+                    vii.edited_signal.connect(self.fieldEdited)
             else:
-                vv.focusOutEvent=self.focusOutEvent
-        '''
+                vv.edited_signal.connect(self.fieldEdited)
 
+
+    def fieldEdited(self):
+        print('fieldedited')
+        print(self._meta_dict)
+        self.meta_edited.emit()
 
     def createLabel(self,label):
         qlabel=QtWidgets.QLabel(label)

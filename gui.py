@@ -423,6 +423,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         self.t_bib=self.createBiBTab()
         self.t_scratchpad=self.createScratchTab()
         self.t_meta=MetaTabScroll(self.font_dict,self)
+        self.t_meta.meta_edited.connect(lambda: self.update_tabledata(
+            self._current_doc,self.t_meta._meta_dict))
 
         tabs.addTab(self.t_meta,'Meta Data')
         tabs.addTab(self.t_notes,'Notes')

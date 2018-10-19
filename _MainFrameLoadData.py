@@ -1,4 +1,3 @@
-import os
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from lib import sqlitedb
@@ -81,6 +80,30 @@ class MainFrameLoadData:
                 return item.data(0,0), item.data(1,0) # folder name, folderid
         return None
 
+    @property
+    def _current_docids(self):
+        if hasattr(self,'doc_table'):
+            docid=[ii[0] for ii in self._tabledata]
+            return docid
+        else:
+            return None
+
+
+    def update_tabledata(self,docid,meta_dict):
+        # need to update 'added' time
+        if docid is None:
+            newid=max(self.meta_dict.keys())+1
+            self.meta_dict[newid]=meta_dict
+        else:
+            if docid in self.meta_dict:
+                self.meta_dict[docid].update(meta_dict)
+            else:
+                self.meta_dict[docid]=meta_dict
+
+        print('update_tabledata')
+        self.loadDocTable(docids=self._current_docids)
+
+
 
     def loadLibTree(self):
 
@@ -105,8 +128,11 @@ class MainFrameLoadData:
 
 
 
-    def loadDocTable(self,folder=None,docids=None):
+    def loadDocTable(self,folder=None,docids=None,sortidx=None):
         '''Load doc table given folder'''
+
+        if folder is not None and folder[0]=='All' and folder[1]=='0':
+            folder=None
 
         tablemodel=self.doc_table.model()
         #hh=self.doc_table.horizontalHeader()
@@ -124,11 +150,13 @@ class MainFrameLoadData:
 
         print('num of docs in folder',len(docids))
         tablemodel.arraydata=data
-        tablemodel.sort(4,Qt.AscendingOrder)
+        if sortidx is not None and sortidx in range(tablemodel.columnCount(None)):
+            print('loaddoctable:, sort idx', sortidx)
+            tablemodel.sort(sortidx,Qt.AscendingOrder)
 
         #------------Load meta data on 1st row------------
         if len(data)>0:
-            self.doc_table.selectRow(0)
+            #self.doc_table.selectRow(0)
             current_row=self.doc_table.currentIndex().row()
             docid=self._current_doc
             print('current_row',current_row, docid)
@@ -138,6 +166,7 @@ class MainFrameLoadData:
             # clear meta tab
             self.clearMetaTab()
 
+        #self.doc_table.update()
 
 
     def loadMetaTab(self,docid=None):
