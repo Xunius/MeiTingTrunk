@@ -2,8 +2,9 @@ import os
 from datetime import datetime
 import operator
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, pyqtSignal
-from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont, QFontMetrics
+from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, pyqtSignal, QPoint
+from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont, QFontMetrics,\
+        QCursor
 import resources
 from .tools import getHLine, getXExpandYMinSizePolicy
 
@@ -224,16 +225,39 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
     def __init__(self,parent=None):
         super(AdjustableTextEdit,self).__init__(parent)
 
+        self.tooltip_label=QtWidgets.QLabel()
+        self.tooltip_label.setWindowFlags(Qt.SplashScreen)
+        self.tooltip_label.setMargin(3)
+        self.tooltip_label.setStyleSheet('''
+                background-color: rgb(235,225,120)
+                ''')
+        self.tooltip_text=''
+        self.label_enabled=False
+
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.textChanged.connect(self.resizeTextEdit)
         self.document().documentLayout().documentSizeChanged.connect(
                 self.resizeTextEdit)
 
+    def focusInEvent(self,event):
+        #self.setToolTip('tooltip')
+        #print('focusInEvent: QCursor.pos()', QCursor.pos())
+        #QtWidgets.QToolTip.showText(QCursor.pos(), 'tooltip')
+        if self.label_enabled and self.tooltip_text:
+            self.tooltip_label.move(self.mapToGlobal(
+                QPoint(0, self.height()-120)))
+            self.tooltip_label.setText(self.tooltip_text)
+            self.tooltip_label.show()
+
+        super(AdjustableTextEdit,self).focusInEvent(event)
+
     def focusOutEvent(self,event):
-        super(AdjustableTextEdit,self).focusOutEvent(event)
         if self.document().isModified():
             self.edited_signal.emit()
+        if self.label_enabled:
+            self.tooltip_label.close()
+        super(AdjustableTextEdit,self).focusOutEvent(event)
 
     def setText(self,text):
         super(AdjustableTextEdit,self).setText(text)
@@ -516,6 +540,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         if font_name in self.font_dict:
             te.setFont(self.font_dict[font_name])
 
+        if key=='authors':
+            te.label_enabled=True
+            te.tooltip_text='firstname, lastname\nfirstname, lastname\n...'
         self.fields_dict[key]=te
 
         h_layout=QtWidgets.QHBoxLayout()
@@ -619,6 +646,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         result_dict={}
         for kk,vv in self.fields_dict.items():
+            if kk=='authors':
+                authors=vv.toPlainText().split('\n')
+                print('_meta_dict: authors:', authors)
             if isinstance(vv,(tuple,list)):
                 vlist=[]
                 for vii in vv:
