@@ -6,6 +6,7 @@ from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, pyqtSignal, QPoint
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont, QFontMetrics,\
         QCursor
 import resources
+from lib import sqlitedb
 from .tools import getHLine, getXExpandYMinSizePolicy
 
 
@@ -441,7 +442,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.v_layout.addWidget(getHLine(self))
 
         #-------------------Add authors-------------------
-        self.createMultiLineField('Authors','authors','meta_authors')
+        self.createMultiLineField('Authors','authors_l','meta_authors')
 
         #-----Add journal, year, volume, issue, pages-----
         grid_layout=QtWidgets.QGridLayout()
@@ -453,13 +454,13 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.v_layout.addLayout(grid_layout)
 
         #---------------------Add tags---------------------
-        self.createMultiLineField('Tags','tags','meta_keywords')
+        self.createMultiLineField('Tags','tags_l','meta_keywords')
 
         #-------------------Add abstract-------------------
         self.createMultiLineField('Abstract','abstract','meta_keywords')
 
         #-------------------Add keywords-------------------
-        self.createMultiLineField('Keywords','keywords','meta_keywords')
+        self.createMultiLineField('Keywords','keywords_l','meta_keywords')
 
         #-----------------Add catalog ids-----------------
         self.v_layout.addWidget(self.createLabel('Catalog IDs'))
@@ -472,7 +473,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.v_layout.addLayout(grid_layout)
 
         #--------------------Add files--------------------
-        self.fields_dict['files']=[]
+        self.fields_dict['files_l']=[]
         self.v_layout.addWidget(self.createLabel('Files'))
         self.file_insert_idx=self.v_layout.count()
         print('MetaTabScroll: number of widgets in v_layout',self.v_layout.count())
@@ -540,9 +541,15 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         if font_name in self.font_dict:
             te.setFont(self.font_dict[font_name])
 
-        if key=='authors':
+        if key=='authors_l':
             te.label_enabled=True
             te.tooltip_text='firstname, lastname\nfirstname, lastname\n...'
+        elif key=='tags_l':
+            te.label_enabled=True
+            te.tooltip_text='tag1; tag2; tag3 ...'
+        elif key=='keywords_l':
+            te.label_enabled=True
+            te.tooltip_text='keyword1; keyword2; keyword3 ...'
         self.fields_dict[key]=te
 
         h_layout=QtWidgets.QHBoxLayout()
@@ -567,7 +574,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         if text is not None:
             le.setText(text)
 
-        self.fields_dict['files'].append(le)
+        self.fields_dict['files_l'].append(le)
         #self.v_layout.addWidget(le)
 
         # create a del file button
@@ -593,7 +600,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         ''' %(int(font_height/2), max(1,font_height-2))
         )
         button.clicked.connect(lambda: self.delFileField(
-            self.fields_dict['files'].index(le)))
+            self.fields_dict['files_l'].index(le)))
 
         le.del_button=button
         h_layout.addWidget(le)
@@ -612,17 +619,17 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             self.v_layout.removeWidget(le)
             le.deleteLater()
             le.del_button.deleteLater()
-            self.fields_dict['files'].remove(le)
+            self.fields_dict['files_l'].remove(le)
             self.file_insert_idx-=1
 
         if idx is None:
             #for ii in range(len(self.fields_dict['files'])):
-            for leii in self.fields_dict['files']:
+            for leii in self.fields_dict['files_l']:
                 print('delFileField',leii,self.file_insert_idx)
                 delFile(leii)
         else:
-            if idx in range(len(self.fields_dict['files'])):
-                leii=self.fields_dict['files'][idx]
+            if idx in range(len(self.fields_dict['files_l'])):
+                leii=self.fields_dict['files_l'][idx]
                 delFile(leii)
 
         return
@@ -635,7 +642,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         if fname:
             print('addFileButtonClicked: new file', fname)
             leii=self.createFileField(fname)
-            self.fields_dict['files'].append(leii)
+            self.fields_dict['files_l'].append(leii)
 
         return
 
@@ -644,21 +651,57 @@ class MetaTabScroll(QtWidgets.QScrollArea):
     @property
     def _meta_dict(self):
 
+        def parseToList(text):
+            textlist=text.replace('\n',';').strip(';').split(';')
+            textlist=[tii.strip() for tii in textlist]
+            return textlist
+
+        def parseAuthors(textlist):
+            firstnames=[]
+            lastnames=[]
+            for nii in textlist:
+                nii=nii.split(',',1)
+                firstnames.append(nii[0] if len(nii)>1 else '')
+                lastnames.append(nii[1] if len(nii)>1 else nii[0])
+            authors=sqlitedb.zipAuthors(firstnames,lastnames)
+
+            return firstnames,lastnames,authors
+
+
+
         result_dict={}
         for kk,vv in self.fields_dict.items():
-            if kk=='authors':
-                authors=vv.toPlainText().split('\n')
-                print('_meta_dict: authors:', authors)
-            if isinstance(vv,(tuple,list)):
-                vlist=[]
-                for vii in vv:
-                    if isinstance(vii,QtWidgets.QLineEdit):
-                        vlist.append(vii.text())
-                result_dict[kk]=vlist
+            # field should be a list
+            if kk.endswith('_l'):
 
+                if isinstance(vv,(tuple,list)):
+                    values=[]
+                    for vii in vv:
+                        if isinstance(vii,QtWidgets.QLineEdit):
+                            values.append(vii.text().strip())
+                        elif isinstance(vii,QtWidgets.QTextEdit):
+                            values.append(vii.toPlaintext().strip())
+                    result_dict[kk]=values
+                elif isinstance(vv,QtWidgets.QTextEdit):
+                    if kk=='authors_l':
+                        names=parseToList(vv.toPlainText())
+                        firsts,lasts,authors=parseAuthors(names)
+                        result_dict['firstNames_l']=firsts
+                        result_dict['lastName_l']=lasts
+                        result_dict['authors_l']=authors
+                    else:
+                        result_dict[kk]=parseToList(vv.toPlainText())
+                elif isinstance(vv,QtWidgets.QLineEdit):
+                    result_dict[kk]=parseToList(vv.toText())
+            # field should be a str
             else:
-                if isinstance(vv,QtWidgets.QTextEdit):
-                    result_dict[kk]=vv.toPlainText()
+                if isinstance(vv,QtWidgets.QLineEdit):
+                    values=vv.toText().strip()
+                    result_dict[kk]=values
+                elif isinstance(vv,QtWidgets.QTextEdit):
+                    values=vv.toPlainText().strip()
+                    result_dict[kk]=values
+
 
         return result_dict
 

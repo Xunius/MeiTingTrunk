@@ -33,7 +33,7 @@ def prepareDocs(meta_dict,docids):
             QtWidgets.QCheckBox(entryii['favourite']),
             QtWidgets.QCheckBox(entryii['read']),
             entryii['has_file'],
-            '; '.join(entryii['authors']),
+            '; '.join(entryii['authors_l']),
             entryii['title'],
             entryii['publication'],
             entryii['year'],
@@ -191,7 +191,7 @@ class MainFrameLoadData:
                 #self.t_meta.fields_dict[fii].clear()
                 self._current_meta_dict[fii].clear()
                 continue
-            elif fii=='files':
+            elif fii=='files_l':
                 # show only file name
                 self.t_meta.delFileField()
                 for fjj in tii:
@@ -215,7 +215,7 @@ class MainFrameLoadData:
         #import bibtexparser
         #bb=bibtexparser.bibdatabase.BibDatabase()
 
-        text=export2bib.parseMeta(metaii,'',metaii['folder'],True,False,
+        text=export2bib.parseMeta(metaii,'',metaii['folders_l'],True,False,
                 True)
 
         self.bib_textedit.setText(text)

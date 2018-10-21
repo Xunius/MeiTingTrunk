@@ -145,16 +145,16 @@ class MainFrameSlots:
                 docids=self.folder_data[folderid]
 
             if sel=='Filter by keywords':
-                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'keywords',docids,
+                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'keywords_l',docids,
                         unique=True,sort=True)
             elif sel=='Filter by authors':
-                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'authors',docids,
+                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'authors_l',docids,
                         unique=False,sort=False)
             elif sel=='Filter by publications':
                 folderdata=sqlitedb.fetchMetaData(self.meta_dict,'publication',docids,
                         unique=True,sort=True)
             elif sel=='Filter by tags':
-                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'tags',docids,
+                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'tags_l',docids,
                         unique=True,sort=True)
 
         folderdata=list(set(folderdata))
@@ -183,7 +183,7 @@ class MainFrameSlots:
 
         #-------------------Get folders-------------------
         metaii=self.meta_dict[docid]
-        folders=metaii['folder']
+        folders=metaii['folders_l']
         folders=[fii[1] for fii in folders]
         print('folders of docid', folders, docid)
 
@@ -236,7 +236,7 @@ class MainFrameSlots:
 
     def enableMetaTab(self):
         for kk,vv in self._current_meta_dict.items():
-            if kk!='files':
+            if kk!='files_l':
                 vv.setReadOnly(False)
 
         for tii in [self.note_textedit, ]:

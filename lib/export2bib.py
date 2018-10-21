@@ -76,8 +76,8 @@ def parseMeta(metadict,basedir,folder,isfile,iszotero,iskeyword,verbose=True):
     citekey=getField(metadict,'citationkey','citationkey')
 
     #-------------------Get authors-------------------
-    first=metadict['firstNames']
-    last=metadict['lastName']
+    first=metadict['firstNames_l']
+    last=metadict['lastName_l']
     if first is None or last is None:
         authors=''
     if type(first) is not list and type(last) is not list:
@@ -96,7 +96,7 @@ def parseMeta(metadict,basedir,folder,isfile,iszotero,iskeyword,verbose=True):
     for kk,vv in metadict.items():
         if vv is None:
             continue
-        if kk in ['type','firstnames','lastname','docid']:
+        if kk in ['type','firstnames_l','lastname_l','docid']:
             continue
         if kk in ['year','month','day']:
             # Convert float to int to str
@@ -138,14 +138,14 @@ def parseMeta(metadict,basedir,folder,isfile,iszotero,iskeyword,verbose=True):
                 fieldvv=vv
 
         #----------Add tags to keywords if iszotero----------
-        if iszotero and (kk=='tags' or kk=='keywords') and not gotkeywords:
+        if iszotero and (kk=='tags_l' or kk=='keywords_l') and not gotkeywords:
             if iskeyword:
-                keywords=getField(metadict,'keywords',[])
+                keywords=getField(metadict,'keywords_l',[])
             else:
                 keywords=[]
             if not isinstance(keywords, list):
                 keywords=[keywords,]
-            tags=getField(metadict,'tags',[])
+            tags=getField(metadict,'tags_l',[])
             if not isinstance(tags, list):
                 tags=[tags,]
             keywords.extend(tags)

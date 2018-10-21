@@ -25,7 +25,7 @@ def readSqlite(dbin):
         metaii=getMetaData(dbin,idii)
         meta[idii]=metaii
 
-        folderii=metaii['folder']
+        folderii=metaii['folders_l']
         # note: convert folder id to str
         # TODO: convert back to int when writing to sqlite
         folderids=[str(ff[0]) for ff in folderii]
@@ -148,27 +148,53 @@ def getMetaData(db, docid):
         result[kii]=vii
 
     # query list fields, .e.g firstnames, tags
-    result['firstNames']=fetchField(db,query_firstnames,(docid,),1,'list')
-    result['lastName']=fetchField(db,query_lastnames,(docid,),1,'list')
-    result['keywords']=fetchField(db,query_keywords,(docid,),1,'list')
-    result['files']=fetchField(db,query_files,(docid,),1,'list')
-    result['folder']=fetchField(db,query_folder,(docid,),2,'list')
-    result['tags']=fetchField(db,query_tags,(docid,),1,'list')
+    result['firstNames_l']=fetchField(db,query_firstnames,(docid,),1,'list')
+    result['lastName_l']=fetchField(db,query_lastnames,(docid,),1,'list')
+    result['keywords_l']=fetchField(db,query_keywords,(docid,),1,'list')
+    result['files_l']=fetchField(db,query_files,(docid,),1,'list')
+    result['folders_l']=fetchField(db,query_folder,(docid,),2,'list')
+    result['tags_l']=fetchField(db,query_tags,(docid,),1,'list')
 
-    folder=result['folder']
-    result['folder']=folder or [(-1, 'Canonical')] # if no folder name, a canonical doc
+    #if '' in result['firstNames_l']:
+        #__import__('pdb').set_trace()
+    #if '' in result['lastName_l']:
+        #__import__('pdb').set_trace()
 
-    first=result['firstNames']
-    last=result['lastName']
-    authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
-    result['authors']=authors
+    folders=result['folders_l']
+    result['folders_l']=folders or [(-1, 'Canonical')] # if no folder name, a canonical doc
 
-    result['has_file']=False if len(result['files'])==0 else True
-    if len(result['files'])>1:
-        print('loadMetaTab: >1 files doc:',docid,result['title'])
+    first=result['firstNames_l']
+    last=result['lastName_l']
+    #authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
+    #result['authors_l']=authors
+    result['authors_l']=zipAuthors(first,last)
+
+    result['has_file']=False if len(result['files_l'])==0 else True
 
 
     return result
+
+
+def zipAuthors(firstnames,lastnames):
+    if len(firstnames)!=len(lastnames):
+        print('zipAuthors')
+        print('firstnames',firstnames)
+        print('lastnames',lastnames)
+        raise Exception("Exception")
+    authors=[]
+    for ii in range(len(firstnames)):
+        fii=firstnames[ii]
+        lii=lastnames[ii]
+        if fii!='' and lii!='':
+            authors.append('%s, %s' %(lii,fii))
+        elif fii=='' and lii!='':
+            authors.append(lii)
+        elif fii!='' and lii=='':
+            authors.append(fii)
+
+    return authors
+
+
 
 
 def getFolders(db):
@@ -265,13 +291,13 @@ def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
         t_last,t_first=map(str.strip,filter_text.split(','))
         print('t_last: %s, t_first: %s, text: %s' %(t_last,t_first,filter_text))
         for kk in docids:
-            authors=meta_dict[kk]['authors']
+            authors=meta_dict[kk]['authors_l']
             if filter_text in authors:
                 results.append(kk)
 
     elif filter_type=='Filter by tags':
         for kk in docids:
-            tags=meta_dict[kk]['tags'] or []
+            tags=meta_dict[kk]['tags_l'] or []
             if filter_text in tags:
                 results.append(kk)
 
@@ -283,7 +309,7 @@ def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
 
     elif filter_type=='Filter by keywords':
         for kk in docids:
-            keywords=meta_dict[kk]['keywords'] or []
+            keywords=meta_dict[kk]['keywords_l'] or []
             if filter_text in keywords:
                 results.append(kk)
 
