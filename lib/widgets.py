@@ -669,7 +669,8 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
 
 
-        result_dict={}
+        #result_dict={}
+        result_dict=sqlitedb.DocMeta()
         for kk,vv in self.fields_dict.items():
             # field should be a list
             if kk.endswith('_l'):
@@ -688,7 +689,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
                         firsts,lasts,authors=parseAuthors(names)
                         result_dict['firstNames_l']=firsts
                         result_dict['lastName_l']=lasts
-                        result_dict['authors_l']=authors
+                        #result_dict['authors_l']=authors
                     else:
                         result_dict[kk]=parseToList(vv.toPlainText())
                 elif isinstance(vv,QtWidgets.QLineEdit):

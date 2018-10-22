@@ -59,8 +59,13 @@ class MainFrameLoadData:
     def _current_doc(self):
         if hasattr(self,'doc_table'):
             current_row=self.doc_table.currentIndex().row()
-            docid=self._tabledata[current_row][0]
-            return docid
+            if current_row < len(self._tabledata):
+                docid=self._tabledata[current_row][0]
+                return docid
+            else:
+                print('_current_doc: current_row > row number',current_row,\
+                        len(self._tabledata))
+                return None
         else:
             return None
 
@@ -91,17 +96,24 @@ class MainFrameLoadData:
 
     def update_tabledata(self,docid,meta_dict):
         # need to update 'added' time
+        print('update_tabledata')
         if docid is None:
+            # update meta_dict
             newid=max(self.meta_dict.keys())+1
+            print('update_tabledata: add new doc, give id:',newid)
             self.meta_dict[newid]=meta_dict
+            # update folder_data
+            foldername,folderid=self._current_folder
+            if folderid!='0':
+                self.folder_data[folderid].append(newid)
+            #self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
+            self.loadDocTable(folder=(foldername,folderid))
         else:
             if docid in self.meta_dict:
                 self.meta_dict[docid].update(meta_dict)
             else:
                 self.meta_dict[docid]=meta_dict
-
-        print('update_tabledata')
-        self.loadDocTable(docids=self._current_docids)
+            self.loadDocTable(docids=self._current_docids)
 
 
 
@@ -166,7 +178,7 @@ class MainFrameLoadData:
             # clear meta tab
             self.clearMetaTab()
 
-        #self.doc_table.update()
+        self.doc_table.update()
 
 
     def loadMetaTab(self,docid=None):

@@ -59,6 +59,7 @@ class MainFrameSlots:
             ret=dialog.exec_()
             print('addActionTriggered: return value:',ret)
             #print(ret['title'].toPlainText())
+            self.update_tabledata(None, ret)
 
         return
 

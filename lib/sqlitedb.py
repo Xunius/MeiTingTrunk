@@ -4,6 +4,78 @@ Author: guangzhi XU (xugzhi1987@gmail.com; guangzhi.xu@outlook.com)
 Update time: 2018-09-27 19:44:32.
 '''
 
+import time
+from collections import MutableMapping
+
+
+class DocMeta(MutableMapping):
+
+    def __init__(self, *args, **kwargs):
+        # set defaults
+        self.store = {
+                'id': None, 'title': None, 'issue': None, 'pages': None,
+                'publication': None, 'volume': None, 'year': None,
+                'doi': None, 'abstract': None, 'arxivId': None, 'chapter': None,
+                'city': None, 'country': None, 'edition': None,
+                'institution': None, 'isbn': None, 'issn': None, 'month': None,
+                'day': None, 'publisher': None, 'series': None,
+                'type': 'article',
+                'read': None, 'favourite': None,
+                'pmid': None, 'added': str(int(time.time())),
+                'confirmed': False,
+                'firstNames_l': [],
+                'lastName_l': [],
+                'keywords_l': [],
+                'files_l': [],
+                'folders_l': [],
+                'tags_l': []
+                }
+
+        self.update(dict(*args, **kwargs))  # use the free update to set keys
+
+    def __getitem__(self, key):
+        if key == 'has_file':
+            return True if len(self.store['files_l']) > 0 else False
+        elif key == 'authors_l':
+            return zipAuthors(self.store['firstNames_l'],
+                    self.store['lastName_l'])
+        elif key == 'citaitonkey':
+            ck = self.store.get('citationkey',None)
+            if ck:
+                return ck
+            else:
+                last = self.store.get('lastName_l',[])
+                year = self.store.get('year',None)
+                if len(last) > 0 and year:
+                    ck='%s%s' %(last,str(year))
+                    return ck
+                else:
+                    return ''
+        else:
+            return self.store[key]
+
+    def __setitem__(self, key, value):
+        if not isinstance(key,str):
+            raise Exception("accept only str type keys")
+        if key.endswith('_l'):
+            if not isinstance(value,(tuple,list)):
+                raise Exception("keys end with '_l' accepts only list or tuple.")
+
+        self.store[key] = value
+
+    def __delitem__(self, key):
+        del self.store[key]
+
+    def __iter__(self):
+        return iter(self.store)
+
+    def __len__(self):
+        return len(self.store)
+
+    def __repr__(self):
+        return self.store.__repr__()
+
+
 
 def readSqlite(dbin):
 
@@ -140,7 +212,8 @@ def getMetaData(db, docid):
             'isbn','issn','month','day','publisher','series','type',\
             'read','favourite','pmid','added','confirmed']
 
-    result={}
+    #result={}
+    result=DocMeta()
 
     # query single-worded fields, e.g. year, city
     for kii in fields:
@@ -163,13 +236,14 @@ def getMetaData(db, docid):
     folders=result['folders_l']
     result['folders_l']=folders or [(-1, 'Canonical')] # if no folder name, a canonical doc
 
-    first=result['firstNames_l']
-    last=result['lastName_l']
+    #first=result['firstNames_l']
+    #last=result['lastName_l']
     #authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
     #result['authors_l']=authors
-    result['authors_l']=zipAuthors(first,last)
 
-    result['has_file']=False if len(result['files_l'])==0 else True
+    #result['authors_l']=zipAuthors(first,last)
+    #result['has_file']=False if len(result['files_l'])==0 else True
+
 
 
     return result
@@ -235,47 +309,6 @@ def fetchMetaData(meta_dict,key,docids,unique,sort):
     return result
 
 
-def getAuthors(meta_dict,docids):
-    if not isinstance(docids, (tuple,list)):
-        docids=[docids,]
-
-    result=[]
-    fs=[]
-    ls=[]
-    for idii in docids:
-        firsts=meta_dict[idii].get('firstNames',None)
-        lasts=meta_dict[idii].get('lastName',None)
-        
-        if firsts is None or lasts is None:
-            __import__('pdb').set_trace()
-
-        if isinstance(firsts, (tuple,list)) and not isinstance(lasts,(tuple,list)):
-            __import__('pdb').set_trace()
-
-        if not isinstance(firsts, (tuple,list)) and isinstance(lasts,(tuple,list)):
-            __import__('pdb').set_trace()
-        if firsts=='':
-            __import__('pdb').set_trace()
-        if isinstance(firsts, (tuple,list)) and isinstance(lasts,(tuple,list)):
-            fs.extend(firsts)
-            ls.extend(lasts)
-            #result.extend(vv)
-        else:
-            #result.append(vv)
-            fs.append(firsts)
-            ls.append(lasts)
-
-        if len(fs)!=len(ls):
-            __import__('pdb').set_trace()
-
-    result=['%s, %s' %(ls[ii],fs[ii]) for ii in range(len(fs))]
-
-    aa=fetchMetaData(meta_dict,'firstNames',docids,
-            unique=False,sort=False)
-    bb=fetchMetaData(meta_dict,'lastName',docids,
-            unique=False,sort=False)
-
-    return result
 
 def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
 
@@ -284,8 +317,6 @@ def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
         docids=meta_dict.keys()
     else:
         docids=folder_data[current_folder]
-
-    print('docids',docids)
 
     if filter_type=='Filter by authors':
         t_last,t_first=map(str.strip,filter_text.split(','))
