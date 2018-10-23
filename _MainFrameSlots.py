@@ -56,10 +56,12 @@ class MainFrameSlots:
 
         elif action_text=='Add Entry Manually':
             dialog=widgets.MetaDataEntryDialog(self.font_dict,self)
-            ret=dialog.exec_()
-            print('addActionTriggered: return value:',ret)
-            #print(ret['title'].toPlainText())
-            self.update_tabledata(None, ret)
+            dl_ret,dl_dict=dialog.exec_()
+            print('addActionTriggered:, dl_ret',dl_ret)
+            if dl_ret:
+                print('addActionTriggered: return value:',dl_dict)
+                #print(ret['title'].toPlainText())
+                self.update_tabledata(None, dl_dict)
 
         return
 

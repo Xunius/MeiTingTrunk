@@ -178,7 +178,8 @@ class MainFrameLoadData:
             # clear meta tab
             self.clearMetaTab()
 
-        self.doc_table.update()
+        #self.doc_table.viewport().update()
+        tablemodel.layoutChanged.emit()
 
 
     def loadMetaTab(self,docid=None):

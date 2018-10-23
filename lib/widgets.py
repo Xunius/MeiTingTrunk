@@ -240,6 +240,7 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
         self.textChanged.connect(self.resizeTextEdit)
         self.document().documentLayout().documentSizeChanged.connect(
                 self.resizeTextEdit)
+        self.setTabChangesFocus(True)
 
     def focusInEvent(self,event):
         #self.setToolTip('tooltip')
@@ -506,6 +507,15 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             else:
                 vv.edited_signal.connect(self.fieldEdited)
 
+        #------------------Set tab orders------------------
+        field_keys=['title', 'authors_l', 'publication', 'year', 'volume',
+                'issue', 'pages', 'citationkey', 'tags_l', 'abstract',
+                'keywords_l', 'arxivId', 'doi', 'issn', 'pmid']
+        for ii,kk in enumerate(field_keys[:-1]):
+            w1=self.fields_dict[kk]
+            w2=self.fields_dict[field_keys[ii+1]]
+            self.setTabOrder(w1,w2)
+
 
     def fieldEdited(self):
         print('fieldedited')
@@ -722,9 +732,6 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
 
         self.scroll=MetaTabScroll(font_dict,self)
 
-        #self.return_value=scroll.fields_dict
-        #self.return_value=scroll._meta_dict
-
         self.buttons=QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
             Qt.Horizontal, self)
@@ -738,10 +745,9 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
         self.setLayout(v_layout)
 
 
-
     def exec_(self):
-        super(MetaDataEntryDialog,self).exec_()
-        return self.scroll._meta_dict
+        ret=super(MetaDataEntryDialog,self).exec_()
+        return ret, self.scroll._meta_dict
 
 
 
