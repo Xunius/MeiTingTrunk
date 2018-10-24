@@ -121,6 +121,7 @@ class MainFrameLoadData:
 
         style=QtWidgets.QApplication.style()
         diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+        needsreview_icon=style.standardIcon(QtWidgets.QStyle.SP_MessageBoxInformation)
 
         #-------------Get all level 1 folders-------------
         folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if\
@@ -130,6 +131,10 @@ class MainFrameLoadData:
         allitem=QtWidgets.QTreeWidgetItem(['All','0'])
         allitem.setIcon(0,diropen_icon)
         self.libtree.addTopLevelItem(allitem)
+
+        needsreviewitem=QtWidgets.QTreeWidgetItem(['Needs Review','-2'])
+        needsreviewitem.setIcon(0,needsreview_icon)
+        self.libtree.addTopLevelItem(needsreviewitem)
 
         for fnameii,idii in folders1:
             addFolder(self.libtree,idii,self.folder_dict)
@@ -143,13 +148,24 @@ class MainFrameLoadData:
     def loadDocTable(self,folder=None,docids=None,sortidx=None):
         '''Load doc table given folder'''
 
-        if folder is not None and folder[0]=='All' and folder[1]=='0':
-            folder=None
-
         tablemodel=self.doc_table.model()
-        #hh=self.doc_table.horizontalHeader()
+
         print('load tabel', folder)
 
+        #-----------Get list of doc ids to load-----------
+        if docids is None:
+
+            if folder is None:
+                docids=self.meta_dict.keys()
+            elif folder is not None and folder[0]=='All' and folder[1]=='0':
+                docids=self.meta_dict.keys()
+            #elif folder is not None and folder[0]=='Needs Review' and folder[1]=='-2':
+                #docids=self.folder_data['-2']
+            else:
+                folderid=folder[1]
+                docids=self.folder_data[folderid]
+
+        '''
         if docids is None:
             if folder is None:
                 docids=self.meta_dict.keys()
@@ -159,6 +175,8 @@ class MainFrameLoadData:
             data=prepareDocs(self.meta_dict,docids)
         else:
             data=prepareDocs(self.meta_dict,docids)
+        '''
+        data=prepareDocs(self.meta_dict,docids)
 
         print('num of docs in folder',len(docids))
         tablemodel.arraydata=data

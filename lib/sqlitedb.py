@@ -92,12 +92,15 @@ def readSqlite(dbin):
     docids.sort()
 
     folder_data={}
+    folder_data['-2']=[]
 
     for idii in docids:
         metaii=getMetaData(dbin,idii)
         meta[idii]=metaii
 
         folderii=metaii['folders_l']
+        if metaii['confirmed'] is None or metaii['confirmed']=='false':
+            folder_data['-2'].append(idii)
         # note: convert folder id to str
         # TODO: convert back to int when writing to sqlite
         folderids=[str(ff[0]) for ff in folderii]
@@ -111,6 +114,7 @@ def readSqlite(dbin):
     empty_folderids=list(set(folder_dict.keys()).difference(folder_data.keys()))
     for fii in empty_folderids:
         folder_data[fii]=[]
+
 
     return meta, folder_data, folder_dict
 
@@ -267,6 +271,8 @@ def zipAuthors(firstnames,lastnames):
             authors.append(fii)
 
     return authors
+
+
 
 
 
