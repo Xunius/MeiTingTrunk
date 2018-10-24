@@ -70,11 +70,18 @@ class MainFrameSlots:
         '''Select folder by clicking'''
         folder=item.data(0,0)
         folderid=item.data(1,0)
+        print('clickSelFolder: folder', folder,'folderid',folderid)
         if folder=='All' and folderid=='0':
             self.loadDocTable(folder=None,sortidx=4)
         else:
             self.loadDocTable((folder,folderid),sortidx=4)
-        self.doc_table.selectRow(0)
+
+
+        if folder=='Needs Review' and folderid=='-2':
+            self.add_button.setDisabled(True)
+        else:
+            self.add_button.setEnabled(True)
+        #self.doc_table.selectRow(0)
 
         # Refresh filter list
         self.filterTypeCombboxChange(item)
@@ -88,6 +95,7 @@ class MainFrameSlots:
             column=0
             print('selFolder:',item.data(0,0),item.data(1,0),'selected column', column)
             self.clickSelFolder(item,column)
+
 
 
     #######################################################################
@@ -279,16 +287,17 @@ class MainFrameSlots:
 
     def clearFilterButtonClicked(self):
 
-        self.clear_filter_frame.setVisible(False)
-        current_folder=self._current_folder
-        if current_folder:
-            folder,folderid=current_folder
+        if self.clear_filter_frame.isVisible():
+            self.clear_filter_frame.setVisible(False)
+            current_folder=self._current_folder
+            if current_folder:
+                folder,folderid=current_folder
 
-            if folder=='All' and folderid=='0':
-                self.loadDocTable(None,sortidx=4)
-            else:
-                self.loadDocTable((folder,folderid),sortidx=4)
-            self.doc_table.selectRow(0)
+                if folder=='All' and folderid=='0':
+                    self.loadDocTable(None,sortidx=4)
+                else:
+                    self.loadDocTable((folder,folderid),sortidx=4)
+                self.doc_table.selectRow(0)
 
         return
 

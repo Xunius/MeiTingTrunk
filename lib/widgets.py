@@ -128,6 +128,7 @@ class TableModel(QAbstractTableModel):
             self.arraydata.reverse()
         self.layoutChanged.emit()
 
+
 class MyHeaderView(QtWidgets.QHeaderView):
     def __init__(self,parent):
         super(MyHeaderView,self).__init__(Qt.Horizontal,parent)

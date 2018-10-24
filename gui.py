@@ -296,7 +296,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         libtree.setColumnCount(2)
         libtree.hideColumn(1)
         libtree.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-        libtree.itemClicked.connect(self.clickSelFolder)
+        #libtree.itemClicked.connect(self.clickSelFolder)
         libtree.selectionModel().selectionChanged.connect(self.selFolder)
         libtree.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         libtree.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
@@ -397,6 +397,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         tv.setColumnHidden(0,True)
 
         tv.selectionModel().currentChanged.connect(self.selDoc)
+        #tablemodel.rowsInserted.connect(self.model_insert_row)
 
         return tv
 

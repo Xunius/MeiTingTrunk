@@ -98,16 +98,24 @@ class MainFrameLoadData:
         # need to update 'added' time
         print('update_tabledata')
         if docid is None:
-            # update meta_dict
+
             newid=max(self.meta_dict.keys())+1
-            print('update_tabledata: add new doc, give id:',newid)
-            self.meta_dict[newid]=meta_dict
+
             # update folder_data
             foldername,folderid=self._current_folder
-            if folderid!='0':
+            if folderid not in ['0', '-2']:
                 self.folder_data[folderid].append(newid)
+                if foldername not in meta_dict['folders_l']:
+                    meta_dict['folders_l'].append(foldername)
+                    print('update_tabledata:, add current_folder', foldername,\
+                            meta_dict['folders_l'])
             #self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
-            self.loadDocTable(folder=(foldername,folderid))
+
+            # update meta_dict
+            print('update_tabledata: add new doc, give id:',newid)
+            self.meta_dict[newid]=meta_dict
+            self.loadDocTable(folder=(foldername,folderid),sortidx=4)
+            #self.doc_table.model().rowsInserted.emit()
         else:
             if docid in self.meta_dict:
                 self.meta_dict[docid].update(meta_dict)
@@ -151,6 +159,10 @@ class MainFrameLoadData:
         tablemodel=self.doc_table.model()
 
         print('load tabel', folder)
+        print('doc_tables header',self.doc_table.horizontalHeader())
+        hh=self.doc_table.horizontalHeader()
+        print('sort indicator section:', hh.sortIndicatorSection())
+        print('sort indicator order:', hh.sortIndicatorOrder())
 
         #-----------Get list of doc ids to load-----------
         if docids is None:
@@ -184,14 +196,15 @@ class MainFrameLoadData:
             print('loaddoctable:, sort idx', sortidx)
             tablemodel.sort(sortidx,Qt.AscendingOrder)
 
+        print('loadDocTable: -----------', len(data))
         #------------Load meta data on 1st row------------
         if len(data)>0:
-            #self.doc_table.selectRow(0)
+            self.enableMetaTab()
             current_row=self.doc_table.currentIndex().row()
             docid=self._current_doc
             print('current_row',current_row, docid)
-            self.loadMetaTab(docid)
-            self.enableMetaTab()
+            self.doc_table.selectRow(0)
+            #self.loadMetaTab(docid)
         else:
             # clear meta tab
             self.clearMetaTab()
