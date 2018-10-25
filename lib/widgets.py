@@ -663,9 +663,13 @@ class MetaTabScroll(QtWidgets.QScrollArea):
     def _meta_dict(self):
 
         def parseToList(text):
+            result=[]
             textlist=text.replace('\n',';').strip(';').split(';')
-            textlist=[tii.strip() for tii in textlist]
-            return textlist
+            for tii in textlist:
+                tii=tii.strip()
+                if len(tii)>0:
+                    result.append(tii)
+            return result
 
         def parseAuthors(textlist):
             firstnames=[]
@@ -685,14 +689,15 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         for kk,vv in self.fields_dict.items():
             # field should be a list
             if kk.endswith('_l'):
-
                 if isinstance(vv,(tuple,list)):
                     values=[]
                     for vii in vv:
                         if isinstance(vii,QtWidgets.QLineEdit):
-                            values.append(vii.text().strip())
+                            textii=vii.text().strip()
                         elif isinstance(vii,QtWidgets.QTextEdit):
-                            values.append(vii.toPlaintext().strip())
+                            textii=vii.toPlaintext().strip()
+                        if textii:
+                            values.append(textii)
                     result_dict[kk]=values
                 elif isinstance(vv,QtWidgets.QTextEdit):
                     if kk=='authors_l':
@@ -709,10 +714,10 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             else:
                 if isinstance(vv,QtWidgets.QLineEdit):
                     values=vv.toText().strip()
-                    result_dict[kk]=values
+                    result_dict[kk]=values or None
                 elif isinstance(vv,QtWidgets.QTextEdit):
                     values=vv.toPlainText().strip()
-                    result_dict[kk]=values
+                    result_dict[kk]=values or None
 
 
         return result_dict
@@ -739,14 +744,42 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
 
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
+        self.scroll.meta_edited.connect(self.checkOkButton)
 
         v_layout.addWidget(self.scroll)
         v_layout.addWidget(self.buttons)
 
         self.setLayout(v_layout)
 
+        self.initialized=False
+        self.empty_dict=sqlitedb.DocMeta()
+        self.empty_dict.pop('added')
+
+    def checkOkButton(self):
+        def checkDictChanged(d1,d2):
+            for kk in d1.keys():
+                if d1[kk]!=d2[kk]:
+                    return False
+            return True
+
+        if not checkDictChanged(self.empty_dict,self.scroll._meta_dict):
+            self.buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
+            print('MetaDataEntryDialog.showEvent:, enabled')
+        else:
+            self.buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
+            print('MetaDataEntryDialog.showEvent:, disabled')
+
+    def showEvent(self,e):
+        if not self.initialized:
+            self.buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
+            print('MetaDataEntryDialog.showEvent:, disabled')
+            self.initialized=True
+
+        super(MetaDataEntryDialog,self).showEvent(e)
+        return
 
     def exec_(self):
+        self.scroll.fields_dict['title'].setFocus()
         ret=super(MetaDataEntryDialog,self).exec_()
         return ret, self.scroll._meta_dict
 

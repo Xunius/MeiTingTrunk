@@ -114,8 +114,12 @@ class MainFrameLoadData:
             # update meta_dict
             print('update_tabledata: add new doc, give id:',newid)
             self.meta_dict[newid]=meta_dict
-            self.loadDocTable(folder=(foldername,folderid),sortidx=4)
+            #self.loadDocTable(folder=(foldername,folderid),sortidx=4)
             #self.doc_table.model().rowsInserted.emit()
+            self.loadDocTable(docids=self._current_docids+[newid,])
+            self.doc_table.scrollToBottom()
+            self.doc_table.selectRow(self.doc_table.model().rowCount(None)-1)
+            
         else:
             if docid in self.meta_dict:
                 self.meta_dict[docid].update(meta_dict)
@@ -200,10 +204,10 @@ class MainFrameLoadData:
         #------------Load meta data on 1st row------------
         if len(data)>0:
             self.enableMetaTab()
+            self.doc_table.selectRow(0)
             current_row=self.doc_table.currentIndex().row()
             docid=self._current_doc
             print('current_row',current_row, docid)
-            self.doc_table.selectRow(0)
             #self.loadMetaTab(docid)
         else:
             # clear meta tab
