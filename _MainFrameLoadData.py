@@ -105,8 +105,9 @@ class MainFrameLoadData:
             foldername,folderid=self._current_folder
             if folderid not in ['0', '-2']:
                 self.folder_data[folderid].append(newid)
-                if foldername not in meta_dict['folders_l']:
-                    meta_dict['folders_l'].append(foldername)
+
+                if (folderid, foldername) not in meta_dict['folders_l']:
+                    meta_dict['folders_l'].append((folderid,foldername))
                     print('update_tabledata:, add current_folder', foldername,\
                             meta_dict['folders_l'])
             #self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}

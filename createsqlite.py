@@ -18,7 +18,7 @@ else:
     from urllib import unquote
     from urlparse import urlparse
 
-FILE_OUT_NAME='new2.sqlite'
+FILE_OUT_NAME='new3.sqlite'
 FILE_IN_NAME='mendeley.sqlite'
 LIB_FOLDER='~/Papers2'
 FILE_FOLDER=os.path.join(LIB_FOLDER,'collections')
@@ -200,6 +200,16 @@ if __name__=='__main__':
     cout.execute(query)
     dbout.commit()
 
+    #------------Create DocumentUrls table------------
+    query='''CREATE TABLE IF NOT EXISTS DocumentUrls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    docid INT,
+    url TEXT
+    )'''
+
+    cout.execute(query)
+    dbout.commit()
+
     #----------------Copy over content----------------
     docids=getDocIds(dbin)
 
@@ -257,6 +267,8 @@ if __name__=='__main__':
         notes=selByDocid(cin, 'FileNotes', ['note', 'modifiedTime', 'createdTime'], docii)
         keywords=selByDocid(cin, 'DocumentKeywords', 'keyword', docii)
         folderid=selByDocid(cin, 'DocumentFolders', 'folderId', docii)
+        urls=selByDocid(cin, 'DocumentUrls', 'url', docii)
+        urls=[str(bjj) for bjj in urls]   # convert blob to str
 
         # get folder
         query='''SELECT Folders.id, Folders.name, Folders.parentId
@@ -311,7 +323,10 @@ if __name__=='__main__':
             VALUES (?, ?, ?, ?)'''
             cout.execute(query, (ii,)+aii)
 
-
+        for urlii in urls:
+            query='''INSERT INTO DocumentUrls (docid, url)
+            VALUES (?, ?)'''
+            cout.execute(query, (ii, urlii))
 
         # get path
         query='''SELECT Files.localUrl

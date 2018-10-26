@@ -17,7 +17,7 @@ import _MainFrameSlots
 
 __version__='v0.1'
 
-FILE_IN='new2.sqlite'
+FILE_IN='new3.sqlite'
 
 
 # TODO:
@@ -36,9 +36,10 @@ FILE_IN='new2.sqlite'
 # seperate libraries
 # [y] use resource file to load icons/images
 # in note tab, add time stamps at left margin
-# change meta dict key naming convention to distinguish string and list types:
+# [y] change meta dict key naming convention to distinguish string and list types:
 #   e.g. authors -> authors_l, year -> year_s
 # possible issue with local time with added time
+# add logger
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -397,6 +398,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         tv.setColumnHidden(0,True)
 
         tv.selectionModel().currentChanged.connect(self.selDoc)
+        tv.clicked.connect(self.docTableClicked)
         #tablemodel.rowsInserted.connect(self.model_insert_row)
 
         return tv

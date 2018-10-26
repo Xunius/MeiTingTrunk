@@ -39,7 +39,7 @@ class DocMeta(MutableMapping):
         elif key == 'authors_l':
             return zipAuthors(self.store['firstNames_l'],
                     self.store['lastName_l'])
-        elif key == 'citaitonkey':
+        elif key == 'citationkey':
             ck = self.store.get('citationkey',None)
             if ck:
                 return ck
@@ -47,7 +47,7 @@ class DocMeta(MutableMapping):
                 last = self.store.get('lastName_l',[])
                 year = self.store.get('year',None)
                 if len(last) > 0 and year:
-                    ck='%s%s' %(last,str(year))
+                    ck='%s%s' %(last[0],str(year))
                     return ck
                 else:
                     return ''
@@ -56,10 +56,13 @@ class DocMeta(MutableMapping):
 
     def __setitem__(self, key, value):
         if not isinstance(key,str):
-            raise Exception("accept only str type keys")
+            raise Exception("accept only str type keys. key: %s, value: %s"\
+                    %(key, value))
         if key.endswith('_l'):
             if not isinstance(value,(tuple,list)):
-                raise Exception("keys end with '_l' accepts only list or tuple.")
+                raise Exception("keys end with '_l' accepts only list or tuple. key: %s, value: %s" %(key, value))
+        if key not in self.store.keys():
+            return
 
         self.store[key] = value
 
@@ -135,6 +138,13 @@ def getMetaData(db, docid):
     SELECT DocumentTags.tag
     FROM DocumentTags
     WHERE (DocumentTags.docid=?)
+    '''
+
+    query_urls=\
+    '''
+    SELECT DocumentUrls.url
+    FROM DocumentUrls
+    WHERE (DocumentUrls.docid=?)
     '''
 
     query_firstnames=\
@@ -231,23 +241,10 @@ def getMetaData(db, docid):
     result['files_l']=fetchField(db,query_files,(docid,),1,'list')
     result['folders_l']=fetchField(db,query_folder,(docid,),2,'list')
     result['tags_l']=fetchField(db,query_tags,(docid,),1,'list')
-
-    #if '' in result['firstNames_l']:
-        #__import__('pdb').set_trace()
-    #if '' in result['lastName_l']:
-        #__import__('pdb').set_trace()
+    result['urls_l']=fetchField(db,query_urls,(docid,),1,'list')
 
     folders=result['folders_l']
     result['folders_l']=folders or [(-1, 'Canonical')] # if no folder name, a canonical doc
-
-    #first=result['firstNames_l']
-    #last=result['lastName_l']
-    #authors=['%s, %s' %(ii[0],ii[1]) for ii in zip(last,first)]
-    #result['authors_l']=authors
-
-    #result['authors_l']=zipAuthors(first,last)
-    #result['has_file']=False if len(result['files_l'])==0 else True
-
 
 
     return result

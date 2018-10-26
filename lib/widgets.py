@@ -585,7 +585,8 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         if text is not None:
             le.setText(text)
 
-        self.fields_dict['files_l'].append(le)
+        if le not in self.fields_dict['files_l']:
+            self.fields_dict['files_l'].append(le)
         #self.v_layout.addWidget(le)
 
         # create a del file button
@@ -652,8 +653,8 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         if fname:
             print('addFileButtonClicked: new file', fname)
-            leii=self.createFileField(fname)
-            self.fields_dict['files_l'].append(leii)
+            self.createFileField(fname)
+            self.fieldEdited()
 
         return
 
@@ -754,6 +755,7 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
         self.initialized=False
         self.empty_dict=sqlitedb.DocMeta()
         self.empty_dict.pop('added')
+        self.empty_dict.pop('files_l')
 
     def checkOkButton(self):
         def checkDictChanged(d1,d2):
@@ -775,11 +777,11 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
             print('MetaDataEntryDialog.showEvent:, disabled')
             self.initialized=True
 
+        self.scroll.fields_dict['title'].setFocus()
         super(MetaDataEntryDialog,self).showEvent(e)
         return
 
     def exec_(self):
-        self.scroll.fields_dict['title'].setFocus()
         ret=super(MetaDataEntryDialog,self).exec_()
         return ret, self.scroll._meta_dict
 

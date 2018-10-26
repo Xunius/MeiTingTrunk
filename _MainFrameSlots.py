@@ -5,23 +5,11 @@ from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics,\
         QCursor
 from lib import sqlitedb
 from lib import widgets
+from lib import bibparse
 import bibtexparser
 
 
 
-def readBibFile(bibfile):
-
-    bibfile=os.path.abspath(bibfile)
-    if not os.path.exists(bibfile):
-        return None
-
-    with open(bibfile,'r') as fin:
-        bib=bibtexparser.load(fin)
-        print('bib',bib)
-
-    entries=bib.entries
-
-    return entries
 
 
 
@@ -49,10 +37,17 @@ class MainFrameSlots:
             print('addActionTriggered: chosen bib file:', fname)
             if fname:
                 try:
-                    bib_entry=readBibFile(fname[0])
-                    print('parsed bib file:', bib_entry)
+                    bib_entries=bibparse.readBibFile(fname[0])
+                    print('parsed bib file:', bib_entries)
+                    #self.doc_table.setSelectionMode(
+                            #QtWidgets.QAbstractItemView.MultiSelection)
+                    for eii in bib_entries:
+                        self.update_tabledata(None,eii)
                 except:
                     print('failed to parse bib file')
+                finally:
+                    self.doc_table.setSelectionMode(
+                            QtWidgets.QAbstractItemView.ExtendedSelection)
 
         elif action_text=='Add Entry Manually':
             dialog=widgets.MetaDataEntryDialog(self.font_dict,self)
@@ -181,7 +176,11 @@ class MainFrameSlots:
     #######################################################################
     #                           Doc table slots                           #
     #######################################################################
-    
+
+    def docTableClicked(self):
+        print('docTableClicked: clicked, set to extendedselection')
+        self.doc_table.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+
 
     def selDoc(self,current,previous):
         '''Actions on selecting a document in doc table
