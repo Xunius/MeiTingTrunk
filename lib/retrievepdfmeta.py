@@ -142,12 +142,12 @@ class _meta_pdf_reader(object):
 
 if __name__=='__main__':
 
-    #FILE_IN='mypdf4.pdf'
-    #fp = open(FILE_IN, 'rb')
-    #parser = PDFParser(fp)
-    #doc = PDFDocument(parser)
+    FILE_IN='mypdf2.pdf'
+    fp = open(FILE_IN, 'rb')
+    parser = PDFParser(fp)
+    doc = PDFDocument(parser)
 
-    #pprint(doc.info)        # The "Info" metadata
+    pprint(doc.info)        # The "Info" metadata
     #print('-------------------')
 
     #if 'Metadata' in doc.catalog:
@@ -159,6 +159,7 @@ if __name__=='__main__':
     #print('-------------------')
     #get_info(FILE_IN)
 
+    '''
     folder='~/Papers/collection'
     folder=os.path.expanduser(folder)
     filelist=os.listdir(folder)
@@ -183,3 +184,4 @@ if __name__=='__main__':
             print('failed file:',fii)
 
 
+    '''
