@@ -55,20 +55,28 @@ def init(filename,verbose=True):
 
     return document, interpreter, device
 
+def sortY(objs,verbose=True):
+    '''Sort objs vertically
 
-pdf = pdfquery.PDFQuery(FILE_IN)
+    Sort objs with similar x coordinates by y coordinates
+    '''
 
-pdf.load(0)
-aa=pdf.pq('LTTextLineHorizontal:in_bbox("15,600,100,700")')
-print(aa)
+    objdict={}
+    for ii in objs:
+        objdict[-ii.bbox[3],ii.bbox[0]]=ii
 
-#pdf.tree.write('test.xml',pretty_print=True,encoding='utf-8')
+    keys=objdict.keys()
+    keys=sorted(keys)
+
+    result=[objdict[ii] for ii in keys]
+
+    return result
 
 document, interpreter, device=init(FILE_IN)
 
-with open(FILE_IN, 'rb') as fin:
-    pdf2=PdfFileReader(fin)
-    print(pdf2.getNumPages())
+#with open(FILE_IN, 'rb') as fin:
+    #pdf2=PdfFileReader(fin)
+    #print(pdf2.getNumPages())
 
 
 pages=[]
@@ -83,8 +91,34 @@ for ii,page in enumerate(PDFPage.create_pages(document)):
 
 print(pages)
 pprint(pages[0]._objs)
+page0=pages[0]._objs
+
+boxes=[objii for objii in page0 if isinstance(objii, LTTextBoxHorizontal)]
+
+#boxes=dict([(kk,vv) for kk,vv in enumerate(boxes)])
+lines=[]
+for bii in boxes:
+    lines.extend(bii._objs)
+
+heights=[lii.height for lii in lines]
+largest_idx=[ii for ii in range(len(heights)) if heights[ii]==max(heights)]
+largest_lines=[lines[ii] for ii in largest_idx]
+
+largest_lines=sortY(largest_lines)
+
+guess_title=' '.join([lii.get_text().strip() for lii in largest_lines])
+print('guessed title: %s' %guess_title)
+
+
+
+
 
 '''
+#pdf.tree.write('test.xml',pretty_print=True,encoding='utf-8')
+pdf = pdfquery.PDFQuery(FILE_IN)
+pdf.load(0)
+aa=pdf.pq('LTTextLineHorizontal:in_bbox("15,600,100,700")')
+print(aa)
 pdf.extract( [
      ('with_parent','LTPage[pageid=1]'),
      ('with_formatter', 'text'),

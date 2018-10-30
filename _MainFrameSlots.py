@@ -39,8 +39,9 @@ class MainFrameSlots:
                 try:
                     bib_entries=bibparse.readBibFile(fname[0])
                     print('parsed bib file:', bib_entries)
-                    #self.doc_table.setSelectionMode(
-                            #QtWidgets.QAbstractItemView.MultiSelection)
+                    self.doc_table.clearSelection()
+                    self.doc_table.setSelectionMode(
+                            QtWidgets.QAbstractItemView.MultiSelection)
                     for eii in bib_entries:
                         self.update_tabledata(None,eii)
                 except:

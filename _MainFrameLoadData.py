@@ -205,7 +205,7 @@ class MainFrameLoadData:
         #------------Load meta data on 1st row------------
         if len(data)>0:
             self.enableMetaTab()
-            self.doc_table.selectRow(0)
+            #self.doc_table.selectRow(0)
             current_row=self.doc_table.currentIndex().row()
             docid=self._current_doc
             print('current_row',current_row, docid)
