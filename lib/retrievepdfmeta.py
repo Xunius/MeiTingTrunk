@@ -1,4 +1,3 @@
-#from pdfminer.pdfparser import PDFParser, PDFDocument
 import os
 import re
 from pprint import pprint
@@ -83,105 +82,54 @@ def xmp_to_dict(xmp):
     """ Shorthand function for parsing an XMP string into a python dictionary. """
     return XmpParser(xmp).meta
 
-def getPDFMeta(path):
-
-    reader=_meta_pdf_reader()
-    __import__('pdb').set_trace()
+def getPDFMeta_pypdf2(path):
 
     with open(path, 'rb') as fin:
-        #pdf = PdfFileReader(fin)
-        #info = pdf.getDocumentInfo()
-        #number_of_pages = pdf.getNumPages()
-
-        aa=reader.read_metadata(fin)
+        pdf = PdfFileReader(fin)
+        info = pdf.getDocumentInfo()
+        number_of_pages = pdf.getNumPages()
 
     print('info of file:')
-    #pprint(info)
-    #print('number of pages:',number_of_pages)
-    #author = info.author
-    #creator = info.creator
-    #producer = info.producer
-    #subject = info.subject
-    #title = info.title
+    pprint(info)
+    print('number of pages:',number_of_pages)
 
-class _meta_pdf_reader(object):
 
-    def __init__(self):
-        self.instance = self.__hash__()
-        self.metadata_regex = re.compile('(?:\/(\w+)\s?\(([^\n\r]*)\)\n?\r?)', re.S)
-        self.metadata_offset = 2048
+def getPDFMeta_pdfminer(path):
 
-    def read_metadata(self, stream):
+    with open(path, 'rb') as fin:
+        parser = PDFParser(fin)
+        doc = PDFDocument(parser)
 
-        """This function reads a PDF file stream and returns its metadata.
-        :param file_name: The PDF file stream to read.
-        :type file_name: str
-        :returns: dict -- The returned metadata as a dictionary of properties.
+    pprint(doc.info)        # The "Info" metadata
 
-        """
 
-        # Scan the last 2048 bytes, the most
-        # frequent metadata density block
-        stream.seek(-self.metadata_offset, os.SEEK_END)
-        try:
-            #properties = dict(('/' + p.group(1), p.group(2).decode('utf-8')) \
-            properties = dict(('/' + p.group(1), p.group(2)) \
-                for p in self.metadata_regex.finditer(stream.read(self.metadata_offset).decode('utf-8')))
-            if '/Author' in properties:
-                return properties
-        except UnicodeDecodeError:
-            properties.clear()
 
-        # Parse the xref table using pyPdf
-        properties = PdfFileReader(stream).documentInfo
-        if properties:
-            return properties
+def getPDFMeta_xmlparse(path):
 
-        return {}
+    with open(path, 'rb') as fin:
+        parser = PDFParser(fin)
+        doc = PDFDocument(parser)
+
+        if 'Metadata' in doc.catalog:
+            metadata = resolve1(doc.catalog['Metadata']).get_data()
+            #pprint(metadata)  # The raw XMP metadata
+            aa=xmp_to_dict(metadata)
+            pprint(aa)
+
 
 
 if __name__=='__main__':
 
-    FILE_IN='mypdf2.pdf'
-    fp = open(FILE_IN, 'rb')
-    parser = PDFParser(fp)
-    doc = PDFDocument(parser)
-
-    pprint(doc.info)        # The "Info" metadata
-    #print('-------------------')
-
-    #if 'Metadata' in doc.catalog:
-        #metadata = resolve1(doc.catalog['Metadata']).get_data()
-        #pprint(metadata)  # The raw XMP metadata
-        #aa=xmp_to_dict(metadata)
-        #pprint(aa)
-
-    #print('-------------------')
-    #get_info(FILE_IN)
-
-    '''
-    folder='~/Papers/collection'
-    folder=os.path.expanduser(folder)
-    filelist=os.listdir(folder)
-    n=0
-    for fii in filelist:
-        if fii[-3:]!='pdf':
-            continue
-        n+=1
-        if n>=80:
-            break
-        print('\n#############################################')
-        print(fii)
-        abpathii=os.path.join(folder,fii)
-        try:
-            getPDFMeta(abpathii)
-
-            #fp = open(abpathii, 'rb')
-            #parser = PDFParser(fp)
-            #doc = PDFDocument(parser)
-            #pprint(doc.info)        # The "Info" metadata
-        except:
-            print('failed file:',fii)
+    FILE_IN='mypdf9.pdf'
 
 
-    '''
+
+    print('get meta data using pdfminer--------------')
+    getPDFMeta_pdfminer(FILE_IN)
+
+    print('get meta data using pypdf2--------------')
+    getPDFMeta_pypdf2(FILE_IN)
+
+    print('get meta data using xmlparser--------------')
+    getPDFMeta_xmlparse(FILE_IN)
+
