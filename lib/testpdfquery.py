@@ -1,6 +1,8 @@
 from pprint import pprint
 from collections import Counter
+from functools import partial
 import numpy as np
+from fuzzywuzzy import fuzz
 
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdfdocument import PDFDocument
@@ -37,7 +39,50 @@ Also, the one underneath that is likely the author list.
 NON_TITLE_LIST=[
         'publication',
         'publications',
+        'journal of',
         ]
+
+def up(a,b,x):
+    '''Left half of a triangular membership func'''
+    if abs(b-a)<=np.finfo(float).eps:
+        return (x>a).astype('float')
+    a,b,x=map(lambda x: np.asarray(x,dtype='float'),[a,b,x])
+    y=(x-a)/(b-a)
+    return np.fmin(np.fmax(0,y),1)
+
+
+def down(a,b,x):
+    '''Right half of a triangular membership func'''
+    return 1.-up(a,b,x)
+
+
+def tria(a,b,c,x):
+    '''Triangular membership func'''
+    a,b,c=np.sort([a,b,c])
+    y=up(a,b,x)*down(b,c,x)
+    return np.fmin(np.fmax(0,y),1)
+
+
+def invTria(a,b,c,x):
+    return 1.-tria(a,b,c,x)
+
+
+def trap(a,b,c,d,x):
+    '''Trapezoid membership func'''
+    a,b,c,d=np.sort([a,b,c,d])
+    y=up(a,b,x)*down(c,d,x)
+    return np.fmin(np.fmax(0,y),1)
+
+
+def invTrap(a,b,c,d,x):
+    return 1.-trap(a,b,c,d,x)
+
+class SimpleFC(object):
+    def __init__(self,input_scales,output_scales,n_classes,defuzzy_method='centroid'):
+        self.input_scales=input_scales
+        self.output_scales=output_scales
+        self.n_classes=n_classes
+        defuzzy_method=defuzzy_method
 
 #------------------------Initiate analysis objs------------------------
 def init(filename,verbose=True):
@@ -141,54 +186,46 @@ def _checkLargetFontLine(lines):
 
 
 
+def guessTitle(pdffile):
 
+    # get meta data
+    with open(pdffile, 'rb') as fin:
+        parser = PDFParser(fin)
+        doc = PDFDocument(parser)
 
+    docinfo=doc.info[0]
+    doctitle=docinfo.get('Title',None)
+    if doctitle:
+        doctitle=doctitle.decode('utf-8')
 
-if __name__=='__main__':
-
-
-
-
-    FILE_IN='mypdf5.pdf'
     document, interpreter, device=init(FILE_IN)
 
-    with open(FILE_IN, 'rb') as fin:
-        pdf2=PdfFileReader(fin)
-        print(pdf2.getNumPages())
-
-
-    pages=[]
+    # get page 1
     for ii,page in enumerate(PDFPage.create_pages(document)):
-
         if ii>0:
             break
-        print(ii,page)
         interpreter.process_page(page)
-        layout = device.get_result()
-        pages.append(layout)
+        p0 = device.get_result()
 
-    print(pages)
-    #pprint(pages[0]._objs)
-    page_w=pages[0].width
-    page_h=pages[0].height
-    page0=pages[0]._objs
+    page_w=p0.width
+    page_h=p0.height
+    p0_objs=p0._objs
 
-    boxes=[objii for objii in page0 if isinstance(objii, LTTextBoxHorizontal)]
+    boxes=[objii for objii in p0_objs if isinstance(objii, LTTextBoxHorizontal)]
 
-    #boxes=dict([(kk,vv) for kk,vv in enumerate(boxes)])
+    # get all lines
     lines=[]
     for bii in boxes:
         lines.extend(bii._objs)
 
+    # get all line heights
     heights=[round(lii.height,4) for lii in lines]
 
-    h_counter=Counter(heights)
-    print(h_counter)
-
     # most comment height should be main text
+    h_counter=Counter(heights)
     main_height=h_counter.most_common()[0][0]
 
-    #------------------Filt by height------------------
+    #------------------Filt by y coordinates------------------
     lines=[lii for lii in lines if lii.y0>=page_h//2]
     heights=[round(lii.height,4) for lii in lines]
 
@@ -196,27 +233,177 @@ if __name__=='__main__':
 
     print('guessed title: %s' %guess)
 
+    return guess
+
+
+def guessTitle2(pdffile):
+
+    # get meta data
+    with open(pdffile, 'rb') as fin:
+        parser = PDFParser(fin)
+        doc = PDFDocument(parser)
+
+    docinfo=doc.info[0]
+    doctitle=docinfo.get('Title',None)
+    if doctitle:
+        doctitle=doctitle.decode('utf-8')
+
+    document, interpreter, device=init(FILE_IN)
+
+    # get page 1
+    for ii,page in enumerate(PDFPage.create_pages(document)):
+        if ii>0:
+            break
+        interpreter.process_page(page)
+        p0 = device.get_result()
+
+    page_w=p0.width
+    page_h=p0.height
+    p0_objs=p0._objs
+
+    boxes=[objii for objii in p0_objs if isinstance(objii, LTTextBoxHorizontal)]
+
+    # get all lines
+    lines=[]
+    for bii in boxes:
+        lines.extend(bii._objs)
+
+    # get all line heights
+    heights=[round(lii.height,4) for lii in lines]
+
+    # most comment height should be main text
+    h_counter=Counter(heights)
+    main_height=h_counter.most_common()[0][0]
+
+    #------------------Filt by y coordinates------------------
+    line_dict=dict([(lii,round(lii.height,4)) for lii in lines if\
+            lii.y0>=page_h//2])
+    #lsort=sorted(line_dict,key=line_dict.get,reverse=True)
+
+    heights=list(set(line_dict.values()))
+    heights.sort(reverse=True)
+
+    __import__('pdb').set_trace()
+
+    #-------------Group by heights and y0-------------
+    groups=[]
+    for hii in heights:
+        print('hii',hii)
+        lsii=[kk for kk,vv in line_dict.items() if vv==hii]
+        lsii=sortY(lsii)
+
+        # check line gaps
+        if len(lsii)>2:
+            ysii=[round(ljj.y0,2) for ljj in lsii]
+            gapsii=[round(ysii[jj]-ysii[jj+1],2) for jj in range(len(ysii)-1)]
+            if len(set(gapsii))==1:
+                groups.append(lsii)
+            else:
+                # kmeans clustering
+                costs=[]
+                members=[]
+                for jj in range(1,len(ysii)):
+                    memberjj,costjj=kmeans(ysii,jj)
+                    print('jj', jj, 'cjj', costjj, 'memberjj', memberjj)
+                    costs.append(costjj)
+                    members.append(memberjj)
+
+                idx=np.argmin(costs)
+                __import__('pdb').set_trace()
+                for kk in members[idx]:
+                    groups.append([ysii[ll] for ll in range(len(ysii)) if ll==kk])
+
+                __import__('pdb').set_trace()
 
 
 
 
+    # build fuzzy logic
+
+    x_hr=np.arange(0,5)
+    x_nottile_fm=np.arange(0,101)
+    x_nwords=np.arange(1,70)
+    x_linegap=np.arange(0,200)
+    x_metatitle_fm=np.arange(0,101)
+
+    y_score=np.arange(0,101)
+
+    hrLow=partial(invTrap,0,1.5,4,5)
+    hrHigh=partial(tria,1.2,3,4)
+
+    nottileFmLow=partial(up,50,100)
+    nottileFmHigh=partial(down,0,60)
+
+    nwordsLow=partial(invTrap,1,6,40,70)
+    nwordsHigh=partial(tria,5,20,50)
+
+    lineGapLow=partial(invTrap,1,6,40,200)
+    lineGapHigh=partial(tria,5,20,50)
+
+    metaTitleFmLow=partial(down,0,70)
+    metaTitleFmHigh=partial(up,30,100)
+
+
+
+
+
+    guess=_checkLargetFontLine(lines)
+
+    print('guessed title: %s' %guess)
+
+    return guess
+
+
+
+
+
+def kmeans(xs,k,max_iter=250):
+
+    xs=np.array(xs)
+    nx=len(xs)
 
     '''
-    #pdf.tree.write('test.xml',pretty_print=True,encoding='utf-8')
-    pdf = pdfquery.PDFQuery(FILE_IN)
-    pdf.load(0)
-    aa=pdf.pq('LTTextLineHorizontal:in_bbox("15,600,100,700")')
-    print(aa)
-    pdf.extract( [
-         ('with_parent','LTPage[pageid=1]'),
-         ('with_formatter', 'text'),
-
-         ('last_name', 'LTTextLineHorizontal:in_bbox("315,680,395,700")'),
-         ('spouse', 'LTTextLineHorizontal:in_bbox("170,650,220,680")'),
-
-         ('with_parent','LTPage[pageid=2]'),
-
-         ('oath', 'LTTextLineHorizontal:contains("perjury")', lambda match: match.text()[:30]+"..."),
-         ('year', 'LTTextLineHorizontal:contains("Form 1040A (")', lambda match: int(match.text()[-5:-1]))
-     ])
+    if k==1:
+        return [0,], np.var(xs)
+    elif k==nx:
+        return range(len(xs)), 0
     '''
+
+    centers=np.random.randint(xs.min(),xs.max(),size=k).astype('float')
+    member=np.zeros(nx)
+
+    for ii in range(max_iter):
+        distsii=abs(xs[:,None]-centers[None,:])
+        member_new=np.argmin(distsii,axis=1)
+        for jj in range(k):
+            centers[jj]=np.mean(xs[member_new==jj])
+
+        if all(member_new==member):
+            break
+        member=member_new
+
+    cost=0
+    for ii in range(nx):
+        cii=(xs[ii]-centers[int(member[ii])])**2
+        cost+=cii
+
+    return member, cost
+
+
+
+
+
+
+
+
+
+
+
+if __name__=='__main__':
+
+
+
+    FILE_IN='mypdf9.pdf'
+
+    guess=guessTitle2(FILE_IN)
+

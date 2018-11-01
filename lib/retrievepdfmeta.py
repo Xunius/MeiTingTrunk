@@ -120,7 +120,7 @@ def getPDFMeta_xmlparse(path):
 
 if __name__=='__main__':
 
-    FILE_IN='mypdf9.pdf'
+    FILE_IN='mypdf2.pdf'
 
 
 
