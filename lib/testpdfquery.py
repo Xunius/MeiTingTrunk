@@ -1,3 +1,6 @@
+from functools import reduce
+from scipy.interpolate import interp1d
+from itertools import combinations
 from pprint import pprint
 from collections import Counter
 from functools import partial
@@ -134,7 +137,6 @@ def sortY(objs,verbose=True):
 def _checkLargetFontLine(lines):
 
     heights=[round(lii.height,4) for lii in lines]
-    __import__('pdb').set_trace()
 
     #if abs(max(heights)-main_height)<0.1:
         #print('probably something wrong')
@@ -236,6 +238,14 @@ def guessTitle(pdffile):
     return guess
 
 
+def getLineHeight(lineobj):
+    heights=[]
+    for ii in lineobj._objs:
+        if hasattr(ii,'height'):
+            heights.append(ii.height)
+    return np.mean(heights)
+
+
 def guessTitle2(pdffile):
 
     # get meta data
@@ -269,125 +279,273 @@ def guessTitle2(pdffile):
         lines.extend(bii._objs)
 
     # get all line heights
-    heights=[round(lii.height,4) for lii in lines]
+    #heights=[round(lii.height,4) for lii in lines]
+    heights=[round(getLineHeight(lii),4) for lii in lines]
 
     # most comment height should be main text
     h_counter=Counter(heights)
     main_height=h_counter.most_common()[0][0]
 
     #------------------Filt by y coordinates------------------
-    line_dict=dict([(lii,round(lii.height,4)) for lii in lines if\
+    line_dict=dict([(lii,round(getLineHeight(lii),4)) for lii in lines if\
             lii.y0>=page_h//2])
     #lsort=sorted(line_dict,key=line_dict.get,reverse=True)
 
     heights=list(set(line_dict.values()))
     heights.sort(reverse=True)
 
-    __import__('pdb').set_trace()
-
     #-------------Group by heights and y0-------------
     groups=[]
     for hii in heights:
+        if hii<=main_height:
+            break
         print('hii',hii)
         lsii=[kk for kk,vv in line_dict.items() if vv==hii]
         lsii=sortY(lsii)
 
+        if len(lsii)==1:
+            groups.append(lsii)
+        elif len(lsii)==2:
+            if lsii[0].vdistance(lsii[1])>lsii[0].height:
+                groups.append([lsii[0]])
+                groups.append([lsii[1]])
+            else:
+                groups.append(lsii)
+
         # check line gaps
         if len(lsii)>2:
             ysii=[round(ljj.y0,2) for ljj in lsii]
-            gapsii=[round(ysii[jj]-ysii[jj+1],2) for jj in range(len(ysii)-1)]
+            gapsii=[round(ysii[jj]-ysii[jj+1],1) for jj in range(len(ysii)-1)]
             if len(set(gapsii))==1:
                 groups.append(lsii)
+
             else:
                 # kmeans clustering
                 costs=[]
-                members=[]
+                groupingii=[]
                 for jj in range(1,len(ysii)):
-                    memberjj,costjj=kmeans(ysii,jj)
-                    print('jj', jj, 'cjj', costjj, 'memberjj', memberjj)
+                    grjj,costjj=kmeans2(ysii,jj)
+                    print('jj', jj, 'cjj', costjj, 'grouping', grjj)
                     costs.append(costjj)
-                    members.append(memberjj)
+                    groupingii.append(grjj)
 
                 idx=np.argmin(costs)
-                __import__('pdb').set_trace()
-                for kk in members[idx]:
-                    groups.append([ysii[ll] for ll in range(len(ysii)) if ll==kk])
-
-                __import__('pdb').set_trace()
+                for kk in groupingii[idx]:
+                    groups.append([lsii[mm] for mm in kk])
 
 
 
+    # get grouped line texts
+
+    gr_lines=[]
+    for gii in groups:
+        gii=sortY(gii)
+        tii=[ljj.get_text().strip() for ljj in gii]
+        tii=' '.join(tii)
+        hii=[getLineHeight(ljj) for ljj in gii]
+        hii=np.mean(hii)
+
+        # compute input vars for fuzzy
+        hrii=hii/main_height
+        y0ii=[ljj.y0 for ljj in gii]
+        y0ii=np.min(y0ii)/page_h
+        nwordsii=len(tii.split(' '))
+        notitlefmii=[fuzz.token_set_ratio(tii,jj) for jj in NON_TITLE_LIST]
+        notitlefmii=np.mean(notitlefmii)
+
+        if doctitle:
+            metatitlefmii=fuzz.ratio(tii, doctitle)
+            gr_lines.append((tii,hii,y0ii,hrii,nwordsii,notitlefmii,metatitlefmii))
+        else:
+            gr_lines.append((tii,hii,y0ii,hrii,nwordsii,notitlefmii))
+
+
+    pprint(gr_lines)
 
     # build fuzzy logic
 
     x_hr=np.arange(0,5)
+    x_y0=np.arange(0,1.1,0.1)
     x_nottile_fm=np.arange(0,101)
     x_nwords=np.arange(1,70)
-    x_linegap=np.arange(0,200)
     x_metatitle_fm=np.arange(0,101)
 
     y_score=np.arange(0,101)
 
-    hrLow=partial(invTrap,0,1.5,4,5)
-    hrHigh=partial(tria,1.2,3,4)
+    hrLow=partial(invTrap, 0, 1.2, 4, 5)
+    hrHigh=partial(tria, 1.1, 3.0, 4.5)
 
-    nottileFmLow=partial(up,50,100)
-    nottileFmHigh=partial(down,0,60)
+    y0Low=partial(tria, 0.4, 0.5, 1)
+    y0High=partial(tria, 0.5, 0.7, 1.2)
 
-    nwordsLow=partial(invTrap,1,6,40,70)
-    nwordsHigh=partial(tria,5,20,50)
+    notitleFmLow=partial(down, 0, 55)
+    notitleFmHigh=partial(up, 45, 100)
 
-    lineGapLow=partial(invTrap,1,6,40,200)
-    lineGapHigh=partial(tria,5,20,50)
+    nwordsLow=partial(invTrap, 1, 5, 30, 70)
+    nwordsHigh=partial(trap, 4, 8, 20, 35)
 
-    metaTitleFmLow=partial(down,0,70)
-    metaTitleFmHigh=partial(up,30,100)
+    metaTitleFmLow=partial(down, 0, 70)
+    metaTitleFmHigh=partial(up, 30, 100)
+
+    scoreLow=partial(down,0,60)
+    scoreHigh=partial(up,40,100)
+
+    fuzz_scores=[]
+    score_lo=scoreLow(y_score)
+    score_hi=scoreHigh(y_score)
+
+    # rules:
+    # 1. HR is low, score low; HR is high, score high
+    # 2. no-title-match is low, score high; no-ttile-match high, score low
+    # 3. nwords is low, score low; nwords is high, score high
+    # 4. meta-title-match is low, score low; meta-title-match high, score high
+    # 5. y0 is low, score low; y0 is high, score high
+    #gr_lines=[gr_lines[0], gr_lines[1]]
+
+    for lii in gr_lines:
+        if doctitle:
+            tii,hii,y0ii,hrii,nwordsii,notitlefmii,metatitlefmii=lii
+        else:
+            tii,hii,y0ii,hrii,nwordsii,notitlefmii=lii
+
+        act_hr_lo=hrLow(hrii)
+        act_hr_hi=hrHigh(hrii)
+
+        act_y0_lo=y0Low(y0ii)
+        act_y0_hi=y0High(y0ii)
+
+        act_notitle_lo=notitleFmLow(notitlefmii)
+        act_notitle_hi=notitleFmHigh(notitlefmii)
+
+        act_nwords_lo=nwordsLow(nwordsii)
+        act_nwords_hi=nwordsHigh(nwordsii)
+
+
+        # apply rules
+        rule1a=np.fmin(act_hr_lo, score_lo)
+        rule1b=np.fmin(act_hr_hi, score_hi)
+        rule2a=np.fmin(act_notitle_lo, score_hi)
+        rule2b=np.fmin(act_notitle_hi, score_lo)
+        rule3a=np.fmin(act_nwords_lo, score_lo)
+        rule3b=np.fmin(act_nwords_hi, score_hi)
+        rule5a=np.fmin(act_y0_lo, score_lo)
+        rule5b=np.fmin(act_y0_hi, score_hi)
+
+
+
+        if doctitle:
+            act_metatitle_lo=metaTitleFmLow(metatitlefmii)
+            act_metatitle_hi=metaTitleFmHigh(metatitlefmii)
+            rule4a=np.fmin(act_metatitle_lo, score_lo)
+            rule4b=np.fmin(act_metatitle_hi, score_hi)
+
+            #agg=reduce(np.fmax, [3*rule1a, 3*rule1b, rule2a, rule2b, rule3a, rule3b,
+            agg=reduce(np.add, [rule1a, rule1b, rule2a, rule2b, rule3a, rule3b,
+                rule5a, rule5b,
+                rule4a, rule4b])
+        else:
+            #agg=reduce(np.fmax, [3*rule1a, 3*rule1b, rule2a, rule2b, rule3a, rule3b,
+            agg=reduce(np.add, [rule1a, rule1b, rule2a, rule2b, rule3a, rule3b,
+                rule5a, rule5b])
+
+        '''
+        print('---------------------------')
+        print(tii)
+        print('hrii', hrii, 'act_hr_lo', act_hr_lo, 'act_hr_hi', act_hr_hi)
+        print('rule1a', rule1a)
+        print('rule1b', rule1b)
+        print('\n')
+        print('y0ii',y0ii,'act_y0_lo', act_y0_lo, 'act_y0_hi', act_y0_hi)
+        print('rule5a', rule5a)
+        print('rule5b', rule5b)
+        print('\n')
+        print('notitlemf',notitlefmii,'act_notitle_lo',act_notitle_lo,'act_nottile_hi',act_notitle_hi)
+        print('rule2a', rule2a)
+        print('rule2b', rule2b)
+        print('\n')
+        print('nwords',nwordsii,'act_nwords_lo',act_nwords_lo,'act_nwords_hi',act_nwords_hi)
+        print('rule3a',rule3a)
+        print('rule3b',rule3b)
+        print('\n')
+        print('agg',agg)
+        '''
+        # compute centroid as final result
+        yhat=(y_score*agg).sum()/agg.sum()
+
+        fit=interp1d(y_score,agg,bounds_error=False, fill_value=0)
+        xhat=fit(yhat)
+
+        pprint('score for %s = %f, xhat = %f' %(tii, yhat, xhat))
+
+        fuzz_scores.append(yhat)
 
 
 
 
+    guess2=gr_lines[np.argmax(fuzz_scores)][0]
 
     guess=_checkLargetFontLine(lines)
 
     print('guessed title: %s' %guess)
+    print('guessed title2: %s' %guess2)
 
     return guess
 
 
+def kmeans2(xs,k):
+    partitions=list(part(range(len(xs)),k))
+
+    errors=[]
+    for pii in partitions:
+        eii=0
+        for gjj in pii:
+            xjj=np.take(xs,gjj)
+            diffjj=np.diff(xjj) if len(xjj)>1 else 0
+            #mjj=np.mean(xjj)
+            #vjj=np.var(xjj)
+            eii+=np.var(diffjj)
+        errors.append(BIC(len(xs), k, eii))
+        #errors.append(eii)
+
+    idx=np.argmin(errors)
+
+    return partitions[idx], errors[idx]
+
+def BIC(n,lag,variance,verbose=True):
+
+    if np.isscalar(lag):
+        shape=1
+    else:
+        lag=np.asarray(lag)
+        shape=lag.shape
+
+    variance=np.asarray(variance)+0.1
+    n=n*np.ones(shape)
+    
+    bic=n*np.log(variance*n/(n-lag))+\
+            (lag+np.ones(shape))*np.log(n)
+
+    if np.isscalar(lag):
+        bic=np.asscalar(bic)
+
+    return bic
+
+
+def part(collection,k):
+
+    edges=combinations(range(1,len(collection)),k-1)
+    result=[]
+    for eii in edges:
+        eii=(0,)+eii+(len(collection),)
+        rii=[]
+        for jj in range(len(eii)-1):
+            rii.append(collection[eii[jj]:eii[jj+1]])
+        result.append(rii)
+
+    return result
 
 
 
-def kmeans(xs,k,max_iter=250):
-
-    xs=np.array(xs)
-    nx=len(xs)
-
-    '''
-    if k==1:
-        return [0,], np.var(xs)
-    elif k==nx:
-        return range(len(xs)), 0
-    '''
-
-    centers=np.random.randint(xs.min(),xs.max(),size=k).astype('float')
-    member=np.zeros(nx)
-
-    for ii in range(max_iter):
-        distsii=abs(xs[:,None]-centers[None,:])
-        member_new=np.argmin(distsii,axis=1)
-        for jj in range(k):
-            centers[jj]=np.mean(xs[member_new==jj])
-
-        if all(member_new==member):
-            break
-        member=member_new
-
-    cost=0
-    for ii in range(nx):
-        cii=(xs[ii]-centers[int(member[ii])])**2
-        cost+=cii
-
-    return member, cost
 
 
 
