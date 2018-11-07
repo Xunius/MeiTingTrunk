@@ -1,4 +1,5 @@
 from functools import reduce
+import re
 from scipy.interpolate import interp1d
 from itertools import combinations
 from pprint import pprint
@@ -158,14 +159,16 @@ def sortY(objs,verbose=True):
 
 
 
-def getLineHeight(lineobj):
+def getLineHeight(lineobj,return_type='mean'):
     '''Use the mean char heights as a line obj's height'''
     heights=[]
     for ii in lineobj._objs:
         if hasattr(ii,'height'):
             heights.append(ii.height)
-    return np.mean(heights)
-
+    if return_type=='mean':
+        return np.mean(heights)
+    elif return_type=='set':
+        return set(heights)
 
 
 def groupLines(line_dict, main_height):
@@ -417,9 +420,116 @@ def guessTitle(pdffile):
 
     #----------------Do fuzzy logic----------------
     fuzz_scores=FCTitleGuess(gr_lines, doctitle)
-    guess=gr_lines[np.argmax(fuzz_scores)][0]
 
-    return guess
+    title_idx=np.argmax(fuzz_scores)
+    title_guess=gr_lines[title_idx]
+    title_y0=title_guess[2]*page_h
+    title_x0=groups[title_idx][0].x0
+
+    #----------------Guess author list----------------
+    top_lines=line_dict.keys()
+    top_lines=sortY(top_lines)
+
+    authorline_list=[]
+
+    def getLineFonts(lineobj):
+        fonts=[]
+        for ii in lineobj._objs:
+            if hasattr(ii,'fontname'):
+                fonts.append(ii.fontname)
+        counter=Counter(fonts)
+        main_font=counter.most_common()[0][0]
+
+        return main_font
+
+    def getLineY0(lineobj):
+        y0s=[]
+        for ii in lineobj._objs:
+            y0s.append(ii.bbox[1])
+        counter=Counter(y0s)
+        main=counter.most_common()[0][0]
+
+        return main
+
+    for ii,lii in enumerate(top_lines):
+        if lii.y0>=title_y0:
+            print('skip line',lii,'y0 = ',lii.y0)
+            continue
+
+        if lii.x0<title_x0:
+            print('skip line',lii,'x0 = ',lii.x0)
+            continue
+
+        if len(authorline_list)==0:
+            authorline_list.append(lii)
+        else:
+            old_font=getLineFonts(authorline_list[0])
+            cur_font=getLineFonts(lii)
+
+            old_height=getLineHeight(authorline_list[0],'set')
+            cur_height=getLineHeight(lii,'set')
+
+            print('old_font:',old_font, 'new_font', cur_font)
+            print('old_height:',old_height, 'new_height', cur_height)
+
+            if cur_font!=old_font:
+                break
+            if old_height!=cur_height:
+                break
+
+            authorline_list.append(lii)
+
+    #-----------------Get author texts-----------------
+    author_texts=[]
+    char_heights=[]
+
+    for lii in authorline_list:
+        charsii=lii._objs
+        #char_y0s=[]
+        liney0ii=round(lii.bbox[1],1)
+        linehii=getLineHeight(lii)
+
+        for cjj in charsii:
+            if hasattr(cjj,'bbox'):
+                if round(cjj.bbox[1],1)-liney0ii>=linehii/4:
+                    continue
+            author_texts.append(cjj.get_text())
+            '''
+            author_texts.append(cjj.get_text())
+            if hasattr(cjj,'size'):
+                char_heights.append(round(cjj.size,1))
+            else:
+                char_heights.append(0)
+            char_y0s.append(cjj.bbox[1])
+            '''
+
+    #char_counter=Counter(char_heights)
+    #char_height=char_counter.most_common()[0][0] # or the largest?
+
+    #author_texts2=[]
+
+    #for ii,sii in enumerate(char_heights):
+        #if sii==char_height or sii==0:
+            #author_texts2.append(author_texts[ii])
+
+    author_texts2=''.join(author_texts)
+
+
+
+    #------------------Tidy up string------------------
+    sc_pattern=re.compile(r'\s+,')
+    and_pattern=re.compile(r',?\s+and\s+', re.I)
+    weird_pattern=re.compile(r'''[~!@#$%^&*()_+`\-=\[\]{}|;:'"<>/?]''')
+
+    author_texts2=sc_pattern.sub(',',author_texts2).strip()
+    author_texts2=and_pattern.sub(', ',author_texts2).strip()
+    author_texts2=weird_pattern.sub('',author_texts2).strip()
+    
+    print('guess authors:', author_texts2)
+
+
+
+    return title_guess
 
 
 
@@ -441,4 +551,4 @@ if __name__=='__main__':
     FILE_IN='mypdf9.pdf'
 
     guess=guessTitle(FILE_IN)
-    print('guessed title: %s' %guess)
+    print('guessed title: ', guess)
