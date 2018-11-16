@@ -350,6 +350,7 @@ def guessTitle(pdffile):
 
     #------------Fetch title from meta data------------
     docinfo=document.info[0]
+    pprint(docinfo)
     doctitle=docinfo.get('Title',None)
     if doctitle:
         doctitle=doctitle.decode('utf-8')
@@ -548,7 +549,11 @@ if __name__=='__main__':
 
 
 
-    FILE_IN='mypdf9.pdf'
+    import time
+    FILE_IN='mypdf10.pdf'
 
+    t1=time.time()
     guess=guessTitle(FILE_IN)
+    t2=time.time()
+    print('time',t2-t1)
     print('guessed title: ', guess)

@@ -1,0 +1,86 @@
+JOURNAL OF GEOPHYSICAL RESEARCH, VOL. 112, C11007, doi:10.1029/2006JC003798, 2007
+
+El Niño Modoki and its possible teleconnection
+Karumuri Ashok,1,2 Swadhin K. Behera,1 Suryachandra A. Rao,1 Hengyi Weng,1
+and Toshio Yamagata1,3
+Received 4 July 2006; revised 2 March 2007; accepted 13 June 2007; published 8 November 2007.
+
+[1] Using observed data sets mainly for the period 1979–2005, we find that anomalous
+
+warming events different from conventional El Niño events occur in the central
+equatorial Pacific. This unique warming in the central equatorial Pacific associated with a
+horseshoe pattern is flanked by a colder sea surface temperature anomaly (SSTA) on
+both sides along the equator. empirical orthogonal function (EOF) analysis of monthly
+tropical Pacific SSTA shows that these events are represented by the second mode that
+explains 12% of the variance. Since a majority of such events are not part of El Niño
+evolution, the phenomenon is named as El Niño Modoki (pseudo-El Niño) (‘‘Modoki’’ is
+a classical Japanese word, which means ‘‘a similar but different thing’’). The El Niño
+Modoki involves ocean-atmosphere coupled processes which include a unique tripolar sea
+level pressure pattern during the evolution, analogous to the Southern Oscillation in the
+case of El Niño. Hence the total entity is named as El Niño–Southern Oscillation (ENSO)
+Modoki. The ENSO Modoki events significantly influence the temperature and
+precipitation over many parts of the globe. Depending on the season, the impacts over
+regions such as the Far East including Japan, New Zealand, western coast of United States,
+etc., are opposite to those of the conventional ENSO. The difference maps between the
+two periods of 1979–2004 and 1958–1978 for various oceanic/atmospheric variables
+suggest that the recent weakening of equatorial easterlies related to weakened zonal
+sea surface temperature gradient led to more flattening of the thermocline. This appears to
+be a cause of more frequent and persistent occurrence of the ENSO Modoki event during
+recent decades.
+Citation: Ashok, K., S. K. Behera, S. A. Rao, H. Weng, and T. Yamagata (2007), El Niño Modoki and its possible teleconnection,
+J. Geophys. Res., 112, C11007, doi:10.1029/2006JC003798.
+
+1. Introduction
+[2] From the point of climate variability, the year 2004
+was very unusual. We start from mentioning some examples. During the summer of that year from June to September, southern India, along with some parts of northern India
+experienced droughts (Figure 1a). Parts of Japan as well as
+Korea also experienced severe drought and heat wave,
+while Philippine Islands received surplus rainfall. A large
+part of Australia experienced deficit in austral winter
+rainfall. Tasmania and New Zealand, on the other hand,
+received surplus precipitation. Southern Mexico and Ecuador
+regions suffered from drought, whereas northern Brazil
+received surplus rainfall. We notice that sea surface temperature anomalies (SSTA) in the equatorial Pacific showed a
+peculiar zonal tripole pattern (Figure 1b): While the central
+tropical Pacific was warmer than normal, it was flanked by
+1
+Frontier Research Center for Global Change/JAMSTEC, Yokohama,
+Kanagawa, Japan.
+2
+Now at APEC Climate Center, Busan, Republic of Korea.
+3
+Department of Earth and Planetary Science, Graduate School of
+Science, University of Tokyo, Tokyo, Japan.
+
+Copyright 2007 by the American Geophysical Union.
+0148-0227/07/2006JC003798
+
+anomalously cooler SSTA to its east and west. This anomalous SSTA pattern is different from that during typical El
+Niño events [e.g., Rasmusson and Carpenter, 1982]. The
+condition continued through the following boreal winter
+(figure not shown).
+[3] In 2003, the National Oceanic and Atmospheric
+Administration (NOAA) of the United States of America
+revised the definition of El Niño ‘‘as a phenomenon in the
+equatorial Pacific Ocean characterized by a positive sea
+surface temperature departure from normal (for the 1971–
+2000 base period) in the Niño 3.4 region (see Table 1 for
+definition) greater than or equal in magnitude to 0.5°C,
+averaged over three consecutive months.’’ (Details can be
+found at http://www.noaanews.noaa.gov/stories/s2095.htm.
+The definition has been adopted by the World Meteorological
+region IV [Larkin and Harrison, 2005a].) Larkin and
+Harrison [2005a] refer to this redefined El Niño as ‘‘Dateline El Niño’’ and mention that the warming may not reach
+NINO3 region during Dateline El Niño events. Interestingly,
+the 2004 event is not exactly covered by this definition
+because the warmer central region extends from the western
+fringe of the NINO4 region rather than being just confined
+to the NINO3.4 region (Figure 1b). Moreover, the western
+Pacific and eastern Pacific SST anomalies during the boreal
+summer of 2004 were significantly colder than normal
+
+C11007
+
+1 of 27
+
+
