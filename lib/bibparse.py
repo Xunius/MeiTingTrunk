@@ -106,7 +106,7 @@ def readBibFile(bibfile):
         eii=altKeys(eii,ALT_KEYS)
 
         eii['citationkey']=eii['ID']
-        del eii['citationkey']
+        #del eii['citationkey']
 
         # WARNING: temporary removing folders_l, as this is not supposed to
         # be in a native bib entry

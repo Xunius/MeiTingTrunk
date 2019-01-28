@@ -40,6 +40,7 @@ FILE_IN='new3.sqlite'
 #   e.g. authors -> authors_l, year -> year_s
 # possible issue with local time with added time
 # add logger
+# get all bib entries for multiple selected docs?
 
 
 class MainWindow(QtWidgets.QMainWindow):

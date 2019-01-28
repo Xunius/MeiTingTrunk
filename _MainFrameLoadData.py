@@ -120,7 +120,7 @@ class MainFrameLoadData:
             self.loadDocTable(docids=self._current_docids+[newid,])
             self.doc_table.scrollToBottom()
             self.doc_table.selectRow(self.doc_table.model().rowCount(None)-1)
-            
+
         else:
             if docid in self.meta_dict:
                 self.meta_dict[docid].update(meta_dict)

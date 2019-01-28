@@ -6,7 +6,8 @@ from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics,\
 from lib import sqlitedb
 from lib import widgets
 from lib import bibparse
-import bibtexparser
+from lib import retrievepdfmeta
+from lib.tools import getMinSizePolicy, getXExpandYMinSizePolicy
 
 
 
@@ -27,9 +28,43 @@ class MainFrameSlots:
 
 
         if action_text=='Add PDF File':
-            fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a PDF file',
+            fname = QtWidgets.QFileDialog.getOpenFileNames(self, 'Choose a PDF file',
          '',"PDF files (*.pdf);; All files (*)")
             print('addActionTriggered: chosen PDF file:', fname)
+            if fname:
+                faillist=[]
+                self.doc_table.clearSelection()
+                self.doc_table.setSelectionMode(
+                        QtWidgets.QAbstractItemView.MultiSelection)
+
+                # add progress bar
+                if len(fname[0])>2:
+                    pb=QtWidgets.QProgressBar(self)
+                    pb.setSizePolicy(getXExpandYMinSizePolicy())
+                    #pb.setGeometry(0,0,10,100)
+                    pb.setMaximum(len(fname[0]))
+                    self.status_bar.showMessage('Adding PDF files...')
+                    self.status_bar.addPermanentWidget(pb)
+
+                for ii,fii in enumerate(fname[0]):
+                    try:
+                        pb.setValue(ii+1)
+
+                        pdfmetaii=retrievepdfmeta.getPDFMeta_pypdf2(fii)
+                        pdfmetaii=retrievepdfmeta.prepareMeta(pdfmetaii)
+                        pdfmetaii['files_l']=[fii,]
+                        print('pdfmetaii',pdfmetaii)
+                        self.update_tabledata(None,pdfmetaii)
+
+                    except:
+                        faillist.append(fii)
+
+                print('faillist:',faillist)
+                pb.hide()
+                self.status_bar.clearMessage()
+                self.doc_table.setSelectionMode(
+                        QtWidgets.QAbstractItemView.ExtendedSelection)
+
 
         elif action_text=='Add BibTex File':
             fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a bibtex file',
@@ -44,8 +79,14 @@ class MainFrameSlots:
                             QtWidgets.QAbstractItemView.MultiSelection)
                     for eii in bib_entries:
                         self.update_tabledata(None,eii)
-                except:
+                except Exception as e:
                     print('failed to parse bib file')
+                    msg=QtWidgets.QMessageBox()
+                    msg.setIcon(QtWidgets.QMessageBox.Critical)
+                    msg.setWindowTitle('Error')
+                    msg.setText('Oopsie. Failed to parse bib file.')
+                    msg.setInformativeText('bibtexparser complaints:\n\n%s' %str(e))
+                    msg.exec_()
                 finally:
                     self.doc_table.setSelectionMode(
                             QtWidgets.QAbstractItemView.ExtendedSelection)
@@ -157,6 +198,7 @@ class MainFrameSlots:
             elif sel=='Filter by authors':
                 folderdata=sqlitedb.fetchMetaData(self.meta_dict,'authors_l',docids,
                         unique=False,sort=False)
+                # why not unique and sort?
             elif sel=='Filter by publications':
                 folderdata=sqlitedb.fetchMetaData(self.meta_dict,'publication',docids,
                         unique=True,sort=True)
@@ -293,6 +335,7 @@ class MainFrameSlots:
             if current_folder:
                 folder,folderid=current_folder
 
+                # TODO: keep a record of previous sortidx?
                 if folder=='All' and folderid=='0':
                     self.loadDocTable(None,sortidx=4)
                 else:

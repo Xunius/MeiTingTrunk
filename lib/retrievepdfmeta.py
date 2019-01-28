@@ -3,6 +3,13 @@ import re
 from pprint import pprint
 from pdfminer.pdftypes import resolve1
 
+try:
+    from . import sqlitedb
+except:
+    import sqlitedb
+
+from collections import Counter
+
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdfdocument import PDFDocument
 from PyPDF2 import PdfFileReader
@@ -24,6 +31,11 @@ NS_MAP = {
     'http://ns.adobe.com/xap/1.0/rights/'            : 'rights',
     'http://www.w3.org/XML/1998/namespace'           : 'xml'
 }
+
+
+#---------Regex pattern for matching dois---------
+DOI_PATTERN=re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
+        re.DOTALL|re.UNICODE)
 
 class XmpParser(object):
     """
@@ -93,6 +105,8 @@ def getPDFMeta_pypdf2(path):
     pprint(info)
     print('number of pages:',number_of_pages)
 
+    return info
+
 
 def getPDFMeta_pdfminer(path):
 
@@ -102,6 +116,7 @@ def getPDFMeta_pdfminer(path):
 
     pprint(doc.info)        # The "Info" metadata
 
+    return doc.info
 
 
 def getPDFMeta_xmlparse(path):
@@ -113,23 +128,78 @@ def getPDFMeta_xmlparse(path):
         if 'Metadata' in doc.catalog:
             metadata = resolve1(doc.catalog['Metadata']).get_data()
             #pprint(metadata)  # The raw XMP metadata
-            aa=xmp_to_dict(metadata)
-            pprint(aa)
+            info=xmp_to_dict(metadata)
+            pprint(info)
+
+    return info
+
+
+
+def parseToList(text):
+    result=[]
+    if ' and ' in text:
+        delim=' and '
+    else:
+        delim=',' if ',' in text else ';'
+    textlist=text.replace('\n',delim).strip(delim).split(delim)
+    for tii in textlist:
+        tii=str(tii).strip()
+        if len(tii)>0:
+            result.append(tii)
+    return result
+
+def prepareMeta(meta_dict):
+
+
+    result=sqlitedb.DocMeta()
+    #result={}
+    gotdois=[]
+    for kk,vv in meta_dict.items():
+        if len(vv)>0:
+            kk=kk.lower().lstrip('/') # pypdf2 convention starts with /
+            if kk=='author':
+                result['authors_l']=parseToList(vv)
+            elif kk=='keywords':
+                result['keywords_l']=parseToList(vv)
+            elif kk in ['title', ]:
+                result[kk]=str(vv)
+
+            match=DOI_PATTERN.match(vv)
+            if match:
+                gotdois.append(vv)
+
+    if len(gotdois)>0:
+        counter=Counter(gotdois)
+        doi=counter.most_common(1)[0][0]
+        result['doi']=doi
+
+
+    return result
+
+
+
 
 
 
 if __name__=='__main__':
 
+    FILE_IN='testpdf2.pdf'
     FILE_IN='mypdf2.pdf'
 
 
 
-    print('get meta data using pdfminer--------------')
-    getPDFMeta_pdfminer(FILE_IN)
+    print('\nget meta data using pdfminer--------------')
+    m1=getPDFMeta_pdfminer(FILE_IN)
 
-    print('get meta data using pypdf2--------------')
-    getPDFMeta_pypdf2(FILE_IN)
+    print('\nget meta data using pypdf2--------------')
+    m2=getPDFMeta_pypdf2(FILE_IN)
 
-    print('get meta data using xmlparser--------------')
-    getPDFMeta_xmlparse(FILE_IN)
+    print('\nget meta data using xmlparser--------------')
+    m3=getPDFMeta_xmlparse(FILE_IN)
 
+    #result=sqlitedb.DocMeta()
+    #result.update(m1[0])
+
+    aa=prepareMeta(m2)
+    print('\nmeta from pdf:')
+    pprint(aa)

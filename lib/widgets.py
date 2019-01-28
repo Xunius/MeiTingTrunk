@@ -761,10 +761,10 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
         def checkDictChanged(d1,d2):
             for kk in d1.keys():
                 if d1[kk]!=d2[kk]:
-                    return False
-            return True
+                    return True
+            return False
 
-        if not checkDictChanged(self.empty_dict,self.scroll._meta_dict):
+        if checkDictChanged(self.empty_dict,self.scroll._meta_dict):
             self.buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
             print('MetaDataEntryDialog.showEvent:, enabled')
         else:
