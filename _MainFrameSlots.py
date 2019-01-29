@@ -3,15 +3,52 @@ from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics,\
         QCursor
+from queue import Queue
 from lib import sqlitedb
 from lib import widgets
 from lib import bibparse
 from lib import retrievepdfmeta
-from lib.tools import getMinSizePolicy, getXExpandYMinSizePolicy
+from lib.tools import getXExpandYMinSizePolicy, WorkerThread
+#from _MainFrameLoadData import addFolder
 
 
 
 
+
+def addPDF(abpath):
+    print('addPDF. abpath=',abpath)
+    try:
+        pdfmetaii=retrievepdfmeta.getPDFMeta_pypdf2(abpath)
+        pdfmetaii=retrievepdfmeta.prepareMeta(pdfmetaii)
+        pdfmetaii['files_l']=[abpath,]
+        rec=0
+    except:
+        pdfmetaii={}
+        rec=1
+    return rec,pdfmetaii
+
+
+
+def addNewFolder(parent,parentid,newfolderid,folder_dict):
+
+    #foldername,parentid=folder_dict[folderid]
+    fitem=QtWidgets.QTreeWidgetItem(['New folder',str(newfolderid)])
+    style=QtWidgets.QApplication.style()
+    diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+    fitem.setIcon(0,diropen_icon)
+    fitem.setFlags(fitem.flags() | Qt.ItemIsEditable)
+            #| Qt.ItemIsEnabled |\
+                    #Qt.ItemIsSelectable)
+    #sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
+    if parentid=='0' or parentid=='-1':
+        parent.addTopLevelItem(fitem)
+    else:
+        parent.addChild(fitem)
+    #if len(sub_ids)>0:
+        #for sii in sub_ids:
+            #addFolder(fitem,sii,folder_dict)
+
+    return
 
 
 class MainFrameSlots:
@@ -37,15 +74,47 @@ class MainFrameSlots:
                 self.doc_table.setSelectionMode(
                         QtWidgets.QAbstractItemView.MultiSelection)
 
-                # add progress bar
-                if len(fname[0])>2:
-                    pb=QtWidgets.QProgressBar(self)
-                    pb.setSizePolicy(getXExpandYMinSizePolicy())
-                    #pb.setGeometry(0,0,10,100)
-                    pb.setMaximum(len(fname[0]))
-                    self.status_bar.showMessage('Adding PDF files...')
-                    self.status_bar.addPermanentWidget(pb)
+                jobqueue=Queue()
+                resqueue=Queue()
 
+                # add progress bar
+                #if len(fname[0])>2:
+                pb=QtWidgets.QProgressBar(self)
+                pb.setSizePolicy(getXExpandYMinSizePolicy())
+                #pb.setGeometry(0,0,10,100)
+                pb.setMaximum(len(fname[0]))
+                self.status_bar.showMessage('Adding PDF files...')
+                self.status_bar.addPermanentWidget(pb)
+
+                for ii,fii in enumerate(fname[0]):
+                    jobqueue.put((fii,))
+
+                threads=[]
+                for ii in range(min(3,len(fname[0]))):
+                    tii=WorkerThread(addPDF,jobqueue,resqueue,self)
+                    threads.append(tii)
+                    tii.start()
+
+                jobqueue.join()
+
+                #-------------------Get results-------------------
+                results=[]
+                while resqueue.qsize():
+                    try:
+                        resii=resqueue.get()
+                        if resii[0]==0:
+                            results.append(resii[1])
+                            pb.setValue(len(results))
+                            self.update_tabledata(None,resii[1])
+                        else:
+                            faillist.append(resii[1])
+                    except:
+                        break
+
+
+
+
+                '''
                 for ii,fii in enumerate(fname[0]):
                     try:
                         pb.setValue(ii+1)
@@ -58,6 +127,7 @@ class MainFrameSlots:
 
                     except:
                         faillist.append(fii)
+                '''
 
                 print('faillist:',faillist)
                 pb.hide()
@@ -101,6 +171,52 @@ class MainFrameSlots:
                 self.update_tabledata(None, dl_dict)
 
         return
+
+
+    def addFolderButtonClicked(self):
+
+        print('addFolderButtonClicked:')
+        item=self.libtree.selectedItems()
+        if item:
+            item=item[0]
+
+            folderid=item.data(1,0)
+            current_ids=map(int,self.folder_dict.keys())
+            newid=str(max(current_ids)+1)
+
+            fitem=QtWidgets.QTreeWidgetItem(['New folder',str(newid)])
+            style=QtWidgets.QApplication.style()
+            diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+            fitem.setIcon(0,diropen_icon)
+            fitem.setFlags(fitem.flags() | Qt.ItemIsEditable)
+
+            if folderid=='0' or folderid=='-1':
+                self.libtree.addTopLevelItem(fitem)
+            else:
+                item.setExpanded(True)
+                item.addChild(fitem)
+
+
+            self.libtree.scrollToItem(fitem)
+            self.libtree.editItem(fitem)
+            self.folder_dict[newid]=('New folder',folderid)
+
+    def addNewFolderToDict(self,item,column):
+        #NOTE: probably have to use a treemodel+view for lib tree
+        # this is called for color changes as well
+        print('addNewFolderToDict','item=',item,'column=',column)
+        print('item.data',item.data(0,0),item.data(1,0))
+
+        foldername,folderid=item.data(0,0), item.data(1,0)
+        if folderid not in ['0', '-1', '-2']:
+            fnameold,parentid=self.folder_dict[folderid]
+            print('old foldername=',fnameold,'parentid=',parentid)
+            self.folder_dict[folderid]=[foldername,parentid]
+            print('new foldername and parentid =',self.folder_dict[folderid])
+            if folderid not in self.folder_data:
+                self.folder_data[folderid]=[]
+
+
 
 
     def clickSelFolder(self,item,column):
@@ -257,6 +373,8 @@ class MainFrameSlots:
                 QBrush)
 
         root=self.libtree.invisibleRootItem()
+        # disconnect libtree item change signal
+        self.libtree.itemChanged.disconnect()
         for item in iterItems(self.libtree, root):
             item.setBackground(0, ori_color)
 
@@ -267,6 +385,8 @@ class MainFrameSlots:
                 for mjj in mii:
                     mjj.setBackground(0, hi_color)
 
+        # re-connect libtree item change signal
+        self.libtree.itemChanged.connect(self.addNewFolderToDict)
 
 
 
@@ -278,8 +398,12 @@ class MainFrameSlots:
 
     def clearMetaTab(self):
         for kk,vv in self._current_meta_dict.items():
-            vv.clear()
-            vv.setReadOnly(True)
+            if kk=='files_l':
+                #vv=[]
+                self.t_meta.delFileField()
+            else:
+                vv.clear()
+                vv.setReadOnly(True)
 
         for tii in [self.note_textedit, self.bib_textedit]:
             tii.clear()

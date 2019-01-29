@@ -153,6 +153,7 @@ class MainFrameLoadData:
             addFolder(self.libtree,idii,self.folder_dict)
 
         self.libtree.setCurrentItem(allitem)
+        self.libtree.itemChanged.connect(self.addNewFolderToDict)
 
         return
 
@@ -164,7 +165,6 @@ class MainFrameLoadData:
         tablemodel=self.doc_table.model()
 
         print('load tabel', folder)
-        print('doc_tables header',self.doc_table.horizontalHeader())
         hh=self.doc_table.horizontalHeader()
         print('sort indicator section:', hh.sortIndicatorSection())
         print('sort indicator order:', hh.sortIndicatorOrder())

@@ -41,6 +41,10 @@ FILE_IN='new3.sqlite'
 # possible issue with local time with added time
 # add logger
 # get all bib entries for multiple selected docs?
+# right click menus
+# option menu
+# RIS
+# import/export menu
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -149,6 +153,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         # Add button
         self.add_button=self.createAddMoreButton()
         self.add_folder_button=self.createAddFolderButton()
+        self.add_folder_button.clicked.connect(self.addFolderButtonClicked)
         self.duplicate_check_button=self.createDuplicateCheckButton()
 
         h_layout0.addWidget(self.add_button)
