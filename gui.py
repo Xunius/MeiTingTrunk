@@ -10,7 +10,8 @@ from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy,\
         getXExpandYMinSizePolicy, getXExpandYExpandSizePolicy, getHSpacer, \
         getVSpacer, getHLine, getVLine
 
-from lib.widgets import TableModel, MyHeaderView, AdjustableTextEdit, MetaTabScroll
+from lib.widgets import TableModel, MyHeaderView, AdjustableTextEdit,\
+        MetaTabScroll, TreeWidgetDelegate
 
 import _MainFrameLoadData
 import _MainFrameSlots
@@ -45,6 +46,7 @@ FILE_IN='new3.sqlite'
 # option menu
 # RIS
 # import/export menu
+# add trash can
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -153,7 +155,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         # Add button
         self.add_button=self.createAddMoreButton()
         self.add_folder_button=self.createAddFolderButton()
-        self.add_folder_button.clicked.connect(self.addFolderButtonClicked)
         self.duplicate_check_button=self.createDuplicateCheckButton()
 
         h_layout0.addWidget(self.add_button)
@@ -279,10 +280,22 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         return button
 
     def createAddFolderButton(self):
+
         button=QtWidgets.QToolButton(self)
         button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+
+        menu=QtWidgets.QMenu()
+        self.create_folder_action=menu.addAction('Create Folder')
+        self.create_subfolder_action=menu.addAction('Create Sub Folder')
+
+        button.setDefaultAction(self.create_folder_action)
+
         button.setText('Create Folder')
         button.setIcon(QIcon.fromTheme('folder-new'))
+        button.setMenu(menu)
+        button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
+
+        menu.triggered.connect(self.addFolderButtonClicked)
 
         return button
 
@@ -313,6 +326,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
         libtree.setContextMenuPolicy(Qt.CustomContextMenu)
         libtree.customContextMenuRequested.connect(self.libTreeMenu)
+        delegate=TreeWidgetDelegate()
+        libtree.setItemDelegate(delegate)
 
         return libtree
 

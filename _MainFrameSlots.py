@@ -1,8 +1,8 @@
 import os
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QRegExp, pyqtSignal
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics,\
-        QCursor
+        QCursor, QRegExpValidator
 from queue import Queue
 from lib import sqlitedb
 from lib import widgets
@@ -47,6 +47,39 @@ def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
     docids=list(set(docids))
 
     return folderids,docids
+
+
+
+
+
+
+def checkFolderName(foldername,folderid,folder_dict):
+
+    invalid_symbols=[
+            '/', '\\', '"', "'", ';', '.', ':', '!', '?', '*', '%', ',']
+
+
+    toplevelids=[kk for kk,vv in folder_dict.items() if vv[1] in ['0','-1']]
+
+    print('checkFolderName:, toplevelids = ',toplevelids,'folderid=',folderid)
+
+    if folderid in toplevelids:
+        siblings=[folder_dict[ii][0] for ii in toplevelids]
+    else:
+        parentid=folder_dict[folderid][1]
+        siblings=[ii[0] for ii in folder_dict.values() if ii[1]==parentid]
+
+    if foldername in siblings:
+        print('checkFolderName: foldername=',foldername,'siblings:',siblings)
+        return 2
+
+    for ii in invalid_symbols:
+        if ii in foldername:
+            print('checkFolderName contain invalid symbol')
+            return 1
+
+    return 0
+
 
 
 class MainFrameSlots:
@@ -171,37 +204,51 @@ class MainFrameSlots:
         return
 
 
-    def addFolderButtonClicked(self):
+    def addFolderButtonClicked(self,action):
 
-        print('addFolderButtonClicked:')
-        item=self.libtree.selectedItems()
+        print('addFolderButtonClicked:, action=', action)
+        item=self._current_folder_item
         if item:
-            item=item[0]
-
             folderid=item.data(1,0)
+
+            # create new item
             current_ids=map(int,self.folder_dict.keys())
             newid=str(max(current_ids)+1)
-
-            fitem=QtWidgets.QTreeWidgetItem(['New folder',str(newid)])
+            newitem=QtWidgets.QTreeWidgetItem(['New folder',str(newid)])
             style=QtWidgets.QApplication.style()
             diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
-            fitem.setIcon(0,diropen_icon)
-            fitem.setFlags(fitem.flags() | Qt.ItemIsEditable)
+            newitem.setIcon(0,diropen_icon)
+            newitem.setFlags(newitem.flags() | Qt.ItemIsEditable)
 
-            if folderid=='0' or folderid=='-1':
-                self.libtree.addTopLevelItem(fitem)
-            else:
-                item.setExpanded(True)
-                item.addChild(fitem)
+            action_text=action.text()
+            print(action.text())
+
+            if action_text=='Create Folder':
+                toplevelids=[self.libtree.topLevelItem(jj).data(1,0) for jj\
+                        in range(self.libtree.topLevelItemCount())]
+                print('toplevelids:',toplevelids)
+
+                if folderid in toplevelids:
+                    self.libtree.addTopLevelItem(newitem)
+                    parentid='0'
+                else:
+                    item.parent().addChild(newitem)
+                    parentid=item.parent().data(1,0)
+
+            elif action_text=='Create Sub Folder':
+                item.addChild(newitem)
+                parentid=folderid
+
+            self.libtree.scrollToItem(newitem)
+            self.libtree.editItem(newitem)
+            self.folder_dict[newid]=('New folder',parentid)
+            print('addFolderButtonClicked: new entry in folder_dict:',\
+                    self.folder_dict[newid],'newid',newid)
 
 
-            self.libtree.scrollToItem(fitem)
-            self.libtree.editItem(fitem)
-            self.folder_dict[newid]=('New folder',folderid)
 
     def addNewFolderToDict(self,item,column):
-        #NOTE: probably have to use a treemodel+view for lib tree
-        # this is called for color changes as well
+
         print('addNewFolderToDict','item=',item,'column=',column)
         print('item.data',item.data(0,0),item.data(1,0))
 
@@ -209,10 +256,54 @@ class MainFrameSlots:
         if folderid not in ['0', '-1', '-2']:
             fnameold,parentid=self.folder_dict[folderid]
             print('old foldername=',fnameold,'parentid=',parentid)
+
+            # check validity of new name
+            """
+            valid=checkFolderName(foldername,folderid,self.folder_dict)
+            if valid!=0:
+                print('## found invalid name.',foldername)
+                #item.setData(0,0,fnameold)
+                item.setText(fnameold)
+
+                tooltip_label=QtWidgets.QLabel(self)
+                tooltip_label.setWindowFlags(Qt.SplashScreen)
+                tooltip_label.setMargin(3)
+                tooltip_label.setStyleSheet('''
+                        background-color: rgb(235,225,120)
+                        ''')
+                tooltip_label.setText('Found invalid character')
+                tooltip_label.move(QCursor.pos())
+                tooltip_label.show()
+
+                self.libtree.editItem(item)
+
+                return
+            """
+
             self.folder_dict[folderid]=[foldername,parentid]
             print('new foldername and parentid =',self.folder_dict[folderid])
+
+            # add new folder
             if folderid not in self.folder_data:
                 self.folder_data[folderid]=[]
+
+        self.sortFolders()
+        self.libtree.setCurrentItem(item)
+
+    def sortFolders(self):
+
+        def moveItemToTop(itemname):
+            item=self.libtree.findItems(itemname, Qt.MatchExactly | Qt.MatchRecursive)[0]
+            idx=self.libtree.indexOfTopLevelItem(item)
+            item=self.libtree.takeTopLevelItem(idx)
+            self.libtree.insertTopLevelItem(0,item)
+
+        self.libtree.sortItems(0,Qt.AscendingOrder)
+        moveItemToTop('Needs Review')
+        moveItemToTop('All')
+
+        return
+
 
 
 
@@ -231,15 +322,18 @@ class MainFrameSlots:
         print('clickSelFolder: folder', folder,'folderid',folderid)
         if folder=='All' and folderid=='0':
             self.loadDocTable(folder=None,sortidx=4)
+            self.create_subfolder_action.setDisabled(True)
         else:
             self.loadDocTable((folder,folderid),sortidx=4)
+            self.create_subfolder_action.setEnabled(True)
 
 
         if folder=='Needs Review' and folderid=='-2':
             self.add_button.setDisabled(True)
+            self.add_folder_button.setDisabled(True)
         else:
             self.add_button.setEnabled(True)
-        #self.doc_table.selectRow(0)
+            self.add_folder_button.setEnabled(True)
 
         # Refresh filter list
         self.filterTypeCombboxChange(item)
@@ -247,9 +341,9 @@ class MainFrameSlots:
 
     def selFolder(self,selected,deselected):
         '''Select folder by changing current'''
-        item=self.libtree.selectedItems()
+        #item=self.libtree.selectedItems()
+        item=self._current_folder_item
         if item:
-            item=item[0]
             column=0
             print('selFolder:',item.data(0,0),item.data(1,0),'selected column', column)
             self.clickSelFolder(item,column)
@@ -258,16 +352,40 @@ class MainFrameSlots:
     def libTreeMenu(self,pos):
 
         menu=QtWidgets.QMenu()
-        add_action=menu.addAction('Add folder')
-        del_action=menu.addAction('Delete')
-        rename_action=menu.addAction('Rename')
+        add_action=menu.addAction('Create Folder')
+        addsub_action=menu.addAction('Create Sub Folder')
+        del_action=menu.addAction('Delete Folder')
+        rename_action=menu.addAction('Rename Folder')
 
-        action=menu.exec_(QCursor.pos())
-        print('libTreeMenu: action:',action)
-        if action==add_action:
-            self.addFolderButtonClicked()
-        elif action==del_action:
-            self.delFolder()
+        item=self._current_folder_item
+        if item:
+            folderid=item.data(1,0)
+
+            if folderid in ['0','-1','-2']:
+                add_action.setDisabled(True)
+                addsub_action.setDisabled(True)
+                del_action.setDisabled(True)
+                rename_action.setDisabled(True)
+            else:
+                add_action.setEnabled(True)
+                addsub_action.setEnabled(True)
+                del_action.setEnabled(True)
+                rename_action.setEnabled(True)
+
+            action=menu.exec_(QCursor.pos())
+            print('libTreeMenu: action:',action)
+            if action==add_action:
+                self.addFolderButtonClicked(add_action)
+            elif action==addsub_action:
+                self.addFolderButtonClicked(addsub_action)
+            elif action==del_action:
+                self.delFolder()
+            elif action==rename_action:
+                self.renameFolder()
+
+        return
+
+
 
     def delFolder(self):
 
@@ -278,13 +396,11 @@ class MainFrameSlots:
 
         if choice==QtWidgets.QMessageBox.Yes:
 
-            item=self.libtree.selectedItems()
+            #item=self.libtree.selectedItems()
+            item=self._current_folder_item
             if item:
-                item=item[0]
 
                 folderid=item.data(1,0)
-                #TODO: has to walk through child folders
-
                 delfolderids,deldocids=walkFolderTree(self.folder_dict,
                         self.folder_data,folderid)
 
@@ -305,6 +421,16 @@ class MainFrameSlots:
                 root=self.libtree.invisibleRootItem()
                 (item.parent() or root).removeChild(item)
 
+    def renameFolder(self):
+
+        item=self._current_folder_item
+        if item:
+            #folderid=item.data(1,0)
+            self.libtree.itemChanged.disconnect()
+            item.setFlags(item.flags() | Qt.ItemIsEditable)
+            self.libtree.itemChanged.connect(self.addNewFolderToDict)
+            self.libtree.scrollToItem(item)
+            self.libtree.editItem(item)
 
 
 

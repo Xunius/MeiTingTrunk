@@ -77,11 +77,20 @@ class MainFrameLoadData:
         return None
 
     @property
-    def _current_folder(self):
+    def _current_folder_item(self):
         if hasattr(self,'libtree'):
             item=self.libtree.selectedItems()
             if item:
-                item=item[0]
+                return item[0]
+            else:
+                return None
+        return None
+
+    @property
+    def _current_folder(self):
+        if hasattr(self,'libtree'):
+            item=self._current_folder_item
+            if item:
                 return item.data(0,0), item.data(1,0) # folder name, folderid
         return None
 
@@ -152,8 +161,11 @@ class MainFrameLoadData:
         for fnameii,idii in folders1:
             addFolder(self.libtree,idii,self.folder_dict)
 
-        self.libtree.setCurrentItem(allitem)
         self.libtree.itemChanged.connect(self.addNewFolderToDict)
+        self.libtree.itemDoubleClicked.connect(self.renameFolder)
+
+        self.sortFolders()
+        self.libtree.setCurrentItem(allitem)
 
         return
 

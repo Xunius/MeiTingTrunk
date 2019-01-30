@@ -4,11 +4,24 @@ import operator
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, pyqtSignal, QPoint
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont, QFontMetrics,\
-        QCursor
+        QCursor, QRegExpValidator
 import resources
 from lib import sqlitedb
 from .tools import getHLine, getXExpandYMinSizePolicy
 
+
+
+
+class TreeWidgetDelegate(QtWidgets.QItemDelegate):
+    def __init__(self, parent=None):
+        QtWidgets.QItemDelegate.__init__(self, parent=parent)
+
+    def createEditor(self, parent, option, index):
+        editor = QtWidgets.QLineEdit(parent)
+        reg=QtCore.QRegExp('[A-z0-9\[\]_-]+')
+        vd=QRegExpValidator(reg)
+        editor.setValidator(vd)
+        return editor
 
 
 class TableModel(QAbstractTableModel):
