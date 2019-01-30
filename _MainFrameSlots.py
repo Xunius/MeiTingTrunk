@@ -28,27 +28,25 @@ def addPDF(abpath):
     return rec,pdfmetaii
 
 
+def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
 
-def addNewFolder(parent,parentid,newfolderid,folder_dict):
+    if docids is None:
+        docids=[]
+    if folderids is None:
+        folderids=[]
 
-    #foldername,parentid=folder_dict[folderid]
-    fitem=QtWidgets.QTreeWidgetItem(['New folder',str(newfolderid)])
-    style=QtWidgets.QApplication.style()
-    diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
-    fitem.setIcon(0,diropen_icon)
-    fitem.setFlags(fitem.flags() | Qt.ItemIsEditable)
-            #| Qt.ItemIsEnabled |\
-                    #Qt.ItemIsSelectable)
-    #sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
-    if parentid=='0' or parentid=='-1':
-        parent.addTopLevelItem(fitem)
-    else:
-        parent.addChild(fitem)
-    #if len(sub_ids)>0:
-        #for sii in sub_ids:
-            #addFolder(fitem,sii,folder_dict)
+    docids.extend(folder_data[folderid])
+    folderids.append(folderid)
 
-    return
+    subfolderids=sqlitedb.getChildFolders(folder_dict,folderid)
+    for sii in subfolderids:
+        folderids,docids=walkFolderTree(folder_dict,folder_data,sii,
+                docids,folderids)
+
+    folderids=list(set(folderids))
+    docids=list(set(docids))
+
+    return folderids,docids
 
 
 class MainFrameSlots:
@@ -219,6 +217,13 @@ class MainFrameSlots:
 
 
 
+
+    #######################################################################
+    #                            Libtree slots                            #
+    #######################################################################
+
+
+
     def clickSelFolder(self,item,column):
         '''Select folder by clicking'''
         folder=item.data(0,0)
@@ -248,6 +253,59 @@ class MainFrameSlots:
             column=0
             print('selFolder:',item.data(0,0),item.data(1,0),'selected column', column)
             self.clickSelFolder(item,column)
+
+
+    def libTreeMenu(self,pos):
+
+        menu=QtWidgets.QMenu()
+        add_action=menu.addAction('Add folder')
+        del_action=menu.addAction('Delete')
+        rename_action=menu.addAction('Rename')
+
+        action=menu.exec_(QCursor.pos())
+        print('libTreeMenu: action:',action)
+        if action==add_action:
+            self.addFolderButtonClicked()
+        elif action==del_action:
+            self.delFolder()
+
+    def delFolder(self):
+
+        choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
+                'Deleting a folder will delete all sub-folders and documents inside.\n\nConfirm?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+
+
+        if choice==QtWidgets.QMessageBox.Yes:
+
+            item=self.libtree.selectedItems()
+            if item:
+                item=item[0]
+
+                folderid=item.data(1,0)
+                #TODO: has to walk through child folders
+
+                delfolderids,deldocids=walkFolderTree(self.folder_dict,
+                        self.folder_data,folderid)
+
+                print('delfolderids:',delfolderids)
+                print('docs to del', deldocids)
+
+                for idii in deldocids:
+                    del self.meta_dict[idii]
+                    #print(idii,'in meta_dict?',idii in self.meta_dict)
+
+                for fii in delfolderids:
+                    #print('del folder',fii,self.folder_dict[fii])
+                    del self.folder_data[fii]
+                    del self.folder_dict[fii]
+                    #print(fii,'in folder_data?',fii in self.folder_data)
+                    #print(fii,'in folder_dict?',fii in self.folder_dict)
+
+                root=self.libtree.invisibleRootItem()
+                (item.parent() or root).removeChild(item)
+
+
 
 
 
@@ -387,6 +445,18 @@ class MainFrameSlots:
 
         # re-connect libtree item change signal
         self.libtree.itemChanged.connect(self.addNewFolderToDict)
+
+
+    def docTableMenu(self,pos):
+
+        menu=QtWidgets.QMenu()
+        add_action1=menu.addAction('Open file')
+        add_action2=menu.addAction('Delete')
+        add_action3=menu.addAction('Export citation')
+
+        menu.exec_(QCursor.pos())
+
+
 
 
 

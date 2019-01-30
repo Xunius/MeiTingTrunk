@@ -311,6 +311,9 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         libtree.header().setStretchLastSection(False)
         libtree.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
+        libtree.setContextMenuPolicy(Qt.CustomContextMenu)
+        libtree.customContextMenuRequested.connect(self.libTreeMenu)
+
         return libtree
 
     def createFoldFilterButton(self):
@@ -406,6 +409,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         tv.selectionModel().currentChanged.connect(self.selDoc)
         tv.clicked.connect(self.docTableClicked)
         #tablemodel.rowsInserted.connect(self.model_insert_row)
+        tv.setContextMenuPolicy(Qt.CustomContextMenu)
+        tv.customContextMenuRequested.connect(self.docTableMenu)
 
         return tv
 
