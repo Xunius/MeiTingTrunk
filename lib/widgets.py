@@ -454,22 +454,30 @@ class FileLineEdit(QtWidgets.QLineEdit):
     def setText(self,text,elide=True):
         self.full_text=text
         self.short_text=os.path.split(self.full_text)[1]
+        #self.short_text=text
 
+        '''
         if elide:
             super(FileLineEdit,self).setText(
                 self.fm.elidedText(self.short_text,Qt.ElideRight,self.width()))
         else:
             super(FileLineEdit,self).setText(self.short_text)
+        '''
+        #super(FileLineEdit,self).setText(text)
+        super(FileLineEdit,self).setText(
+             self.fm.elidedText(self.short_text,Qt.ElideRight,self.width()))
 
         return
 
     def text(self):
-        return self.full_text
+        #return self.full_text
+        return self.fm.elidedText(self.short_text,Qt.ElideRight,self.width())
+
 
     def resizeEvent(self,event):
         super(QtWidgets.QLineEdit, self).resizeEvent(event)
-        if hasattr(self,'short_text'):
-            self.setText(self.short_text,elide=True)
+        if hasattr(self,'full_text'):
+            self.setText(self.full_text,elide=True)
 
 
 class MetaTabScroll(QtWidgets.QScrollArea):
@@ -751,7 +759,10 @@ class MetaTabScroll(QtWidgets.QScrollArea):
                     values=[]
                     for vii in vv:
                         if isinstance(vii,QtWidgets.QLineEdit):
-                            textii=vii.text().strip()
+                            if kk=='files_l':
+                                textii=vii.full_text
+                            else:
+                                textii=vii.text().strip()
                         elif isinstance(vii,QtWidgets.QTextEdit):
                             textii=vii.toPlaintext().strip()
                         if textii:

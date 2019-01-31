@@ -431,6 +431,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         tv.setContextMenuPolicy(Qt.CustomContextMenu)
         tv.customContextMenuRequested.connect(self.docTableMenu)
 
+        tv.doubleClicked.connect(self.docDoubleClicked)
+
         return tv
 
 

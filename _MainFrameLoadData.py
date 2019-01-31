@@ -144,6 +144,7 @@ class MainFrameLoadData:
         style=QtWidgets.QApplication.style()
         diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
         needsreview_icon=style.standardIcon(QtWidgets.QStyle.SP_MessageBoxInformation)
+        trash_icon=style.standardIcon(QtWidgets.QStyle.SP_TrashIcon)
 
         #-------------Get all level 1 folders-------------
         folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if\
@@ -157,6 +158,10 @@ class MainFrameLoadData:
         needsreviewitem=QtWidgets.QTreeWidgetItem(['Needs Review','-2'])
         needsreviewitem.setIcon(0,needsreview_icon)
         self.libtree.addTopLevelItem(needsreviewitem)
+
+        #trashitem=QtWidgets.QTreeWidgetItem(['Trash','-3'])
+        #trashitem.setIcon(0,trash_icon)
+        #self.libtree.addTopLevelItem(trashitem)
 
         for fnameii,idii in folders1:
             addFolder(self.libtree,idii,self.folder_dict)

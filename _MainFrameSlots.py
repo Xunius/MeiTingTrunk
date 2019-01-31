@@ -1,4 +1,5 @@
 import os
+import subprocess
 from PyQt5.QtCore import Qt, QRegExp, pyqtSignal, QTimer, QPoint, pyqtSlot
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics,\
@@ -577,11 +578,134 @@ class MainFrameSlots:
     def docTableMenu(self,pos):
 
         menu=QtWidgets.QMenu()
-        add_action1=menu.addAction('Open file')
-        add_action2=menu.addAction('Delete')
-        add_action3=menu.addAction('Export citation')
+        open_action=menu.addAction('Open File Externally')
+        del_from_folder_action=menu.addAction('Delete From Current Folder')
+        del_action=menu.addAction('Delete From Library')
+        menu.addSeparator()
+        export_menu=menu.addMenu('Export Citation')
+        export_bib_action=export_menu.addAction('Export bib to File')
 
-        menu.exec_(QCursor.pos())
+        sel_rows=self.doc_table.selectionModel().selectedRows()
+        sel_rows=[ii.row() for ii in sel_rows]
+        print('docTableMenu:, sel_rows:',sel_rows)
+
+        if len(sel_rows)>0:
+
+            docids=[self._tabledata[ii][0] for ii in sel_rows]
+            has_files=[self.meta_dict[docii]['has_file'] for docii in docids]
+
+            print('docTableMenu: docids', docids, 'has_files',has_files)
+
+            if any(has_files):
+                open_action.setEnabled(True)
+            else:
+                open_action.setDisabled(True)
+
+            foldername,folderid=self._current_folder
+            if (foldername=='All' and folderid=='0') or (foldername=='Needs Review'\
+                    and folderid=='-2'):
+                del_from_folder_action.setDisabled(True)
+            else:
+                del_from_folder_action.setEnabled(True)
+
+
+            action=menu.exec_(QCursor.pos())
+            print('docTableMenu: action:',action)
+
+            if action==open_action:
+                open_docs=[docids[ii] for ii in range(len(docids)) if has_files[ii]]
+                print('open_docs:', open_docs)
+                self.openDoc(open_docs)
+
+            elif action==del_from_folder_action:
+                self.delFromFolder(docids, foldername, folderid)
+
+            elif action==del_action:
+                self.delDoc(docids)
+
+            elif action==export_bib_action:
+                self.exportToBib(docids)
+
+
+
+    def openDoc(self,docids):
+        print('openDoc:',docids)
+        for docii in docids:
+            file_pathii=self.meta_dict[docii]['files_l'][0] # take the 1st file
+            print('openDoc: docii=',docii,'file_pathii',file_pathii)
+            prop=subprocess.call(('xdg-open', file_pathii))
+        return
+
+
+    def delFromFolder(self,docids,foldername,folderid):
+        print('delFromFolder:',docids,foldername,folderid)
+        return
+
+    def delDoc(self,docids):
+        print('delDoc:',docids)
+        return
+
+    def exportToBib(self,docids):
+        print('exportToBib:',docids)
+        return
+
+
+    def docDoubleClicked(self,idx):
+        row_idx=idx.row()
+        print('docDoubleClicked:',idx,'row_idx',row_idx)
+
+        docid=self._tabledata[row_idx][0]
+        files=self.meta_dict[docid]['files_l']
+        nfiles=len(files)
+
+        if nfiles==0:
+            return
+        elif nfiles==1:
+            self.openDoc([docid,])
+        else:
+            print('multiple files')
+            dialog=QtWidgets.QDialog()
+            dialog.resize(500,500)
+            dialog.setWindowTitle('Open Files Externally')
+            dialog.setWindowModality(Qt.ApplicationModal)
+            layout=QtWidgets.QVBoxLayout()
+            dialog.setLayout(layout)
+
+            label=QtWidgets.QLabel('Select file(s) to open')
+            label_font=QFont('Serif',12,QFont.Bold)
+            label.setFont(label_font)
+            layout.addWidget(label)
+
+            listwidget=QtWidgets.QListWidget()
+            listwidget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+            for fii in files:
+                listwidget.addItem(fii)
+
+            listwidget.setCurrentRow(0)
+            layout.addWidget(listwidget)
+
+            buttons=QtWidgets.QDialogButtonBox(
+                QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
+                Qt.Horizontal, dialog)
+
+            buttons.accepted.connect(dialog.accept)
+            buttons.rejected.connect(dialog.reject)
+            layout.addWidget(buttons)
+
+            rec=dialog.exec_()
+            print('doubleClicked:, rec',rec)
+
+            if rec:
+                sel_files=listwidget.selectionModel().selectedRows()
+                print('sel_files',sel_files)
+                sel_files=[listwidget.item(ii.row()) for ii in sel_files]
+                print('sel_files',sel_files)
+                sel_files=[ii.data(0) for ii in sel_files]
+                print('sel_files',sel_files)
+
+                if len(sel_files)>0:
+                    for fii in sel_files:
+                        subprocess.call(('xdg-open',fii))
 
 
 
