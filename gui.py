@@ -11,7 +11,7 @@ from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy,\
         getVSpacer, getHLine, getVLine
 
 from lib.widgets import TableModel, MyHeaderView, AdjustableTextEdit,\
-        MetaTabScroll, TreeWidgetDelegate
+        MetaTabScroll, TreeWidgetDelegate, MyTreeWidget
 
 import _MainFrameLoadData
 import _MainFrameSlots
@@ -310,7 +310,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
     def createLibTree(self):
 
-        libtree=QtWidgets.QTreeWidget()
+        #libtree=QtWidgets.QTreeWidget()
+        libtree=MyTreeWidget()
         libtree.setHeaderHidden(True)
         # column1: folder name, column2: folder id
         libtree.setColumnCount(2)
@@ -328,6 +329,9 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         libtree.customContextMenuRequested.connect(self.libTreeMenu)
         delegate=TreeWidgetDelegate()
         libtree.setItemDelegate(delegate)
+
+        libtree.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
+        libtree.folder_move_signal.connect(self.changeFolderParent)
 
         return libtree
 

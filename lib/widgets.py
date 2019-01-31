@@ -18,10 +18,57 @@ class TreeWidgetDelegate(QtWidgets.QItemDelegate):
 
     def createEditor(self, parent, option, index):
         editor = QtWidgets.QLineEdit(parent)
-        reg=QtCore.QRegExp('[A-z0-9\[\]_-]+')
+        reg=QtCore.QRegExp('[A-z0-9\[\]_-\s]+')
         vd=QRegExpValidator(reg)
         editor.setValidator(vd)
         return editor
+
+
+
+class MyTreeWidget(QtWidgets.QTreeWidget):
+
+    folder_move_signal=pyqtSignal(tuple)
+
+    def __init__(self,parent=None):
+        super(MyTreeWidget,self).__init__(parent=parent)
+
+
+    def startDrag(self,actions):
+        print('startDrag:, actions:', actions)
+
+        move_item=self.selectedItems()[0]
+        print('startDrag: move_item:',move_item.data(0,0),move_item.data(1,0))
+        self._move_item=move_item
+
+        super(MyTreeWidget,self).startDrag(actions)
+
+    def dropEvent(self,event):
+        print('MyTreeWidget.dropevent:',event)
+
+        pos=event.pos()
+        newparent=self.itemAt(pos)
+        print('dropEvent: newparent=',newparent,newparent.data(0,0))
+
+        # get children
+        children=[newparent.child(ii) for ii in range(newparent.childCount())]
+        children_names=[ii.data(0,0) for ii in children]
+        print('dropEvent:, children:',children)
+        print('dropEvent:, children_names:',children_names)
+
+        if self._move_item.data(0,0) in children_names:
+            print('dropEvent: name conflict')
+            msg=QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Critical)
+            msg.setWindowTitle('Name conflict')
+            msg.setText('Move cancelled due to name conflict.')
+            msg.setInformativeText('Folder name\n\t%s\nconflicts with another folder in the target folder.\nPlease rename before moving.' %self._move_item)
+            msg.exec_()
+        else:
+            self.folder_move_signal.emit((self._move_item.data(1,0),\
+                    newparent.data(1,0)))
+            super(MyTreeWidget,self).dropEvent(event)
+
+
 
 
 class TableModel(QAbstractTableModel):
@@ -318,9 +365,6 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
 
         return
-
-
-
 
 
 class AdjustableTextEditWithFold(AdjustableTextEdit):

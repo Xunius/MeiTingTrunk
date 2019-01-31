@@ -1,5 +1,5 @@
 import os
-from PyQt5.QtCore import Qt, QRegExp, pyqtSignal
+from PyQt5.QtCore import Qt, QRegExp, pyqtSignal, QTimer, QPoint, pyqtSlot
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics,\
         QCursor, QRegExpValidator
@@ -9,7 +9,6 @@ from lib import widgets
 from lib import bibparse
 from lib import retrievepdfmeta
 from lib.tools import getXExpandYMinSizePolicy, WorkerThread
-#from _MainFrameLoadData import addFolder
 
 
 
@@ -55,10 +54,6 @@ def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
 
 def checkFolderName(foldername,folderid,folder_dict):
 
-    invalid_symbols=[
-            '/', '\\', '"', "'", ';', '.', ':', '!', '?', '*', '%', ',']
-
-
     toplevelids=[kk for kk,vv in folder_dict.items() if vv[1] in ['0','-1']]
 
     print('checkFolderName:, toplevelids = ',toplevelids,'folderid=',folderid)
@@ -71,12 +66,7 @@ def checkFolderName(foldername,folderid,folder_dict):
 
     if foldername in siblings:
         print('checkFolderName: foldername=',foldername,'siblings:',siblings)
-        return 2
-
-    for ii in invalid_symbols:
-        if ii in foldername:
-            print('checkFolderName contain invalid symbol')
-            return 1
+        return 1
 
     return 0
 
@@ -226,7 +216,6 @@ class MainFrameSlots:
             if action_text=='Create Folder':
                 toplevelids=[self.libtree.topLevelItem(jj).data(1,0) for jj\
                         in range(self.libtree.topLevelItemCount())]
-                print('toplevelids:',toplevelids)
 
                 if folderid in toplevelids:
                     self.libtree.addTopLevelItem(newitem)
@@ -257,38 +246,38 @@ class MainFrameSlots:
             fnameold,parentid=self.folder_dict[folderid]
             print('old foldername=',fnameold,'parentid=',parentid)
 
-            # check validity of new name
-            """
-            valid=checkFolderName(foldername,folderid,self.folder_dict)
-            if valid!=0:
-                print('## found invalid name.',foldername)
-                #item.setData(0,0,fnameold)
-                item.setText(fnameold)
-
-                tooltip_label=QtWidgets.QLabel(self)
-                tooltip_label.setWindowFlags(Qt.SplashScreen)
-                tooltip_label.setMargin(3)
-                tooltip_label.setStyleSheet('''
-                        background-color: rgb(235,225,120)
-                        ''')
-                tooltip_label.setText('Found invalid character')
-                tooltip_label.move(QCursor.pos())
-                tooltip_label.show()
-
-                self.libtree.editItem(item)
-
-                return
-            """
-
-            self.folder_dict[folderid]=[foldername,parentid]
-            print('new foldername and parentid =',self.folder_dict[folderid])
-
             # add new folder
             if folderid not in self.folder_data:
                 self.folder_data[folderid]=[]
 
+            # check validity of new name
+            valid=checkFolderName(foldername,folderid,self.folder_dict)
+            if valid!=0:
+                print('## found invalid name.',foldername)
+
+                msg=QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Critical)
+                msg.setWindowTitle('Name conflict')
+                msg.setText('Name conflict.')
+                msg.setInformativeText('The given name\n\t%s\nconflicts with another folder name.\nPlease choose another name.' %foldername)
+                msg.exec_()
+
+                self.libtree.itemChanged.disconnect()
+                item.setData(0,0,fnameold)
+                self.libtree.itemChanged.connect(self.addNewFolderToDict,
+                        Qt.QueuedConnection)
+
+                self.libtree.editItem(item)
+
+                return
+
+            self.folder_dict[folderid]=[foldername,parentid]
+            print('new foldername and parentid =',self.folder_dict[folderid])
+
         self.sortFolders()
         self.libtree.setCurrentItem(item)
+
+        return
 
     def sortFolders(self):
 
@@ -304,6 +293,17 @@ class MainFrameSlots:
 
         return
 
+
+    @pyqtSlot(tuple)
+    def changeFolderParent(self,arg_tuple):
+        print('changeFolderParent:, arg_tuple:',arg_tuple)
+
+        move_id, parent_id=arg_tuple
+        folder_name=self.folder_dict[move_id][0]
+        print('changeFolderParent: folder_dict[id] before:',self.folder_dict[move_id])
+        self.folder_dict[move_id]=(folder_name, parent_id)
+        print('changeFolderParent: folder_dict[id] after:',self.folder_dict[move_id])
+        return
 
 
 
@@ -428,7 +428,8 @@ class MainFrameSlots:
             #folderid=item.data(1,0)
             self.libtree.itemChanged.disconnect()
             item.setFlags(item.flags() | Qt.ItemIsEditable)
-            self.libtree.itemChanged.connect(self.addNewFolderToDict)
+            self.libtree.itemChanged.connect(self.addNewFolderToDict,
+                    Qt.QueuedConnection)
             self.libtree.scrollToItem(item)
             self.libtree.editItem(item)
 
@@ -570,7 +571,7 @@ class MainFrameSlots:
                     mjj.setBackground(0, hi_color)
 
         # re-connect libtree item change signal
-        self.libtree.itemChanged.connect(self.addNewFolderToDict)
+        self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
 
 
     def docTableMenu(self,pos):

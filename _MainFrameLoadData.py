@@ -161,7 +161,7 @@ class MainFrameLoadData:
         for fnameii,idii in folders1:
             addFolder(self.libtree,idii,self.folder_dict)
 
-        self.libtree.itemChanged.connect(self.addNewFolderToDict)
+        self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
         self.libtree.itemDoubleClicked.connect(self.renameFolder)
 
         self.sortFolders()
