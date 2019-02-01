@@ -276,6 +276,25 @@ def zipAuthors(firstnames,lastnames):
     return authors
 
 
+def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
+
+    if docids is None:
+        docids=[]
+    if folderids is None:
+        folderids=[]
+
+    docids.extend(folder_data[folderid])
+    folderids.append(folderid)
+
+    subfolderids=getChildFolders(folder_dict,folderid)
+    for sii in subfolderids:
+        folderids,docids=walkFolderTree(folder_dict,folder_data,sii,
+                docids,folderids)
+
+    folderids=list(set(folderids))
+    docids=list(set(docids))
+
+    return folderids,docids
 
 
 

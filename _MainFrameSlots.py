@@ -28,25 +28,6 @@ def addPDF(abpath):
     return rec,pdfmetaii
 
 
-def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
-
-    if docids is None:
-        docids=[]
-    if folderids is None:
-        folderids=[]
-
-    docids.extend(folder_data[folderid])
-    folderids.append(folderid)
-
-    subfolderids=sqlitedb.getChildFolders(folder_dict,folderid)
-    for sii in subfolderids:
-        folderids,docids=walkFolderTree(folder_dict,folder_data,sii,
-                docids,folderids)
-
-    folderids=list(set(folderids))
-    docids=list(set(docids))
-
-    return folderids,docids
 
 
 
@@ -387,7 +368,7 @@ class MainFrameSlots:
             elif action==addsub_action:
                 self.addFolderButtonClicked(addsub_action)
             elif action==del_action:
-                self.delFolder()
+                self.delFolder(item,True)
             elif action==rename_action:
                 self.renameFolder()
 
@@ -395,39 +376,42 @@ class MainFrameSlots:
 
 
 
-    def delFolder(self):
+    def delFolder(self,item,ask=True):
 
-        choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
-                'Deleting a folder will delete all sub-folders and documents inside.\n\nConfirm?',
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        if ask:
+            choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
+                    'Deleting a folder will delete all sub-folders and documents inside.\n\nConfirm?',
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
 
-        if choice==QtWidgets.QMessageBox.Yes:
+        if not ask or (ask and choice==QtWidgets.QMessageBox.Yes):
 
             #item=self.libtree.selectedItems()
-            item=self._current_folder_item
-            if item:
+            #item=self._current_folder_item
+            folderid=item.data(1,0)
+            delfolderids,deldocids=sqlitedb.walkFolderTree(self.folder_dict,
+                    self.folder_data,folderid)
 
-                folderid=item.data(1,0)
-                delfolderids,deldocids=walkFolderTree(self.folder_dict,
-                        self.folder_data,folderid)
+            print('delfolderids:',delfolderids)
+            print('docs to del', deldocids)
 
-                print('delfolderids:',delfolderids)
-                print('docs to del', deldocids)
+            for idii in deldocids:
+                #del self.meta_dict[idii]
+                # NOTE: need to check orphan docs and set to pend_delete
+                pass
+                #print(idii,'in meta_dict?',idii in self.meta_dict)
 
-                for idii in deldocids:
-                    del self.meta_dict[idii]
-                    #print(idii,'in meta_dict?',idii in self.meta_dict)
+            for fii in delfolderids:
+                #print('del folder',fii,self.folder_dict[fii])
+                del self.folder_data[fii]
+                del self.folder_dict[fii]
+                #print(fii,'in folder_data?',fii in self.folder_data)
+                #print(fii,'in folder_dict?',fii in self.folder_dict)
 
-                for fii in delfolderids:
-                    #print('del folder',fii,self.folder_dict[fii])
-                    del self.folder_data[fii]
-                    del self.folder_dict[fii]
-                    #print(fii,'in folder_data?',fii in self.folder_data)
-                    #print(fii,'in folder_dict?',fii in self.folder_dict)
+            root=self.libtree.invisibleRootItem()
+            (item.parent() or root).removeChild(item)
 
-                root=self.libtree.invisibleRootItem()
-                (item.parent() or root).removeChild(item)
+        return
 
     def renameFolder(self):
 

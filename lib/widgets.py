@@ -28,9 +28,12 @@ class TreeWidgetDelegate(QtWidgets.QItemDelegate):
 class MyTreeWidget(QtWidgets.QTreeWidget):
 
     folder_move_signal=pyqtSignal(tuple)
+    folder_del_signal=pyqtSignal((QtWidgets.QTreeWidgetItem,bool))
 
     def __init__(self,parent=None):
         super(MyTreeWidget,self).__init__(parent=parent)
+
+        self._trashed_folders=[]
 
 
     def startDrag(self,actions):
@@ -63,9 +66,27 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
             print('dropEvent:, children:',children)
             print('dropEvent:, children_names:',children_names)
 
+            print('dropevent, check target folder',\
+                    self._trashed_folders, newparent.data(1,0))
+
             if newparent.data(0,0) in ['All', 'Needs Review']:
                 event.ignore()
                 return
+
+            elif newparent.data(1,0) in ['-3']+self._trashed_folders:
+                choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
+                        'Deleting a folder will delete all sub-folders and documents inside.\n\nConfirm?',
+                        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+
+                if choice==QtWidgets.QMessageBox.Yes:
+                    self._trashed_folders.append(self._move_item.data(1,0))
+                    print('dropEvent: add folder id to trashed_folders',self._trashed_folders)
+                    self.folder_del_signal.emit(self._move_item,False)
+                    super(MyTreeWidget,self).dropEvent(event)
+                    return
+                else:
+                    event.ignore()
+                    return
 
             if self._move_item.data(0,0) in children_names:
                 print('dropEvent: name conflict')
@@ -81,16 +102,17 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
                 self.folder_move_signal.emit((self._move_item.data(1,0),\
                         newparent.data(1,0)))
                 super(MyTreeWidget,self).dropEvent(event)
+                return
 
         # above item
         elif indicatorpos==1:
-            if parentidx.row()<=2:
+            if parentidx.row()<=3:
                 event.ignore()
                 return
 
         # below item
         elif indicatorpos==2:
-            if parentidx.row()<=1:
+            if parentidx.row()<=2:
                 event.ignore()
                 return
 

@@ -332,6 +332,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
         libtree.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
         libtree.folder_move_signal.connect(self.changeFolderParent)
+        libtree.folder_del_signal.connect(self.delFolder)
 
         return libtree
 
