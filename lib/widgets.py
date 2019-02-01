@@ -47,26 +47,54 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
         pos=event.pos()
         newparent=self.itemAt(pos)
+        parentidx=self.indexFromItem(newparent)
+        indicatorpos=self.dropIndicatorPosition()
+        print('dropEvent, parentidx',parentidx,parentidx.row(),self.indexAt(pos).row())
         print('dropEvent: newparent=',newparent,newparent.data(0,0))
+        print('dropEvent: proposedAction=',event.proposedAction())
+        print('dropEvent, dropIndicatorPosition',indicatorpos)
 
-        # get children
-        children=[newparent.child(ii) for ii in range(newparent.childCount())]
-        children_names=[ii.data(0,0) for ii in children]
-        print('dropEvent:, children:',children)
-        print('dropEvent:, children_names:',children_names)
+        # on item
+        if indicatorpos==0:
 
-        if self._move_item.data(0,0) in children_names:
-            print('dropEvent: name conflict')
-            msg=QtWidgets.QMessageBox()
-            msg.setIcon(QtWidgets.QMessageBox.Critical)
-            msg.setWindowTitle('Name conflict')
-            msg.setText('Move cancelled due to name conflict.')
-            msg.setInformativeText('Folder name\n\t%s\nconflicts with another folder in the target folder.\nPlease rename before moving.' %self._move_item)
-            msg.exec_()
-        else:
-            self.folder_move_signal.emit((self._move_item.data(1,0),\
-                    newparent.data(1,0)))
-            super(MyTreeWidget,self).dropEvent(event)
+            # get children
+            children=[newparent.child(ii) for ii in range(newparent.childCount())]
+            children_names=[ii.data(0,0) for ii in children]
+            print('dropEvent:, children:',children)
+            print('dropEvent:, children_names:',children_names)
+
+            if newparent.data(0,0) in ['All', 'Needs Review']:
+                event.ignore()
+                return
+
+            if self._move_item.data(0,0) in children_names:
+                print('dropEvent: name conflict')
+                event.ignore()
+                msg=QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Critical)
+                msg.setWindowTitle('Name conflict')
+                msg.setText('Move cancelled due to name conflict.')
+                msg.setInformativeText('Folder name\n\t%s\nconflicts with another folder in the target folder.\nPlease rename before moving.' %self._move_item)
+                msg.exec_()
+                return
+            else:
+                self.folder_move_signal.emit((self._move_item.data(1,0),\
+                        newparent.data(1,0)))
+                super(MyTreeWidget,self).dropEvent(event)
+
+        # above item
+        elif indicatorpos==1:
+            if parentidx.row()<=2:
+                event.ignore()
+                return
+
+        # below item
+        elif indicatorpos==2:
+            if parentidx.row()<=1:
+                event.ignore()
+                return
+
+        super(MyTreeWidget,self).dropEvent(event)
 
 
 

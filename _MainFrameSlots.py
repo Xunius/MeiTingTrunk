@@ -282,15 +282,16 @@ class MainFrameSlots:
 
     def sortFolders(self):
 
-        def moveItemToTop(itemname):
-            item=self.libtree.findItems(itemname, Qt.MatchExactly | Qt.MatchRecursive)[0]
+        def moveItemToTop(item):
             idx=self.libtree.indexOfTopLevelItem(item)
             item=self.libtree.takeTopLevelItem(idx)
             self.libtree.insertTopLevelItem(0,item)
 
         self.libtree.sortItems(0,Qt.AscendingOrder)
-        moveItemToTop('Needs Review')
-        moveItemToTop('All')
+
+        # move system folders to back to top
+        for itemii in reversed(self.sys_folders):
+            moveItemToTop(itemii)
 
         return
 
@@ -321,20 +322,25 @@ class MainFrameSlots:
         folder=item.data(0,0)
         folderid=item.data(1,0)
         print('clickSelFolder: folder', folder,'folderid',folderid)
-        if folder=='All' and folderid=='0':
+
+        if item==self.all_folder:
             self.loadDocTable(folder=None,sortidx=4)
             self.create_subfolder_action.setDisabled(True)
         else:
             self.loadDocTable((folder,folderid),sortidx=4)
             self.create_subfolder_action.setEnabled(True)
 
-
-        if folder=='Needs Review' and folderid=='-2':
+        if item==self.needsreview_folder:
             self.add_button.setDisabled(True)
             self.add_folder_button.setDisabled(True)
         else:
             self.add_button.setEnabled(True)
             self.add_folder_button.setEnabled(True)
+
+        if item==self.trash_folder:
+            self.add_button.setDisabled(True)
+            self.add_folder_button.setDisabled(True)
+            self.create_subfolder_action.setDisabled(True)
 
         # Refresh filter list
         self.filterTypeCombboxChange(item)
@@ -362,7 +368,8 @@ class MainFrameSlots:
         if item:
             folderid=item.data(1,0)
 
-            if folderid in ['0','-1','-2']:
+            #if folderid in ['0','-1','-2']:
+            if item in self.sys_folders:
                 add_action.setDisabled(True)
                 addsub_action.setDisabled(True)
                 del_action.setDisabled(True)
@@ -602,12 +609,10 @@ class MainFrameSlots:
                 open_action.setDisabled(True)
 
             foldername,folderid=self._current_folder
-            if (foldername=='All' and folderid=='0') or (foldername=='Needs Review'\
-                    and folderid=='-2'):
+            if self._current_folder_item in self.sys_folders:
                 del_from_folder_action.setDisabled(True)
             else:
                 del_from_folder_action.setEnabled(True)
-
 
             action=menu.exec_(QCursor.pos())
             print('docTableMenu: action:',action)

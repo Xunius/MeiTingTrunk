@@ -28,7 +28,8 @@ class DocMeta(MutableMapping):
                 'keywords_l': [],
                 'files_l': [],
                 'folders_l': [],
-                'tags_l': []
+                'tags_l': [],
+                'pend_delete': False
                 }
 
         self.update(dict(*args, **kwargs))  # use the free update to set keys
@@ -95,15 +96,20 @@ def readSqlite(dbin):
     docids.sort()
 
     folder_data={}
-    folder_data['-2']=[]
+    folder_data['-2']=[] # needs review folder
+    folder_data['-3']=[] # trash can
 
     for idii in docids:
         metaii=getMetaData(dbin,idii)
         meta[idii]=metaii
 
         folderii=metaii['folders_l']
+
         if metaii['confirmed'] is None or metaii['confirmed']=='false':
             folder_data['-2'].append(idii)
+        if metaii['pend_delete']:
+            folder_data['-3'].append(idii)
+
         # note: convert folder id to str
         # TODO: convert back to int when writing to sqlite
         folderids=[str(ff[0]) for ff in folderii]
@@ -117,7 +123,6 @@ def readSqlite(dbin):
     empty_folderids=list(set(folder_dict.keys()).difference(folder_data.keys()))
     for fii in empty_folderids:
         folder_data[fii]=[]
-
 
     return meta, folder_data, folder_dict
 
@@ -246,6 +251,7 @@ def getMetaData(db, docid):
     folders=result['folders_l']
     result['folders_l']=folders or [(-1, 'Canonical')] # if no folder name, a canonical doc
 
+    result['pend_delete']=False
 
     return result
 

@@ -2,6 +2,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from lib import sqlitedb
 from lib import export2bib
+from lib.tools import getHLine
 
 
 
@@ -151,18 +152,29 @@ class MainFrameLoadData:
                 vv[1]=='0' or vv[1]=='-1']
         folders1.sort()
 
-        allitem=QtWidgets.QTreeWidgetItem(['All','0'])
-        allitem.setIcon(0,diropen_icon)
-        self.libtree.addTopLevelItem(allitem)
+        #-------------Create preserved folders-------------
+        self.all_folder=QtWidgets.QTreeWidgetItem(['All','0'])
+        self.all_folder.setIcon(0,diropen_icon)
+        self.libtree.addTopLevelItem(self.all_folder)
 
-        needsreviewitem=QtWidgets.QTreeWidgetItem(['Needs Review','-2'])
-        needsreviewitem.setIcon(0,needsreview_icon)
-        self.libtree.addTopLevelItem(needsreviewitem)
+        self.needsreview_folder=QtWidgets.QTreeWidgetItem(['Needs Review','-2'])
+        self.needsreview_folder.setIcon(0,needsreview_icon)
+        self.libtree.addTopLevelItem(self.needsreview_folder)
 
-        #trashitem=QtWidgets.QTreeWidgetItem(['Trash','-3'])
-        #trashitem.setIcon(0,trash_icon)
-        #self.libtree.addTopLevelItem(trashitem)
+        self.trash_folder=QtWidgets.QTreeWidgetItem(['Trash','-3'])
+        self.trash_folder.setIcon(0,trash_icon)
+        self.libtree.addTopLevelItem(self.trash_folder)
 
+        self.sys_folders=[self.all_folder,self.needsreview_folder,self.trash_folder]
+
+        #------------------Add separator------------------
+        separator=QtWidgets.QTreeWidgetItem([' ',None])
+        separator.setFlags(Qt.NoItemFlags)
+        self.libtree.addTopLevelItem(separator)
+        h_line=getHLine(None)
+        self.libtree.setItemWidget(separator,0,h_line)
+
+        #------------Add folders from database------------
         for fnameii,idii in folders1:
             addFolder(self.libtree,idii,self.folder_dict)
 
@@ -170,7 +182,7 @@ class MainFrameLoadData:
         self.libtree.itemDoubleClicked.connect(self.renameFolder)
 
         self.sortFolders()
-        self.libtree.setCurrentItem(allitem)
+        self.libtree.setCurrentItem(self.all_folder)
 
         return
 
