@@ -36,7 +36,7 @@ def addPDF(abpath):
 
 def checkFolderName(foldername,folderid,folder_dict):
 
-    toplevelids=[kk for kk,vv in folder_dict.items() if vv[1] in ['0','-1']]
+    toplevelids=[kk for kk,vv in folder_dict.items() if vv[1]=='-1']
 
     print('checkFolderName:, toplevelids = ',toplevelids,'folderid=',folderid)
 
@@ -224,7 +224,7 @@ class MainFrameSlots:
         print('item.data',item.data(0,0),item.data(1,0))
 
         foldername,folderid=item.data(0,0), item.data(1,0)
-        if folderid not in ['0', '-1', '-2']:
+        if folderid not in ['-1', '-2', '-3']:
             fnameold,parentid=self.folder_dict[folderid]
             print('old foldername=',fnameold,'parentid=',parentid)
 
@@ -277,15 +277,14 @@ class MainFrameSlots:
         return
 
 
-    @pyqtSlot(tuple)
-    def changeFolderParent(self,arg_tuple):
-        print('changeFolderParent:, arg_tuple:',arg_tuple)
+    @pyqtSlot(str,str)
+    def changeFolderParent(self,move_folder_id,new_parent_id):
 
-        move_id, parent_id=arg_tuple
-        folder_name=self.folder_dict[move_id][0]
-        print('changeFolderParent: folder_dict[id] before:',self.folder_dict[move_id])
-        self.folder_dict[move_id]=(folder_name, parent_id)
-        print('changeFolderParent: folder_dict[id] after:',self.folder_dict[move_id])
+        #move_folder_id, new_parent_id=arg_tuple
+        folder_name=self.folder_dict[move_folder_id][0]
+        print('changeFolderParent: folder_dict[id] before:',self.folder_dict[move_folder_id])
+        self.folder_dict[move_folder_id]=(folder_name, new_parent_id)
+        print('changeFolderParent: folder_dict[id] after:',self.folder_dict[move_folder_id])
         return
 
 
@@ -306,25 +305,36 @@ class MainFrameSlots:
 
         if item==self.all_folder:
             self.loadDocTable(folder=None,sortidx=4)
-            self.create_subfolder_action.setDisabled(True)
         else:
             self.loadDocTable((folder,folderid),sortidx=4)
-            self.create_subfolder_action.setEnabled(True)
+            #self.create_subfolder_action.setEnabled(True)
 
-        if item==self.needsreview_folder:
+        if item==self.all_folder:
             self.add_button.setDisabled(True)
-            self.add_folder_button.setDisabled(True)
-        else:
-            self.add_button.setEnabled(True)
-            self.add_folder_button.setEnabled(True)
-
-        if item==self.trash_folder:
-            self.add_button.setDisabled(True)
-            self.add_folder_button.setDisabled(True)
             self.create_subfolder_action.setDisabled(True)
+            self.create_folder_action.setEnabled(True)
+            #self.add_folder_button.setDisabled(True)
+        elif item==self.needsreview_folder:
+            self.add_button.setDisabled(True)
+            self.add_folder_button.setDisabled(True)
+        elif item==self.trash_folder:
+            self.add_button.setDisabled(True)
+            self.add_folder_button.setDisabled(True)
+            #self.create_subfolder_action.setDisabled(True)
+        else:
+            if folderid in self.libtree._trashed_folder_ids:
+                self.add_button.setDisabled(True)
+                self.add_folder_button.setDisabled(True)
+                self.create_subfolder_action.setDisabled(True)
+            else:
+                self.add_button.setEnabled(True)
+                self.add_folder_button.setEnabled(True)
+                self.create_subfolder_action.setEnabled(True)
 
         # Refresh filter list
         self.filterTypeCombboxChange(item)
+
+        return 
 
 
     def selFolder(self,selected,deselected):
@@ -339,44 +349,62 @@ class MainFrameSlots:
 
     def libTreeMenu(self,pos):
 
-        menu=QtWidgets.QMenu()
-        add_action=menu.addAction('Create Folder')
-        addsub_action=menu.addAction('Create Sub Folder')
-        del_action=menu.addAction('Delete Folder')
-        rename_action=menu.addAction('Rename Folder')
-
         item=self._current_folder_item
-        if item:
-            folderid=item.data(1,0)
+        folderid=item.data(1,0)
 
-            #if folderid in ['0','-1','-2']:
-            if item in self.sys_folders:
-                add_action.setDisabled(True)
-                addsub_action.setDisabled(True)
-                del_action.setDisabled(True)
-                rename_action.setDisabled(True)
+        if item:
+            if item==self.trash_folder or folderid in self.libtree._trashed_folder_ids:
+                menu=QtWidgets.QMenu()
+                restore_action=menu.addAction('Restore Folder(s)')
+                clear_action=menu.addAction('Clear Folder(s) From Trash')
+                menu_type='trash'
             else:
-                add_action.setEnabled(True)
-                addsub_action.setEnabled(True)
-                del_action.setEnabled(True)
-                rename_action.setEnabled(True)
+                menu=QtWidgets.QMenu()
+                add_action=menu.addAction('Create Folder')
+                addsub_action=menu.addAction('Create Sub Folder')
+                del_action=menu.addAction('Delete Folder')
+                rename_action=menu.addAction('Rename Folder')
+                menu_type='default'
+
+            if menu_type=='trash':
+                restore_action.setEnabled(True)
+                clear_action.setEnabled(True)
+            else:
+                if item in [self.all_folder, self.needsreview_folder]:
+                    add_action.setDisabled(True)
+                    addsub_action.setDisabled(True)
+                    del_action.setDisabled(True)
+                    rename_action.setDisabled(True)
+                else:
+                    add_action.setEnabled(True)
+                    addsub_action.setEnabled(True)
+                    del_action.setEnabled(True)
+                    rename_action.setEnabled(True)
 
             action=menu.exec_(QCursor.pos())
             print('libTreeMenu: action:',action)
-            if action==add_action:
-                self.addFolderButtonClicked(add_action)
-            elif action==addsub_action:
-                self.addFolderButtonClicked(addsub_action)
-            elif action==del_action:
-                self.delFolder(item,True)
-            elif action==rename_action:
-                self.renameFolder()
+
+            if menu_type=='trash':
+                if action==restore_action:
+                    print('libTreeMenu: restore action')
+                elif action==clear_action:
+                    print('libTreeMenu: clear action')
+            else:
+                if action==add_action:
+                    self.addFolderButtonClicked(add_action)
+                elif action==addsub_action:
+                    self.addFolderButtonClicked(addsub_action)
+                elif action==del_action:
+                    self.trashFolder(item,True)
+                elif action==rename_action:
+                    self.renameFolder()
 
         return
 
 
 
-    def delFolder(self,item,ask=True):
+    @pyqtSlot(QtWidgets.QTreeWidgetItem,bool)
+    def trashFolder(self,item,ask=True):
 
         if ask:
             choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
@@ -386,32 +414,52 @@ class MainFrameSlots:
 
         if not ask or (ask and choice==QtWidgets.QMessageBox.Yes):
 
-            #item=self.libtree.selectedItems()
-            #item=self._current_folder_item
-            folderid=item.data(1,0)
-            delfolderids,deldocids=sqlitedb.walkFolderTree(self.folder_dict,
-                    self.folder_data,folderid)
-
-            print('delfolderids:',delfolderids)
-            print('docs to del', deldocids)
-
-            for idii in deldocids:
-                #del self.meta_dict[idii]
-                # NOTE: need to check orphan docs and set to pend_delete
-                pass
-                #print(idii,'in meta_dict?',idii in self.meta_dict)
-
-            for fii in delfolderids:
-                #print('del folder',fii,self.folder_dict[fii])
-                del self.folder_data[fii]
-                del self.folder_dict[fii]
-                #print(fii,'in folder_data?',fii in self.folder_data)
-                #print(fii,'in folder_dict?',fii in self.folder_dict)
+            self.libtree._trashed_folder_ids.append(item.data(1,0))
+            print('trashFolder: add folder id to trashed_folders',self.libtree._trashed_folder_ids)
 
             root=self.libtree.invisibleRootItem()
             (item.parent() or root).removeChild(item)
+            self.trash_folder.addChild(item)
+            self.postTrashFolder(item)
 
         return
+
+
+
+
+    @pyqtSlot(QtWidgets.QTreeWidgetItem)
+    def postTrashFolder(self,item):
+
+        folderid=item.data(1,0)
+        delfolderids,deldocids=sqlitedb.walkFolderTree(self.folder_dict,
+                self.folder_data,folderid)
+
+        orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,deldocids,
+                self.libtree._trashed_folder_ids)
+
+        self.libtree._trashed_doc_ids.extend(orphan_docs)
+
+        print('posttrashFolder: delfolderids:',delfolderids)
+        print('posttrashFolder: docs to del', deldocids)
+        print('posttrashFolder: orphan_docs', orphan_docs)
+
+        for idii in orphan_docs:
+            self.meta_dict[idii]['pend_delete']=True
+            print(idii,"meta_dict['pend_delete]",idii,self.meta_dict[idii]['pend_delete'])
+
+        for fii in delfolderids:
+            #print('del folder',fii,self.folder_dict[fii])
+            #del self.folder_data[fii]
+            #del self.folder_dict[fii]
+            pass
+            #print(fii,'in folder_data?',fii in self.folder_data)
+            #print(fii,'in folder_dict?',fii in self.folder_dict)
+
+        return
+
+
+
+
 
     def renameFolder(self):
 
@@ -480,7 +528,7 @@ class MainFrameSlots:
 
             #---------------Get items in folder---------------
             foldername,folderid=current_folder
-            if foldername=='All' and folderid=='0':
+            if foldername=='All' and folderid=='-1':
                 docids=list(self.meta_dict.keys())
             else:
                 docids=self.folder_data[folderid]
@@ -770,7 +818,7 @@ class MainFrameSlots:
                 folder,folderid=current_folder
 
                 # TODO: keep a record of previous sortidx?
-                if folder=='All' and folderid=='0':
+                if folder=='All' and folderid=='-1':
                     self.loadDocTable(None,sortidx=4)
                 else:
                     self.loadDocTable((folder,folderid),sortidx=4)

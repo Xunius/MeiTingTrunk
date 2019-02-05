@@ -15,7 +15,7 @@ def addFolder(parent,folderid,folder_dict):
     diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
     fitem.setIcon(0,diropen_icon)
     sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
-    if parentid=='0' or parentid=='-1':
+    if parentid=='-1':
         parent.addTopLevelItem(fitem)
     else:
         parent.addChild(fitem)
@@ -149,11 +149,11 @@ class MainFrameLoadData:
 
         #-------------Get all level 1 folders-------------
         folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if\
-                vv[1]=='0' or vv[1]=='-1']
+                vv[1]=='-1']
         folders1.sort()
 
         #-------------Create preserved folders-------------
-        self.all_folder=QtWidgets.QTreeWidgetItem(['All','0'])
+        self.all_folder=QtWidgets.QTreeWidgetItem(['All','-1'])
         self.all_folder.setIcon(0,diropen_icon)
         self.libtree.addTopLevelItem(self.all_folder)
 
@@ -201,9 +201,13 @@ class MainFrameLoadData:
         #-----------Get list of doc ids to load-----------
         if docids is None:
 
+            # load All folder
             if folder is None:
                 docids=self.meta_dict.keys()
-            elif folder is not None and folder[0]=='All' and folder[1]=='0':
+                print('loadDocTable: before difference trashed_docs',len(docids))
+                docids=list(set(docids).difference(self.libtree._trashed_doc_ids))
+                print('loadDocTable: after difference trashed_docs',len(docids))
+            elif folder is not None and folder[0]=='All' and folder[1]=='-1':
                 docids=self.meta_dict.keys()
             #elif folder is not None and folder[0]=='Needs Review' and folder[1]=='-2':
                 #docids=self.folder_data['-2']
@@ -211,17 +215,6 @@ class MainFrameLoadData:
                 folderid=folder[1]
                 docids=self.folder_data[folderid]
 
-        '''
-        if docids is None:
-            if folder is None:
-                docids=self.meta_dict.keys()
-            else:
-                folderid=folder[1]
-                docids=self.folder_data[folderid]
-            data=prepareDocs(self.meta_dict,docids)
-        else:
-            data=prepareDocs(self.meta_dict,docids)
-        '''
         data=prepareDocs(self.meta_dict,docids)
 
         print('num of docs in folder',len(docids))
@@ -238,7 +231,7 @@ class MainFrameLoadData:
             current_row=self.doc_table.currentIndex().row()
             docid=self._current_doc
             print('current_row',current_row, docid)
-            #self.loadMetaTab(docid)
+            self.loadMetaTab(docid)
         else:
             # clear meta tab
             self.clearMetaTab()

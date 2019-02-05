@@ -27,13 +27,14 @@ class TreeWidgetDelegate(QtWidgets.QItemDelegate):
 
 class MyTreeWidget(QtWidgets.QTreeWidget):
 
-    folder_move_signal=pyqtSignal(tuple)
+    folder_move_signal=pyqtSignal((str,str))
     folder_del_signal=pyqtSignal((QtWidgets.QTreeWidgetItem,bool))
 
     def __init__(self,parent=None):
         super(MyTreeWidget,self).__init__(parent=parent)
 
-        self._trashed_folders=[]
+        self._trashed_folder_ids=[]
+        self._trashed_doc_ids=[]
 
 
     def startDrag(self,actions):
@@ -48,13 +49,16 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
     def dropEvent(self,event):
         print('MyTreeWidget.dropevent:',event)
 
+        if self._move_item.data(1,0) in ['-1','-2','-3']:
+            return 
+
         pos=event.pos()
         newparent=self.itemAt(pos)
         parentidx=self.indexFromItem(newparent)
         indicatorpos=self.dropIndicatorPosition()
         print('dropEvent, parentidx',parentidx,parentidx.row(),self.indexAt(pos).row())
         print('dropEvent: newparent=',newparent,newparent.data(0,0))
-        print('dropEvent: proposedAction=',event.proposedAction())
+        #print('dropEvent: proposedAction=',event.proposedAction())
         print('dropEvent, dropIndicatorPosition',indicatorpos)
 
         # on item
@@ -67,20 +71,21 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
             print('dropEvent:, children_names:',children_names)
 
             print('dropevent, check target folder',\
-                    self._trashed_folders, newparent.data(1,0))
+                    self._trashed_folder_ids, newparent.data(1,0))
 
             if newparent.data(0,0) in ['All', 'Needs Review']:
                 event.ignore()
                 return
 
-            elif newparent.data(1,0) in ['-3']+self._trashed_folders:
+            # move to trash
+            elif newparent.data(1,0) in ['-3']+self._trashed_folder_ids:
                 choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
                         'Deleting a folder will delete all sub-folders and documents inside.\n\nConfirm?',
                         QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
                 if choice==QtWidgets.QMessageBox.Yes:
-                    self._trashed_folders.append(self._move_item.data(1,0))
-                    print('dropEvent: add folder id to trashed_folders',self._trashed_folders)
+                    self._trashed_folder_ids.append(self._move_item.data(1,0))
+                    print('dropEvent: add folder id to trashed_folders',self._trashed_folder_ids)
                     self.folder_del_signal.emit(self._move_item,False)
                     super(MyTreeWidget,self).dropEvent(event)
                     return
@@ -88,6 +93,7 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
                     event.ignore()
                     return
 
+            # change folder parent
             if self._move_item.data(0,0) in children_names:
                 print('dropEvent: name conflict')
                 event.ignore()
@@ -99,8 +105,8 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
                 msg.exec_()
                 return
             else:
-                self.folder_move_signal.emit((self._move_item.data(1,0),\
-                        newparent.data(1,0)))
+                self.folder_move_signal.emit(self._move_item.data(1,0),\
+                        newparent.data(1,0))
                 super(MyTreeWidget,self).dropEvent(event)
                 return
 

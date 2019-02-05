@@ -18,7 +18,7 @@ import _MainFrameSlots
 
 __version__='v0.1'
 
-FILE_IN='new3.sqlite'
+FILE_IN='new4.sqlite'
 
 
 # TODO:
@@ -332,7 +332,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
         libtree.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
         libtree.folder_move_signal.connect(self.changeFolderParent)
-        libtree.folder_del_signal.connect(self.delFolder)
+        libtree.folder_del_signal.connect(self.postTrashFolder)
 
         return libtree
 

@@ -107,8 +107,8 @@ def readSqlite(dbin):
 
         if metaii['confirmed'] is None or metaii['confirmed']=='false':
             folder_data['-2'].append(idii)
-        if metaii['pend_delete']:
-            folder_data['-3'].append(idii)
+        #if metaii['pend_delete']:
+            #folder_data['-3'].append(idii)
 
         # note: convert folder id to str
         # TODO: convert back to int when writing to sqlite
@@ -249,7 +249,8 @@ def getMetaData(db, docid):
     result['urls_l']=fetchField(db,query_urls,(docid,),1,'list')
 
     folders=result['folders_l']
-    result['folders_l']=folders or [(-1, 'Canonical')] # if no folder name, a canonical doc
+    # if no folder name, add to Default
+    result['folders_l']=folders or [(0, 'Default')]
 
     result['pend_delete']=False
 
@@ -297,6 +298,19 @@ def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
     return folderids,docids
 
 
+def findOrphanDocs(folder_data,docids,trashed_folder_ids):
+    idsinfolders=[]
+    for kk,vv in folder_data.items():
+        if kk not in ['-1','-2','-3']+trashed_folder_ids:
+            idsinfolders.extend(vv)
+
+    result=[idii for idii in docids if idii not in idsinfolders]
+    print('findOrphanDocs: exclude folders:',['-1','-2','-3']+trashed_folder_ids)
+    #print('findOrphanDocs: idsinfolders:',idsinfolders)
+    print('findOrphanDocs: result:',result)
+    return result
+
+
 
 
 def getFolders(db):
@@ -311,6 +325,9 @@ def getFolders(db):
     # dict, key: folderid, value: (folder_name, parent_id)
     # note: convert id to str
     df=dict([(str(ii[0]), (ii[1], str(ii[2]))) for ii in data])
+
+    # add Default
+    df['0']=('Default', '-1')
 
     return df
 
