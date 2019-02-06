@@ -395,7 +395,7 @@ class MainFrameSlots:
                 elif action==addsub_action:
                     self.addFolderButtonClicked(addsub_action)
                 elif action==del_action:
-                    self.trashFolder(item,True)
+                    self.trashFolder(item,None,True)
                 elif action==rename_action:
                     self.renameFolder()
 
@@ -403,8 +403,8 @@ class MainFrameSlots:
 
 
 
-    @pyqtSlot(QtWidgets.QTreeWidgetItem,bool)
-    def trashFolder(self,item,ask=True):
+    @pyqtSlot(QtWidgets.QTreeWidgetItem,QtWidgets.QTreeWidgetItem,bool)
+    def trashFolder(self,item,newparent=None,ask=True):
 
         if ask:
             choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
@@ -419,7 +419,12 @@ class MainFrameSlots:
 
             root=self.libtree.invisibleRootItem()
             (item.parent() or root).removeChild(item)
-            self.trash_folder.addChild(item)
+
+            if newparent is None:
+                self.trash_folder.addChild(item)
+            else:
+                newparent.addChild(item)
+
             self.postTrashFolder(item)
 
         return
@@ -427,7 +432,6 @@ class MainFrameSlots:
 
 
 
-    @pyqtSlot(QtWidgets.QTreeWidgetItem)
     def postTrashFolder(self,item):
 
         folderid=item.data(1,0)
@@ -676,7 +680,19 @@ class MainFrameSlots:
 
     def delFromFolder(self,docids,foldername,folderid):
         print('delFromFolder:',docids,foldername,folderid)
+        # check orphan docs
+        for idii in docids:
+            self.folder_data[folderid].remove(idii)
+            print('delFromFolder: idii in folder_data?',idii,idii in self.folder_data)
+
+        orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,docids,
+                self.libtree._trashed_folder_ids)
+        self.libtree._trashed_doc_ids.extend(orphan_docs)
+
+        self.loadDocTable(folder=(foldername,folderid))
+
         return
+
 
     def delDoc(self,docids):
         print('delDoc:',docids)

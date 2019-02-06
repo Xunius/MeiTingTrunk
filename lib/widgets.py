@@ -28,7 +28,8 @@ class TreeWidgetDelegate(QtWidgets.QItemDelegate):
 class MyTreeWidget(QtWidgets.QTreeWidget):
 
     folder_move_signal=pyqtSignal((str,str))
-    folder_del_signal=pyqtSignal((QtWidgets.QTreeWidgetItem,bool))
+    folder_del_signal=pyqtSignal((QtWidgets.QTreeWidgetItem,\
+            QtWidgets.QTreeWidgetItem,bool))
 
     def __init__(self,parent=None):
         super(MyTreeWidget,self).__init__(parent=parent)
@@ -79,6 +80,7 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
             # move to trash
             elif newparent.data(1,0) in ['-3']+self._trashed_folder_ids:
+                '''
                 choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
                         'Deleting a folder will delete all sub-folders and documents inside.\n\nConfirm?',
                         QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
@@ -92,6 +94,10 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
                 else:
                     event.ignore()
                     return
+                '''
+                print('dropEvent: trashing folder')
+                self.folder_del_signal.emit(self._move_item,newparent,True)
+                return 
 
             # change folder parent
             if self._move_item.data(0,0) in children_names:

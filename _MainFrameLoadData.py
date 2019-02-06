@@ -66,7 +66,7 @@ class MainFrameLoadData:
             else:
                 print('_current_doc: current_row > row number',current_row,\
                         len(self._tabledata))
-                return None
+                return self._tabledata[-1][0]
         else:
             return None
 
@@ -227,11 +227,12 @@ class MainFrameLoadData:
         #------------Load meta data on 1st row------------
         if len(data)>0:
             self.enableMetaTab()
-            #self.doc_table.selectRow(0)
+            self.doc_table.selectRow(0)
             current_row=self.doc_table.currentIndex().row()
             docid=self._current_doc
             print('current_row',current_row, docid)
-            self.loadMetaTab(docid)
+            #self.loadMetaTab(docid)
+            self.selDoc(self.doc_table.currentIndex(),None)
         else:
             # clear meta tab
             self.clearMetaTab()
