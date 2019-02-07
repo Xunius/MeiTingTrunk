@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from lib import sqlitedb
-from lib import export2bib
+from lib import bibparse
 from lib.tools import getHLine
 
 
@@ -60,7 +60,7 @@ class MainFrameLoadData:
     def _current_doc(self):
         if hasattr(self,'doc_table'):
             current_row=self.doc_table.currentIndex().row()
-            if current_row < len(self._tabledata):
+            if current_row < len(self._tabledata)-1:
                 docid=self._tabledata[current_row][0]
                 return docid
             else:
@@ -231,7 +231,6 @@ class MainFrameLoadData:
             current_row=self.doc_table.currentIndex().row()
             docid=self._current_doc
             print('current_row',current_row, docid)
-            #self.loadMetaTab(docid)
             self.selDoc(self.doc_table.currentIndex(),None)
         else:
             # clear meta tab
@@ -287,8 +286,12 @@ class MainFrameLoadData:
         #import bibtexparser
         #bb=bibtexparser.bibdatabase.BibDatabase()
 
-        text=export2bib.parseMeta(metaii,'',metaii['folders_l'],True,False,
-                True)
+        #text=export2bib.parseMeta(metaii,'',metaii['folders_l'],True,False,
+                #True)
+
+        omit_keys=self.settings.value('export/bib/omit_fields', [], str)
+        text=bibparse.metaDictToBib(metaii,bibparse.INV_ALT_KEYS,
+                omit_keys)
 
         self.bib_textedit.setText(text)
 

@@ -7,7 +7,7 @@ from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont, QFontMetrics,\
         QCursor, QRegExpValidator
 import resources
 from lib import sqlitedb
-from .tools import getHLine, getXExpandYMinSizePolicy
+from .tools import getHLine, getXExpandYMinSizePolicy, parseAuthors
 
 
 
@@ -681,7 +681,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         if key=='authors_l':
             te.label_enabled=True
-            te.tooltip_text='firstname, lastname\nfirstname, lastname\n...'
+            te.tooltip_text='lastname, firstname\nlastname, firstname\n...'
         elif key=='tags_l':
             te.label_enabled=True
             te.tooltip_text='tag1; tag2; tag3 ...'
@@ -799,19 +799,6 @@ class MetaTabScroll(QtWidgets.QScrollArea):
                     result.append(tii)
             return result
 
-        def parseAuthors(textlist):
-            firstnames=[]
-            lastnames=[]
-            for nii in textlist:
-                nii=nii.split(',',1)
-                firstnames.append(nii[0] if len(nii)>1 else '')
-                lastnames.append(nii[1] if len(nii)>1 else nii[0])
-            authors=sqlitedb.zipAuthors(firstnames,lastnames)
-
-            return firstnames,lastnames,authors
-
-
-
         #result_dict={}
         result_dict=sqlitedb.DocMeta()
         for kk,vv in self.fields_dict.items():
@@ -833,6 +820,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
                 elif isinstance(vv,QtWidgets.QTextEdit):
                     if kk=='authors_l':
                         names=parseToList(vv.toPlainText())
+                        print('_meta_dict',names)
                         firsts,lasts,authors=parseAuthors(names)
                         result_dict['firstNames_l']=firsts
                         result_dict['lastName_l']=lasts

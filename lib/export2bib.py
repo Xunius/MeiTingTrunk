@@ -16,9 +16,22 @@ import platform
 #import tools
 import re
 from .pylatexenc import latexencode
+from lib import bibparse
 
 import logging
 logging.basicConfig()
+
+
+# exclude these keys from meta_data dict from the exported bib entry
+# make this into option dialog
+EXCLUDE_KEYS=[
+        'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
+        'lastNames_l', 'pend_delete'
+        ]
+
+
+ALT_KEYS=dict([(vv,kk) for kk,vv in bibparse.ALT_KEYS.items()])
+
 
 
 
@@ -60,6 +73,18 @@ def parseMeta(metadict,basedir,folder,isfile,iszotero,iskeyword,verbose=True):
     '''Parse document meta-data
 
     metadict
+    '''
+
+    # change or omit keys
+    '''
+    metadict2={}
+    for kk,vv in metadict.items():
+        if kk not in EXCLUDE_KEYS:
+            kk2=ALT_KEYS.get(kk,kk)
+            metadict2[kk2]=vv
+
+    metadict=metadict2
+    print('parseMeta: new dict',metadict)
     '''
 
     def getField(doc,field,default=''):

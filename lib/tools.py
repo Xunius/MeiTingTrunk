@@ -4,9 +4,12 @@ Author: guangzhi XU (xugzhi1987@gmail.com; guangzhi.xu@outlook.com)
 Update time: 2018-09-29 21:20:32.
 '''
 
-import time
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QThread, QObject, QMutex, pyqtSignal, pyqtSlot
+try:
+    from . import sqlitedb
+except:
+    import sqlitedb
 
 def getMinSizePolicy():
     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
@@ -136,3 +139,14 @@ class Client(QObject):
         self._thread.quit()
         self.clientDone.emit()
 
+
+def parseAuthors(textlist):
+    firstnames=[]
+    lastnames=[]
+    for nii in textlist:
+        nii=nii.split(',',1)
+        lastnames.append(nii[0] if len(nii)>1 else nii[0])
+        firstnames.append(nii[1] if len(nii)>1 else '')
+    authors=sqlitedb.zipAuthors(firstnames,lastnames)
+
+    return firstnames,lastnames,authors

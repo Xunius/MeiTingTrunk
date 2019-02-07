@@ -8,8 +8,9 @@ from queue import Queue
 from lib import sqlitedb
 from lib import widgets
 from lib import bibparse
+#from lib import export2bib
 from lib import retrievepdfmeta
-from lib.tools import getXExpandYMinSizePolicy, WorkerThread
+from lib.tools import getXExpandYMinSizePolicy, WorkerThread, parseAuthors
 
 
 
@@ -625,8 +626,9 @@ class MainFrameSlots:
         del_from_folder_action=menu.addAction('Delete From Current Folder')
         del_action=menu.addAction('Delete From Library')
         menu.addSeparator()
-        export_menu=menu.addMenu('Export Citation')
-        export_bib_action=export_menu.addAction('Export bib to File')
+        #export_menu=menu.addMenu('Export Citation')
+        export_bib_action=menu.addAction('Export bib to File')
+        copy_clipboard_action=menu.addAction('Export Citation To Clipboard')
 
         sel_rows=self.doc_table.selectionModel().selectedRows()
         sel_rows=[ii.row() for ii in sel_rows]
@@ -667,6 +669,8 @@ class MainFrameSlots:
             elif action==export_bib_action:
                 self.exportToBib(docids)
 
+            elif action==copy_clipboard_action:
+                self.copyToClipboard(docids,style=None)
 
 
     def openDoc(self,docids):
@@ -696,11 +700,119 @@ class MainFrameSlots:
 
     def delDoc(self,docids):
         print('delDoc:',docids)
+
+        choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
+                'Confirm deleting a document permanently?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+
+        if choice==QtWidgets.QMessageBox.Yes:
+
+            for idii in docids:
+                for kk,vv in self.folder_data.items():
+                    if idii in vv:
+                        vv.remove(idii)
+                        print('delDoc: docid',idii,'in folder_data[kk]',kk,
+                                idii in self.folder_data[kk])
+                del self.meta_dict[idii]
+                print('delDoc: docid',idii,'in meta_dict?',
+                        idii in self.meta_dict)
+
+                if idii in self.libtree._trashed_doc_ids:
+                    self.libtree._trashed_doc_ids.remove(idii)
+                print('delDoc: docid',idii,'in _trashed_doc_ids?',
+                        idii in self.libtree._trashed_doc_ids)
+
+            self.loadDocTable(folder=self._current_folder)
+
+
         return
 
     def exportToBib(self,docids):
         print('exportToBib:',docids)
+
+        if len(docids)==1:
+            default_path='%s.bib' %(self.meta_dict[docids[0]]['citationkey'])
+        else:
+            default_path='./bibtex.bib'
+
+        print('exportToBib: default path',default_path)
+
+        fname = QtWidgets.QFileDialog.getSaveFileName(self,
+                'Save Citaitons to bib File',
+                default_path,
+                "bib Files (*.bib);; All files (*)")[0]
+        print('exportToBib: chosen bib file:', fname)
+
+        if fname:
+            text=''
+            omit_keys=self.settings.value('export/bib/omit_fields', [], str)
+
+            for idii in docids:
+                print('exportToBib: parsing bib for id',idii)
+                metaii=self.meta_dict[idii]
+
+                #textii=export2bib.parseMeta(metaii,'',metaii['folders_l'],True,False,
+                        #True)
+                textii=bibparse.metaDictToBib(metaii,bibparse.INV_ALT_KEYS,
+                        omit_keys)
+                text=text+textii+'\n'
+
+            with open(fname,'w') as fout:
+                fout.write(text)
+            print('exportToBib: file saved')
+
         return
+
+
+    def copyToClipboard(self,docids,style=None):
+
+        cb=QtWidgets.QApplication.clipboard()
+        meta={}
+        meta_list=[]
+
+        for idii in docids:
+            docii=self.meta_dict[idii]
+
+            print('copyToClipboard',docii['authors_l'])
+            authorsii=parseAuthors(docii['authors_l'])[2]
+            if len(authorsii)==0:
+                authorsii='UNKNOWN'
+            elif len(authorsii)==1:
+                authorsii=authorsii[0]
+            elif len(authorsii)>=2:
+                authorsii=' and '.join(authorsii)
+
+
+            meta['authors']=authorsii
+            meta['year']=docii['year']
+            meta['title']=docii['title']
+            meta['journal']=docii['publication']
+            meta['issue']=docii['issue']
+            meta['pages']=docii['pages']
+
+            print('copyToClipboard: metaii',meta)
+
+            meta_list.append(meta)
+
+
+        text=''
+        for docii in meta_list:
+            if style is None:
+
+                textii='%s, %s: %s. %s, <html><b>%s</b></html>, %s' %(docii['authors'],
+                        docii['year'],
+                        docii['title'],
+                        docii['journal'],
+                        docii['issue'],
+                        docii['pages']
+                        )
+
+                text=text+textii+'\n\n'
+
+        cb.setText(text)
+
+        return
+
 
 
     def docDoubleClicked(self,idx):

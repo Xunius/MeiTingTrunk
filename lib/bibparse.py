@@ -1,10 +1,16 @@
 import bibtexparser
 from bibtexparser.bparser import BibTexParser
+from bibtexparser.bwriter import BibTexWriter
+from bibtexparser.bibdatabase import BibDatabase
 from bibtexparser import customization as bibcus
 try:
     from . import sqlitedb
 except:
     import sqlitedb
+try:
+    from .tools import parseAuthors
+except:
+    from tools import parseAuthors
 from pprint import pprint
 import os
 import re
@@ -17,6 +23,12 @@ ALT_KEYS={
         'folder': 'folders_l'
         }
 
+INV_ALT_KEYS=dict([(vv,kk) for kk,vv in ALT_KEYS.items()])
+
+OMIT_KEYS=[
+        'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
+        'lastName_l', 'pend_delete', 'folders_l', 'type', 'id'
+        ]
 
 def splitFields(record, key, sep=',|;'):
     """
@@ -100,6 +112,7 @@ def readBibFile(bibfile):
         bib=bibtexparser.load(fin,parser=parser)
 
     results=[]
+    __import__('pdb').set_trace()
 
     for eii in bib.entries:
         eii=splitNames(eii)
@@ -119,7 +132,80 @@ def readBibFile(bibfile):
 
     return results
 
+
+
+def toOrdinaryDict(metadict,alt_dict,omit_keys):
+
+    result={}
+
+    for kk,vv in metadict.items():
+        if kk in omit_keys:
+            continue
+
+        if vv is None:
+            continue
+
+        if kk in alt_dict:
+            if isinstance(vv,(tuple,list)):
+                if len(vv)==0:
+                    continue
+                print('kk:',kk,'vv:',vv)
+                vv='; '.join(vv)
+            result[alt_dict[kk]]=vv
+        else:
+            result[kk]=str(vv)
+
+    authors=parseAuthors(metadict['authors_l'])[2]
+    authors=' and '.join(authors)
+    result['author']=authors
+
+    doctype=metadict['type']
+    if doctype.lower()=='journalarticle':
+        doctype='article'
+    result['ENTRYTYPE']=doctype
+
+    result['ID']=metadict['citationkey'].replace('(','').replace(')','')
+
+    return result
+
+
+def metaDictToBib(metadict,alt_dict,omit_keys):
+
+    ord_dict=toOrdinaryDict(metadict,alt_dict,omit_keys)
+
+    db=BibDatabase()
+    db.entries=[ord_dict,]
+    writer=BibTexWriter()
+    writer.indent='    '
+    writer.comma_first=False
+
+    dbtext=writer.write(db)
+
+    return dbtext
+
+
+
+
 if __name__=='__main__':
     aa=readBibFile('test.bib')
     pprint(aa[-1])
+
+
+    # test export
+
+    entries=[]
+    for eii in aa:
+        dii=toOrdinaryDict(eii,INV_ALT_KEYS,OMIT_KEYS)
+        entries.append(dii)
+
+    db=BibDatabase()
+    db.entries=entries
+    writer=BibTexWriter()
+    writer.indent='    '
+    writer.comma_first=False
+
+    with open('testexport.bib','w') as fout:
+        dbtext=writer.write(db)
+        print('dbtext',dbtext)
+        fout.write(dbtext)
 

@@ -19,6 +19,10 @@ import _MainFrameSlots
 __version__='v0.1'
 
 FILE_IN='new4.sqlite'
+OMIT_KEYS=[
+        'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
+        'lastName_l', 'pend_delete', 'folders_l', 'type', 'id'
+        ]
 
 
 # TODO:
@@ -80,6 +84,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 QFont('Serif', 10)),
             settings.setValue('display/folder/highlight_color_br',
                     QBrush(QColor(200,200,255)))
+            settings.setValue('export/bib/omit_fields', OMIT_KEYS)
 
             settings.sync()
 
@@ -95,6 +100,9 @@ class MainWindow(QtWidgets.QMainWindow):
         aa=settings.value('display/fonts/meta_title')
         print('settings',settings)
         print('fonat',aa)
+
+        aa=settings.value('export/bib/omit_fields', [], str)
+        print('omit_fields',aa)
 
         return settings
 
