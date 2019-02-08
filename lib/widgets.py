@@ -7,7 +7,8 @@ from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont, QFontMetrics,\
         QCursor, QRegExpValidator
 import resources
 from lib import sqlitedb
-from .tools import getHLine, getXExpandYMinSizePolicy, parseAuthors
+from .tools import getHLine, getXExpandYMinSizePolicy, getXMinYExpandSizePolicy,\
+    parseAuthors
 
 
 
@@ -430,6 +431,8 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
 
 class AdjustableTextEditWithFold(AdjustableTextEdit):
+
+    fold_change_signal=pyqtSignal(str,bool)
     def __init__(self,parent=None):
         super(AdjustableTextEditWithFold,self).__init__(parent)
 
@@ -483,6 +486,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
     def toggleFold(self):
         self.unfoldText() if self.is_fold else self.foldText()
+        self.fold_change_signal.emit(self.label,self.is_fold)
         return
 
     def foldText(self):
@@ -495,6 +499,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
             self.is_fold=True
             self.fold_button.setText('+')
             #self.fold_button.setIcon(QIcon.fromTheme('list-add'))
+        print('foldText: self.is_fold',self.is_fold)
         return
 
     def unfoldText(self):
@@ -557,6 +562,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.setWidgetResizable(True)
         self.setWidget(frame)
         self.fields_dict={}  # key: field name, value: textedit or lineedit
+        self.fold_dict={} # key: field name, value: is textedit folded
 
         #-------------------Add widgets-------------------
         self.v_layout=QtWidgets.QVBoxLayout()
@@ -589,7 +595,8 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.createMultiLineField('Abstract','abstract','meta_keywords')
 
         #-------------------Add keywords-------------------
-        self.createMultiLineField('Keywords','keywords_l','meta_keywords')
+        self.createMultiLineField('Keywords','keywords_l',
+                'meta_keywords')
 
         #-----------------Add catalog ids-----------------
         self.v_layout.addWidget(self.createLabel('Catalog IDs'))
@@ -675,6 +682,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
     def createMultiLineField(self,label,key,font_name):
         te=AdjustableTextEditWithFold()
         te.setFrameStyle(QtWidgets.QFrame.NoFrame)
+        te.label=key
+        self.fold_dict[key]=te.is_fold
+        te.fold_change_signal.connect(self.foldChanged)
 
         if font_name in self.font_dict:
             te.setFont(self.font_dict[font_name])
@@ -697,7 +707,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.v_layout.addLayout(h_layout)
         self.v_layout.addWidget(te)
 
-        return
+        return te
 
     def createFileField(self,text=None,font_name='meta_keywords'):
 
@@ -783,6 +793,11 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             self.createFileField(fname)
             self.fieldEdited()
 
+        return
+
+    def foldChanged(self,label,isfold):
+        self.fold_dict[label]=isfold
+        print('foldChanged: label:',label,'isfold',isfold)
         return
 
 
@@ -902,6 +917,52 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
     def exec_(self):
         ret=super(MetaDataEntryDialog,self).exec_()
         return ret, self.scroll._meta_dict
+
+
+
+
+
+class PreferenceDialog(QtWidgets.QDialog):
+
+    def __init__(self,settings,parent=None):
+        super(PreferenceDialog,self).__init__(parent=parent)
+
+        self.settings=settings
+
+        self.resize(800,600)
+        self.setWindowTitle('Preferences')
+        self.setWindowModality(Qt.ApplicationModal)
+
+        h_layout=QtWidgets.QHBoxLayout()
+        self.setLayout(h_layout)
+
+        self.list=QtWidgets.QListWidget(self)
+        #self.list.setSizePolicy(getXMinYExpandSizePolicy())
+        self.list.setMaximumWidth(150)
+        h_layout.addWidget(self.list)
+
+        self.categories=['Display', 'Export', 'Citation Style', 'Savings']
+        self.list.addItems(self.categories)
+
+        v_layout=QtWidgets.QVBoxLayout()
+        h_layout.addLayout(v_layout)
+
+        frame=QtWidgets.QWidget()
+        scroll=QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(frame)
+
+        v_layout.addWidget(scroll)
+
+        self.buttons=QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
+            Qt.Horizontal, self)
+
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+
+        v_layout.addWidget(self.buttons)
+
 
 
 

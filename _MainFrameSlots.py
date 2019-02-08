@@ -526,7 +526,10 @@ class MainFrameSlots:
 
         sel=self.filter_type_combbox.currentText()
         current_folder=self._current_folder
-        print('filter type cb select:',sel)
+        print('filter type cb select:',sel,type(sel))
+        #if sel=='':
+            #return
+
         if current_folder:
             print('filtertypecombochange: currentfolder:',\
                     current_folder[0], current_folder[1])
@@ -552,10 +555,10 @@ class MainFrameSlots:
                 folderdata=sqlitedb.fetchMetaData(self.meta_dict,'tags_l',docids,
                         unique=True,sort=True)
 
-        folderdata=list(set(folderdata))
-        folderdata.sort()
-        self.filter_item_list.clear()
-        self.filter_item_list.addItems(folderdata)
+            folderdata=list(set(folderdata))
+            folderdata.sort()
+            self.filter_item_list.clear()
+            self.filter_item_list.addItems(folderdata)
 
         return
 
@@ -965,3 +968,10 @@ class MainFrameSlots:
         self.bib_textedit.copy()
 
 
+    def clearData(self):
+
+        self.clearMetaTab()
+        self.doc_table.model().arraydata=[]
+        self.libtree.clear()
+        self.filter_item_list.clear()
+        print('clearData: data cleared')

@@ -136,11 +136,18 @@ class MainFrameLoadData:
                 self.meta_dict[docid].update(meta_dict)
             else:
                 self.meta_dict[docid]=meta_dict
-            self.loadDocTable(docids=self._current_docids)
+            self.loadDocTable(docids=self._current_docids,
+                    sel_row=self.doc_table.currentIndex().row())
 
 
 
-    def loadLibTree(self):
+    def loadLibTree(self,db,meta_dict,folder_data,folder_dict):
+
+        self.db=db
+        self.meta_dict=meta_dict
+        self.folder_data=folder_data
+        self.folder_dict=folder_dict
+        self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
 
         style=QtWidgets.QApplication.style()
         diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
@@ -188,7 +195,7 @@ class MainFrameLoadData:
 
 
 
-    def loadDocTable(self,folder=None,docids=None,sortidx=None):
+    def loadDocTable(self,folder=None,docids=None,sortidx=None,sel_row=None):
         '''Load doc table given folder'''
 
         tablemodel=self.doc_table.model()
@@ -227,7 +234,10 @@ class MainFrameLoadData:
         #------------Load meta data on 1st row------------
         if len(data)>0:
             self.enableMetaTab()
-            self.doc_table.selectRow(0)
+            if sel_row is None:
+                self.doc_table.selectRow(0)
+            else:
+                self.doc_table.selectRow(sel_row)
             current_row=self.doc_table.currentIndex().row()
             docid=self._current_doc
             print('current_row',current_row, docid)
@@ -271,6 +281,12 @@ class MainFrameLoadData:
                 if isinstance(tii,(list,tuple)):
                     tii=u'; '.join(tii)
                 self._current_meta_dict[fii].setText(conv(tii))
+
+            if fii in ['authors_l','abstract','tags_l','keywords_l']:
+                print('loadMetaTab: is_fold',fii,self.t_meta.fold_dict[fii])
+                if self.t_meta.fold_dict[fii]:
+                    self._current_meta_dict[fii].foldText()
+
 
         return
 

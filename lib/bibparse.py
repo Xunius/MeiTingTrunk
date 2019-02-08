@@ -160,7 +160,7 @@ def toOrdinaryDict(metadict,alt_dict,omit_keys):
     result['author']=authors
 
     doctype=metadict['type']
-    if doctype.lower()=='journalarticle':
+    if doctype is None or doctype.lower()=='journalarticle':
         doctype='article'
     result['ENTRYTYPE']=doctype
 

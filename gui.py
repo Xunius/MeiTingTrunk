@@ -11,7 +11,7 @@ from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy,\
         getVSpacer, getHLine, getVLine
 
 from lib.widgets import TableModel, MyHeaderView, AdjustableTextEdit,\
-        MetaTabScroll, TreeWidgetDelegate, MyTreeWidget
+        MetaTabScroll, TreeWidgetDelegate, MyTreeWidget, PreferenceDialog
 
 import _MainFrameLoadData
 import _MainFrameSlots
@@ -55,16 +55,17 @@ OMIT_KEYS=[
 
 class MainWindow(QtWidgets.QMainWindow):
 
-    def __init__(self,db):
+    def __init__(self):
         super(MainWindow,self).__init__()
 
-        self.db=db
-        meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
+        #self.db=db
+        #meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
         self.settings=self.loadSettings()
+        self.is_loaded=False
 
         self.initUI()
 
-        self.main_frame=MainFrame(db,meta_dict,folder_data,folder_dict,self.settings)
+        self.main_frame=MainFrame(self.settings)
         self.setCentralWidget(self.main_frame)
 
     def initSettings(self):
@@ -111,30 +112,126 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle('Reference manager %s' %__version__)
         self.setGeometry(100,100,1200,900)    #(x_left,y_top,w,h)
         #self.setWindowIcon(QIcon('img.png'))
+
         self.menu_bar=self.menuBar()
-        self.file_manu=self.menu_bar.addMenu('File')
-        self.edit_manu=self.menu_bar.addMenu('Edit')
-        self.view_manu=self.menu_bar.addMenu('View')
-        self.tool_manu=self.menu_bar.addMenu('Tool')
-        self.help_manu=self.menu_bar.addMenu('Help')
+
+        self.file_menu=self.menu_bar.addMenu('&File')
+
+        create_database_action=QtWidgets.QAction('Create New Database',self)
+        open_database_action=QtWidgets.QAction('Open Database',self)
+        close_database_action=QtWidgets.QAction('Close Database',self)
+        import_action=QtWidgets.QAction('Import',self)
+        export_action=QtWidgets.QAction('Export',self)
+        create_backup_action=QtWidgets.QAction('Create Backup',self)
+        quit_action=QtWidgets.QAction('Quit',self)
+
+        create_database_action.setShortcut('Ctrl+n')
+        open_database_action.setShortcut('Ctrl+o')
+        close_database_action.setShortcut('Ctrl+w')
+        quit_action.setShortcut('Ctrl+q')
+
+        self.file_menu.addAction(create_database_action)
+        self.file_menu.addAction(open_database_action)
+        self.file_menu.addAction(close_database_action)
+        self.file_menu.addSeparator()
+        self.file_menu.addAction(import_action)
+        self.file_menu.addAction(export_action)
+        self.file_menu.addAction(create_backup_action)
+        self.file_menu.addSeparator()
+        self.file_menu.addAction(quit_action)
+
+
+        self.edit_menu=self.menu_bar.addMenu('&Edit')
+        preference_action=QtWidgets.QAction('Preferences',self)
+        self.edit_menu.addAction(preference_action)
+
+        self.tool_menu=self.menu_bar.addMenu('&Tool')
+        self.help_menu=self.menu_bar.addMenu('&Help')
+        self.help_menu.addAction('Help')
+
+
+        #-----------------Connect signals-----------------
+        open_database_action.triggered.connect(self.openDatabaseTriggered)
+        close_database_action.triggered.connect(self.closeDatabaseTriggered)
+        preference_action.triggered.connect(self.preferenceTriggered)
+        self.help_menu.triggered.connect(self.helpMenuTriggered)
+        quit_action.triggered.connect(self.close)
 
         self.show()
 
     def closeEvent(self,event):
+        print('settings sync')
         self.settings.sync()
+
+
+
+    #######################################################################
+    #                           Menu bar actions                           #
+    #######################################################################
+
+    def openDatabaseTriggered(self):
+
+        fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a sqlite file',
+     '',"sqlite files (*.sqlite);; All files (*)")[0]
+
+        if fname:
+
+            # close current if loaded
+            if self.is_loaded:
+                self.closeDatabaseTriggered()
+
+            self.main_frame.status_bar.showMessage('Opening database...')
+            db = sqlite3.connect(fname)
+            print('Connected to database:')
+            self.db=db
+            meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
+            self.main_frame.loadLibTree(db,meta_dict,folder_data,folder_dict)
+            self.main_frame.status_bar.clearMessage()
+            self.is_loaded=True
+
+        return
+
+    def closeDatabaseTriggered(self):
+
+        choice=QtWidgets.QMessageBox.question(self, 'Confirm Close',
+                'Save and close current database?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+
+        if choice==QtWidgets.QMessageBox.Yes:
+            self.main_frame.clearData()
+            self.is_loaded=False
+
+
+
+
+
+
+
+    def helpMenuTriggered(self,action):
+        print('helpMenuTriggered: action:',action,action.text())
+        return
+
+
+    def preferenceTriggered(self):
+        diag=PreferenceDialog(self.settings,parent=self)
+        diag.exec_()
+    
+
+
 
 
 class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         _MainFrameSlots.MainFrameSlots):
 
-    def __init__(self,db,meta_dict,folder_data,folder_dict,settings):
+    def __init__(self,settings):
         super(MainFrame,self).__init__()
 
-        self.db=db
-        self.meta_dict=meta_dict
-        self.folder_data=folder_data
-        self.folder_dict=folder_dict
-        self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
+        #self.db=db
+        #self.meta_dict=meta_dict
+        #self.folder_data=folder_data
+        #self.folder_dict=folder_dict
+        #if isinstance(self.folder_dict,dict):
+            #self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
         self.settings=settings
 
         # get font configs
@@ -148,7 +245,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         self.initUI()
 
         #--------------------Load data--------------------
-        self.loadLibTree()
+        #self.loadLibTree()
 
 
     def initUI(self):
@@ -551,13 +648,15 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
 if __name__=='__main__':
 
+    '''
     abpath_in=os.path.abspath(FILE_IN)
     try:
         dbin = sqlite3.connect(abpath_in)
         print('Connected to database:')
     except:
         print('Failed to connect to database:')
+    '''
 
     app=QtWidgets.QApplication(sys.argv)
-    mainwindow=MainWindow(dbin)
+    mainwindow=MainWindow()
     sys.exit(app.exec_())
