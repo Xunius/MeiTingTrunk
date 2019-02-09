@@ -4,8 +4,30 @@ Author: guangzhi XU (xugzhi1987@gmail.com; guangzhi.xu@outlook.com)
 Update time: 2018-09-27 19:44:32.
 '''
 
+import os
 import time
+import sqlite3
 from collections import MutableMapping
+
+DOC_ATTRS=[\
+'issn', 'issue', 'language', 'read', 'type', 'confirmed',
+'deduplicated', 'deletionPending', 'favourite', 'note',
+'abstract', 'advisor', 'added',
+'arxivId', 'title', 'pmid',
+'publication', 'publicLawNumber', 'month',
+'pages', 'sections', 'seriesEditor', 'series', 'seriesNumber',
+'publisher', 'reprintEdition', 'reviewedArticle', 'revisionNumber',
+'userType', 'volume', 'year', 'session', 'shortTitle', 'sourceType',
+'code', 'codeNumber', 'codeSection', 'codeVolume', 'chapter',
+'citationKey', 'city', 'day', 'department', 'doi', 'edition',
+'committee', 'counsel', 'country', 'dateAccessed',
+'internationalAuthor', 'internationalNumber', 'internationalTitle',
+'internationalUserType', 'genre',
+'institution', 'lastUpdate', 'legalStatus', 'length', 'medium', 'isbn']
+
+INT_COLUMNS=['read', 'confirmed', 'deduplicated', 'deletionPending',
+        'favourite', 'month', 'year', 'day']
+
 
 
 class DocMeta(MutableMapping):
@@ -600,3 +622,151 @@ def getFolderDocList(db,folderid,verbose=True):
 
 
 
+
+
+
+def createNewDatabase(file_path,lib_folder):
+
+    dbfout=os.path.abspath(file_path)
+
+    try:
+        dbout = sqlite3.connect(dbfout)
+        print('Connected to database:')
+    except:
+        print('Failed to connect to database:')
+
+    cout=dbout.cursor()
+
+    #--------------Create documents table--------------
+    query='''CREATE TABLE IF NOT EXISTS Documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid TEXT NOT NULL UNIQUE,
+    %s)'''
+    columns=[]
+    for kii in DOC_ATTRS:
+        if kii in INT_COLUMNS:
+            columns.append('%s INT' %kii)
+        else:
+            columns.append('%s TEXT' %kii)
+
+    columns=', '.join(columns)
+    query=query %columns
+
+    print 'Creating empty table...'
+    cout.execute(query)
+    dbout.commit()
+
+    #------------Create DocumentTags table------------
+    query='''CREATE TABLE IF NOT EXISTS DocumentTags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    docid INT,
+    tag TEXT)'''
+
+    cout.execute(query)
+    dbout.commit()
+
+    #------------Create DocumentNotes table------------
+    query='''CREATE TABLE IF NOT EXISTS DocumentNotes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    docid INT,
+    note TEXT,
+    modifiedTime TEXT,
+    createdTime TEXT
+    )'''
+
+    cout.execute(query)
+    dbout.commit()
+    
+    #----------Create DocumentKeywords table----------
+    query='''CREATE TABLE IF NOT EXISTS DocumentKeywords (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    docid INT,
+    text TEXT)'''
+
+    cout.execute(query)
+    dbout.commit()
+
+    #-----------Create DocumentFolders table-----------
+    query='''CREATE TABLE IF NOT EXISTS DocumentFolders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    docid INT,
+    folderid INT
+    )'''
+
+    cout.execute(query)
+    dbout.commit()
+
+    #---------------Create Folders table---------------
+    query='''CREATE TABLE IF NOT EXISTS Folders (
+    id INTEGER,
+    name TEXT,
+    parentId INT,
+    path TEXT,
+    UNIQUE (name, parentId)
+    )'''
+
+    cout.execute(query)
+    dbout.commit()
+
+    #--------Create DocumentContributors table--------
+    query='''CREATE TABLE IF NOT EXISTS DocumentContributors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    docid INT,
+    contribution TEXT,
+    firstNames TEXT,
+    lastName TEXT
+    )'''
+
+    cout.execute(query)
+    dbout.commit()
+
+    #------------Create DocumentFiles table------------
+    query='''CREATE TABLE IF NOT EXISTS DocumentFiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    docid INT,
+    abspath TEXT
+    )'''
+
+    cout.execute(query)
+    dbout.commit()
+
+    #------------Create DocumentUrls table------------
+    query='''CREATE TABLE IF NOT EXISTS DocumentUrls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    docid INT,
+    url TEXT
+    )'''
+
+    cout.execute(query)
+    dbout.commit()
+
+    #--------------create Default folder--------------
+    query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
+    VALUES (?,?,?,?)'''
+
+    cout.execute(query, (0, 'Default', -1, os.path.join(lib_folder,'Default')))
+
+    return dbout
+
+
+def metaDictToDatabase(db,meta_dict,lib_folder):
+
+    cout=db.cursor()
+
+    #----------------Copy folders table----------------
+    query='''SELECT id, name, parentId
+    FROM Folders
+    '''
+
+    ret=cout.execute(query).fetchall()
+    #max_folderid=
+
+    folders=meta_dict['folders_l']
+
+    for fii in folders:
+
+        #--------------create folder--------------
+        query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
+        VALUES (?,?,?,?)'''
+
+        cout.execute(query, (0, 'Default', -1, os.path.join(lib_folder,'Default')))

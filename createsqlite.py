@@ -85,6 +85,7 @@ def converturl2abspath(url):
             path=os.path.abspath(path)
             return path
 
+
 if __name__=='__main__':
 
     dbfin=os.path.abspath(FILE_IN_NAME)

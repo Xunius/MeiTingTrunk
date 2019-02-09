@@ -86,6 +86,7 @@ class MainWindow(QtWidgets.QMainWindow):
             settings.setValue('display/folder/highlight_color_br',
                     QBrush(QColor(200,200,255)))
             settings.setValue('export/bib/omit_fields', OMIT_KEYS)
+            settings.setValue('saving/storage_folder', folder_name)
 
             settings.sync()
 
@@ -104,6 +105,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
         aa=settings.value('export/bib/omit_fields', [], str)
         print('omit_fields',aa)
+
+        storage_folder=settings.value('saving/storage_folder')
+        print('storage_folder',storage_folder)
+
+        #---------------Create output folder---------------
+        storage_folder=os.path.expanduser(storage_folder)
+        if not os.path.exists(storage_folder):
+            os.makedirs(storage_folder)
+            print("Create folder %s" %storage_folder)
+
 
         return settings
 
@@ -168,6 +179,17 @@ class MainWindow(QtWidgets.QMainWindow):
     #######################################################################
     #                           Menu bar actions                           #
     #######################################################################
+
+    def createDatabaseTriggered(self):
+
+        fname = QtWidgets.QFileDialog.getSaveFileName(self, 'Create a sqlite file',
+     '',"sqlite files (*.sqlite);; All files (*)")[0]
+
+        if fname:
+            print('createDatabaseTriggered: database file:',fname)
+
+        return
+
 
     def openDatabaseTriggered(self):
 
