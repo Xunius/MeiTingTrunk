@@ -57,6 +57,69 @@ def checkFolderName(foldername,folderid,folder_dict):
 
 class MainFrameSlots:
 
+
+    #######################################################################
+    #                      Meta data update functions                      #
+    #######################################################################
+
+    def updateTabelData(self,docid,meta_dict,field_list=None):
+        # need to update 'added' time
+        print('updateTabelData')
+        if docid is None:
+
+            newid=max(self.meta_dict.keys())+1
+
+            # update folder_data
+            foldername,folderid=self._current_folder
+            if folderid not in ['0', '-2']:
+                self.folder_data[folderid].append(newid)
+
+                if (folderid, foldername) not in meta_dict['folders_l']:
+                    meta_dict['folders_l'].append((folderid,foldername))
+                    print('updateTabelData:, add current_folder', foldername,\
+                            meta_dict['folders_l'])
+            #self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
+
+            # update meta_dict
+            print('updateTabelData: add new doc, give id:',newid)
+            self.meta_dict[newid]=meta_dict
+            #self.loadDocTable(folder=(foldername,folderid),sortidx=4)
+            #self.doc_table.model().rowsInserted.emit()
+            self.loadDocTable(docids=self._current_docids+[newid,])
+            self.doc_table.scrollToBottom()
+            self.doc_table.selectRow(self.doc_table.model().rowCount(None)-1)
+
+        else:
+            if docid in self.meta_dict:
+                #self.meta_dict[docid].update(meta_dict)
+                for kk in field_list:
+                    if kk=='authors_l':
+                        self.meta_dict[docid]['firstNames_l']=meta_dict['firstNames_l']
+                        self.meta_dict[docid]['lastName_l']=meta_dict['lastName_l']
+                    else:
+                        self.meta_dict[docid][kk]=meta_dict[kk]
+                    print('updateTabelData: update key:',kk,self.meta_dict[docid][kk])
+            else:
+                self.meta_dict[docid]=meta_dict
+
+            self.loadDocTable(docids=self._current_docids,
+                    sel_row=self.doc_table.currentIndex().row())
+
+    def updateNotes(self,docid,note_text):
+        print('updateNotes: docid',docid)
+
+        if docid is None:
+            return
+
+        self.meta_dict[docid]['notes']=note_text
+        print('updateNotes: new notes:',self.meta_dict[docid]['notes'])
+        return
+
+
+
+
+
+
     #######################################################################
     #                        Tool bar button slots                        #
     #######################################################################
@@ -109,7 +172,7 @@ class MainFrameSlots:
                         if resii[0]==0:
                             results.append(resii[1])
                             pb.setValue(len(results))
-                            self.update_tabledata(None,resii[1])
+                            self.updateTabelData(None,resii[1])
                         else:
                             faillist.append(resii[1])
                     except:
@@ -127,7 +190,7 @@ class MainFrameSlots:
                         pdfmetaii=retrievepdfmeta.prepareMeta(pdfmetaii)
                         pdfmetaii['files_l']=[fii,]
                         print('pdfmetaii',pdfmetaii)
-                        self.update_tabledata(None,pdfmetaii)
+                        self.updateTabelData(None,pdfmetaii)
 
                     except:
                         faillist.append(fii)
@@ -152,7 +215,7 @@ class MainFrameSlots:
                     self.doc_table.setSelectionMode(
                             QtWidgets.QAbstractItemView.MultiSelection)
                     for eii in bib_entries:
-                        self.update_tabledata(None,eii)
+                        self.updateTabelData(None,eii)
                 except Exception as e:
                     print('failed to parse bib file')
                     msg=QtWidgets.QMessageBox()
@@ -172,7 +235,7 @@ class MainFrameSlots:
             if dl_ret:
                 print('addActionTriggered: return value:',dl_dict)
                 #print(ret['title'].toPlainText())
-                self.update_tabledata(None, dl_dict)
+                self.updateTabelData(None, dl_dict)
 
         return
 
@@ -582,6 +645,7 @@ class MainFrameSlots:
         print('selDoc: rowid', rowid, 'docid', docid)
         self.loadMetaTab(docid)
         self.loadBibTab(docid)
+        self.loadNoteTab(docid)
 
         #-------------------Get folders-------------------
         metaii=self.meta_dict[docid]

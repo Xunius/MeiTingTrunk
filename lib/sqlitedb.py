@@ -51,7 +51,8 @@ class DocMeta(MutableMapping):
                 'files_l': [],
                 'folders_l': [],
                 'tags_l': [],
-                'pend_delete': False
+                'pend_delete': False,
+                'notes': None
                 }
 
         self.update(dict(*args, **kwargs))  # use the free update to set keys
@@ -210,6 +211,13 @@ def getMetaData(db, docid):
     WHERE (DocumentFiles.docid=?)
     '''
 
+    query_notes=\
+    '''
+    SELECT DocumentNotes.note
+    FROM DocumentNotes
+    WHERE (DocumentNotes.docid=?)
+    '''
+
 
     '''
     def fetchField(db,query,values,ncol=1):
@@ -260,6 +268,9 @@ def getMetaData(db, docid):
     for kii in fields:
         vii=fetchField(db,query_base %(kii), (docid,))
         result[kii]=vii
+
+    # query notes
+    result['notes']=fetchField(db,query_notes,(docid,),1,'str')
 
     # query list fields, .e.g firstnames, tags
     result['firstNames_l']=fetchField(db,query_firstnames,(docid,),1,'list')
@@ -639,7 +650,7 @@ def createNewDatabase(file_path,lib_folder):
 
     #--------------Create documents table--------------
     query='''CREATE TABLE IF NOT EXISTS Documents (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     uuid TEXT NOT NULL UNIQUE,
     %s)'''
     columns=[]
@@ -652,13 +663,13 @@ def createNewDatabase(file_path,lib_folder):
     columns=', '.join(columns)
     query=query %columns
 
-    print 'Creating empty table...'
+    print('Creating empty table...')
     cout.execute(query)
     dbout.commit()
 
     #------------Create DocumentTags table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentTags (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     docid INT,
     tag TEXT)'''
 
@@ -667,7 +678,7 @@ def createNewDatabase(file_path,lib_folder):
 
     #------------Create DocumentNotes table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentNotes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     docid INT,
     note TEXT,
     modifiedTime TEXT,
@@ -679,7 +690,7 @@ def createNewDatabase(file_path,lib_folder):
     
     #----------Create DocumentKeywords table----------
     query='''CREATE TABLE IF NOT EXISTS DocumentKeywords (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     docid INT,
     text TEXT)'''
 
@@ -688,7 +699,7 @@ def createNewDatabase(file_path,lib_folder):
 
     #-----------Create DocumentFolders table-----------
     query='''CREATE TABLE IF NOT EXISTS DocumentFolders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     docid INT,
     folderid INT
     )'''
@@ -710,7 +721,7 @@ def createNewDatabase(file_path,lib_folder):
 
     #--------Create DocumentContributors table--------
     query='''CREATE TABLE IF NOT EXISTS DocumentContributors (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     docid INT,
     contribution TEXT,
     firstNames TEXT,
@@ -722,7 +733,7 @@ def createNewDatabase(file_path,lib_folder):
 
     #------------Create DocumentFiles table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentFiles (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     docid INT,
     abspath TEXT
     )'''
@@ -732,7 +743,7 @@ def createNewDatabase(file_path,lib_folder):
 
     #------------Create DocumentUrls table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentUrls (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     docid INT,
     url TEXT
     )'''

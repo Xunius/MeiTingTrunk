@@ -11,7 +11,8 @@ from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy,\
         getVSpacer, getHLine, getVLine
 
 from lib.widgets import TableModel, MyHeaderView, AdjustableTextEdit,\
-        MetaTabScroll, TreeWidgetDelegate, MyTreeWidget, PreferenceDialog
+        MetaTabScroll, TreeWidgetDelegate, MyTreeWidget, PreferenceDialog,\
+        NoteTextEdit
 
 import _MainFrameLoadData
 import _MainFrameSlots
@@ -50,7 +51,8 @@ OMIT_KEYS=[
 # option menu
 # RIS
 # import/export menu
-# add trash can
+# [y] add trash can
+# sqlite text search: https://stackoverflow.com/questions/35020797/how-to-use-full-text-search-in-sqlite3-database-in-django 
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -586,8 +588,10 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         self.t_bib=self.createBiBTab()
         self.t_scratchpad=self.createScratchTab()
         self.t_meta=MetaTabScroll(self.font_dict,self)
-        self.t_meta.meta_edited.connect(lambda: self.update_tabledata(
-            self._current_doc,self.t_meta._meta_dict))
+        #self.t_meta.meta_edited.connect(lambda: self.updateTabelData(
+            #self._current_doc,self.t_meta._meta_dict))
+        self.t_meta.meta_edited.connect(lambda field_list: self.updateTabelData(\
+            self._current_doc,self.t_meta._meta_dict,field_list))
 
         tabs.addTab(self.t_meta,'Meta Data')
         tabs.addTab(self.t_notes,'Notes')
@@ -604,9 +608,12 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         frame=QtWidgets.QFrame()
         v_layout=QtWidgets.QVBoxLayout()
 
-        self.note_textedit=QtWidgets.QTextEdit(self)
-        self.note_textedit.setFont(self.font_dict['meta_keywords'])
-        self.note_textedit.setSizePolicy(getXExpandYExpandSizePolicy())
+        #self.note_textedit=QtWidgets.QTextEdit(self)
+        #self.note_textedit.setFont(self.font_dict['meta_keywords'])
+        #self.note_textedit.setSizePolicy(getXExpandYExpandSizePolicy())
+        self.note_textedit=NoteTextEdit(self.font_dict['meta_keywords'])
+        self.note_textedit.note_edited_signal.connect(lambda: self.updateNotes(
+            self._current_doc,self.note_textedit.toPlainText()))
 
         v_layout.addWidget(self.note_textedit)
         frame.setLayout(v_layout)

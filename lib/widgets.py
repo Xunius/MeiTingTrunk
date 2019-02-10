@@ -2,13 +2,14 @@ import os
 from datetime import datetime
 import operator
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, pyqtSignal, QPoint
+from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, pyqtSignal, QPoint,\
+        pyqtSlot
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont, QFontMetrics,\
         QCursor, QRegExpValidator
 import resources
 from lib import sqlitedb
 from .tools import getHLine, getXExpandYMinSizePolicy, getXMinYExpandSizePolicy,\
-    parseAuthors
+    parseAuthors, getXExpandYExpandSizePolicy
 
 
 
@@ -346,10 +347,11 @@ class MyHeaderView(QtWidgets.QHeaderView):
 
 class AdjustableTextEdit(QtWidgets.QTextEdit):
 
-    edited_signal=pyqtSignal()
-    def __init__(self,parent=None):
+    edited_signal=pyqtSignal(str)
+    def __init__(self,field,parent=None):
         super(AdjustableTextEdit,self).__init__(parent)
 
+        self.field=field # field name, e.g. title, year, tags_l ...
         self.tooltip_label=QtWidgets.QLabel()
         self.tooltip_label.setWindowFlags(Qt.SplashScreen)
         self.tooltip_label.setMargin(3)
@@ -380,7 +382,7 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
     def focusOutEvent(self,event):
         if self.document().isModified():
-            self.edited_signal.emit()
+            self.edited_signal.emit(self.field)
         if self.label_enabled:
             self.tooltip_label.close()
         super(AdjustableTextEdit,self).focusOutEvent(event)
@@ -433,9 +435,10 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 class AdjustableTextEditWithFold(AdjustableTextEdit):
 
     fold_change_signal=pyqtSignal(str,bool)
-    def __init__(self,parent=None):
+    def __init__(self,field,parent=None):
         super(AdjustableTextEditWithFold,self).__init__(parent)
 
+        self.field=field
         self.is_fold=False
         self.fold_above_nl=3
 
@@ -549,7 +552,7 @@ class FileLineEdit(QtWidgets.QLineEdit):
 
 class MetaTabScroll(QtWidgets.QScrollArea):
 
-    meta_edited=pyqtSignal()
+    meta_edited=pyqtSignal(list) # send field names
     def __init__(self,font_dict,parent=None):
         super(MetaTabScroll,self).__init__(parent)
 
@@ -568,7 +571,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.v_layout=QtWidgets.QVBoxLayout()
 
         #--------------------Add title--------------------
-        title_te=AdjustableTextEdit()
+        title_te=AdjustableTextEdit('title')
         title_te.setFrameStyle(QtWidgets.QFrame.NoFrame)
         title_te.setFont(self.font_dict['meta_title'])
         self.fields_dict['title']=title_te
@@ -652,10 +655,11 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             self.setTabOrder(w1,w2)
 
 
-    def fieldEdited(self):
-        print('fieldedited')
+    @pyqtSlot(str)
+    def fieldEdited(self,field):
+        print('fieldedited: field:',field)
         print(self._meta_dict)
-        self.meta_edited.emit()
+        self.meta_edited.emit([field,])
 
     def createLabel(self,label):
         qlabel=QtWidgets.QLabel(label)
@@ -665,7 +669,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
 
     def createOneLineField(self,label,key,font_name,grid_layout):
-        te=AdjustableTextEdit()
+        te=AdjustableTextEdit(key)
         qlabel=QtWidgets.QLabel(label)
         qlabel.setStyleSheet(self.label_color)
 
@@ -680,9 +684,8 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         return
 
     def createMultiLineField(self,label,key,font_name):
-        te=AdjustableTextEditWithFold()
+        te=AdjustableTextEditWithFold(key)
         te.setFrameStyle(QtWidgets.QFrame.NoFrame)
-        te.label=key
         self.fold_dict[key]=te.is_fold
         te.fold_change_signal.connect(self.foldChanged)
 
@@ -795,9 +798,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         return
 
-    def foldChanged(self,label,isfold):
-        self.fold_dict[label]=isfold
-        print('foldChanged: label:',label,'isfold',isfold)
+    def foldChanged(self,field,isfold):
+        self.fold_dict[field]=isfold
+        print('foldChanged: field:',field,'isfold',isfold)
         return
 
 
@@ -835,7 +838,6 @@ class MetaTabScroll(QtWidgets.QScrollArea):
                 elif isinstance(vv,QtWidgets.QTextEdit):
                     if kk=='authors_l':
                         names=parseToList(vv.toPlainText())
-                        print('_meta_dict',names)
                         firsts,lasts,authors=parseAuthors(names)
                         result_dict['firstNames_l']=firsts
                         result_dict['lastName_l']=lasts
@@ -919,6 +921,21 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
         return ret, self.scroll._meta_dict
 
 
+class NoteTextEdit(QtWidgets.QTextEdit):
+
+    note_edited_signal=pyqtSignal()
+    def __init__(self,font,parent=None):
+
+        super(NoteTextEdit,self).__init__(parent=parent)
+
+        self.setFont(font)
+        self.setSizePolicy(getXExpandYExpandSizePolicy())
+
+
+    def focusOutEvent(self,event):
+        if self.document().isModified():
+            self.note_edited_signal.emit()
+        super(NoteTextEdit,self).focusOutEvent(event)
 
 
 

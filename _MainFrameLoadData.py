@@ -104,42 +104,6 @@ class MainFrameLoadData:
             return None
 
 
-    def update_tabledata(self,docid,meta_dict):
-        # need to update 'added' time
-        print('update_tabledata')
-        if docid is None:
-
-            newid=max(self.meta_dict.keys())+1
-
-            # update folder_data
-            foldername,folderid=self._current_folder
-            if folderid not in ['0', '-2']:
-                self.folder_data[folderid].append(newid)
-
-                if (folderid, foldername) not in meta_dict['folders_l']:
-                    meta_dict['folders_l'].append((folderid,foldername))
-                    print('update_tabledata:, add current_folder', foldername,\
-                            meta_dict['folders_l'])
-            #self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
-
-            # update meta_dict
-            print('update_tabledata: add new doc, give id:',newid)
-            self.meta_dict[newid]=meta_dict
-            #self.loadDocTable(folder=(foldername,folderid),sortidx=4)
-            #self.doc_table.model().rowsInserted.emit()
-            self.loadDocTable(docids=self._current_docids+[newid,])
-            self.doc_table.scrollToBottom()
-            self.doc_table.selectRow(self.doc_table.model().rowCount(None)-1)
-
-        else:
-            if docid in self.meta_dict:
-                self.meta_dict[docid].update(meta_dict)
-            else:
-                self.meta_dict[docid]=meta_dict
-            self.loadDocTable(docids=self._current_docids,
-                    sel_row=self.doc_table.currentIndex().row())
-
-
 
     def loadLibTree(self,db,meta_dict,folder_data,folder_dict):
 
@@ -312,5 +276,19 @@ class MainFrameLoadData:
         self.bib_textedit.setText(text)
 
         return
+
+
+    def loadNoteTab(self,docid=None):
+        print('loadNoteTab',docid)
+        if docid is None:
+            return
+
+        noteii=self.meta_dict[docid]['notes']
+        print('loadNoteTab', noteii)
+
+        self.note_textedit.clear()
+        self.note_textedit.setText(noteii)
+        return
+
 
 
