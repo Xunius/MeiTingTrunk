@@ -25,7 +25,7 @@ def addPDF(abpath):
     except:
         pdfmetaii={}
         rec=1
-    return rec,pdfmetaii
+    return rec,pdfmetaii,abpath
 
 
 def checkFolderName(foldername,folderid,folder_dict):
@@ -56,7 +56,56 @@ def checkFolderName(foldername,folderid,folder_dict):
 
 
 
+
+
 class MainFrameSlots:
+
+
+
+    def threadedFuncCall(self,func,joblist,res_func,show_message):
+
+        faillist=[]
+        jobqueue=Queue()
+        resqueue=Queue()
+
+        pb=QtWidgets.QProgressBar(self)
+        pb.setSizePolicy(getXExpandYMinSizePolicy())
+        pb.setMaximum(len(joblist))
+        self.status_bar.showMessage(show_message)
+        self.status_bar.addPermanentWidget(pb)
+
+        for ii,jobii in enumerate(joblist):
+            jobqueue.put((jobii,))
+
+        threads=[]
+        for ii in range(min(3,len(joblist))):
+            tii=WorkerThread(func,jobqueue,resqueue,self)
+            threads.append(tii)
+            tii.start()
+
+        jobqueue.join()
+
+        #-------------------Get results-------------------
+        results=[]
+        while resqueue.qsize():
+            try:
+                resii=resqueue.get()
+                if resii[0]==0:
+                    results.append(resii[1])
+                    pb.setValue(len(results))
+                    #self.updateTabelData(None,resii[1])
+                    res_func(resii[1])
+                else:
+                    faillist.append(resii[2])
+            except:
+                break
+
+        pb.hide()
+        self.status_bar.clearMessage()
+
+        return results,faillist
+
+
 
 
     #######################################################################
@@ -141,14 +190,14 @@ class MainFrameSlots:
             self.logger.info('Chosen PDF file=%s' %fname)
 
             if fname:
-                faillist=[]
                 self.doc_table.clearSelection()
                 self.doc_table.setSelectionMode(
                         QtWidgets.QAbstractItemView.MultiSelection)
 
-                jobqueue=Queue()
-                resqueue=Queue()
+                results, faillist=self.threadedFuncCall(addPDF,fname,
+                        lambda x:self.updateTabelData(None,x),'Adding PDF Files...')
 
+                '''
                 # add progress bar
                 pb=QtWidgets.QProgressBar(self)
                 pb.setSizePolicy(getXExpandYMinSizePolicy())
@@ -156,6 +205,9 @@ class MainFrameSlots:
                 self.status_bar.showMessage('Adding PDF files...')
                 self.status_bar.addPermanentWidget(pb)
 
+                faillist=[]
+                jobqueue=Queue()
+                resqueue=Queue()
                 for ii,fii in enumerate(fname):
                     jobqueue.put((fii,))
 
@@ -180,27 +232,13 @@ class MainFrameSlots:
                             faillist.append(resii[1])
                     except:
                         break
-
-                '''
-                for ii,fii in enumerate(fname):
-                    try:
-                        pb.setValue(ii+1)
-
-                        pdfmetaii=retrievepdfmeta.getPDFMeta_pypdf2(fii)
-                        pdfmetaii=retrievepdfmeta.prepareMeta(pdfmetaii)
-                        pdfmetaii['files_l']=[fii,]
-                        print('pdfmetaii',pdfmetaii)
-                        self.updateTabelData(None,pdfmetaii)
-
-                    except:
-                        faillist.append(fii)
                 '''
 
                 print('# <addActionTriggered>: failist for PDF importing: %s' %faillist)
                 self.logger.info('failist for PDF importing: %s' %faillist)
 
-                pb.hide()
-                self.status_bar.clearMessage()
+                #pb.hide()
+                #self.status_bar.clearMessage()
                 self.doc_table.setSelectionMode(
                         QtWidgets.QAbstractItemView.ExtendedSelection)
 

@@ -67,13 +67,13 @@ LOG_CONFIG={
 # autosave, auto backup
 # export to text (clipboard, styles), bibtex, ris.
 # [y] collapse side tab
-# seperate libraries
+# [y] seperate libraries
 # [y] use resource file to load icons/images
-# in note tab, add time stamps at left margin
+# in note tab, add time stamps at left margin?
 # [y] change meta dict key naming convention to distinguish string and list types:
 #   e.g. authors -> authors_l, year -> year_s
 # possible issue with local time with added time
-# add logger
+# [y] add logger
 # get all bib entries for multiple selected docs?
 # right click menus
 # option menu
@@ -81,6 +81,9 @@ LOG_CONFIG={
 # import/export menu
 # [y] add trash can
 # sqlite text search: https://stackoverflow.com/questions/35020797/how-to-use-full-text-search-in-sqlite3-database-in-django 
+# PDF preview
+# add doc strings!!
+# make long actions threaded
 
 
 class MainWindow(QtWidgets.QMainWindow):
