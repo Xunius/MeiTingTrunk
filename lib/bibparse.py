@@ -149,7 +149,7 @@ def toOrdinaryDict(metadict,alt_dict,omit_keys):
             if isinstance(vv,(tuple,list)):
                 if len(vv)==0:
                     continue
-                print('kk:',kk,'vv:',vv)
+                #print('kk:',kk,'vv:',vv)
                 vv='; '.join(vv)
             result[alt_dict[kk]]=vv
         else:

@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import operator
+import logging
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, pyqtSignal, QPoint,\
         pyqtSlot
@@ -41,16 +42,19 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
 
     def startDrag(self,actions):
-        print('startDrag:, actions:', actions)
 
         move_item=self.selectedItems()[0]
-        print('startDrag: move_item:',move_item.data(0,0),move_item.data(1,0))
+
+        print('# <startDrag>: move_item.data(0,0)=%s, move_item.data(1,0)=%s'\
+                %(move_item.data(0,0), move_item.data(1,0)))
+        self.logger.info('move_item.data(0,0)=%s, move_item.data(1,0)=%s'\
+                %(move_item.data(0,0), move_item.data(1,0)))
+
         self._move_item=move_item
 
         super(MyTreeWidget,self).startDrag(actions)
 
     def dropEvent(self,event):
-        print('MyTreeWidget.dropevent:',event)
 
         if self._move_item.data(1,0) in ['-1','-2','-3']:
             return 
@@ -59,10 +63,14 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
         newparent=self.itemAt(pos)
         parentidx=self.indexFromItem(newparent)
         indicatorpos=self.dropIndicatorPosition()
-        print('dropEvent, parentidx',parentidx,parentidx.row(),self.indexAt(pos).row())
-        print('dropEvent: newparent=',newparent,newparent.data(0,0))
-        #print('dropEvent: proposedAction=',event.proposedAction())
-        print('dropEvent, dropIndicatorPosition',indicatorpos)
+
+        print('# <dropEvent>: parentidx.row()=%s. newparent=.data(0,0=%s.'\
+                %(parentidx.row(), newparent.data(0,0)))
+        self.logger.info('parentidx.row()=%s. newparent=.data(0,0=%s.'\
+                %(parentidx.row(), newparent.data(0,0)))
+
+        print('# <dropEvent>: dropIndicatorPosition=%s' %indicatorpos)
+        self.logger.info('dropIndicatorPosition=%s' %indicatorpos)
 
         # on item
         if indicatorpos==0:
@@ -70,11 +78,9 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
             # get children
             children=[newparent.child(ii) for ii in range(newparent.childCount())]
             children_names=[ii.data(0,0) for ii in children]
-            print('dropEvent:, children:',children)
-            print('dropEvent:, children_names:',children_names)
 
-            print('dropevent, check target folder',\
-                    self._trashed_folder_ids, newparent.data(1,0))
+            print('# <dropEvent>: Got children=%s' %children_names)
+            self.logger.info('Got children=%s' %children_names)
 
             if newparent.data(0,0) in ['All', 'Needs Review']:
                 event.ignore()
@@ -82,28 +88,19 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
             # move to trash
             elif newparent.data(1,0) in ['-3']+self._trashed_folder_ids:
-                '''
-                choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
-                        'Deleting a folder will delete all sub-folders and documents inside.\n\nConfirm?',
-                        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
-                if choice==QtWidgets.QMessageBox.Yes:
-                    self._trashed_folder_ids.append(self._move_item.data(1,0))
-                    print('dropEvent: add folder id to trashed_folders',self._trashed_folder_ids)
-                    self.folder_del_signal.emit(self._move_item,False)
-                    super(MyTreeWidget,self).dropEvent(event)
-                    return
-                else:
-                    event.ignore()
-                    return
-                '''
-                print('dropEvent: trashing folder')
+                print('# <dropEvent>: Trashing folder.')
+                self.logger.info('Trashing folder.')
+
                 self.folder_del_signal.emit(self._move_item,newparent,True)
                 return 
 
             # change folder parent
             if self._move_item.data(0,0) in children_names:
-                print('dropEvent: name conflict')
+
+                print('# <dropEvent>: Name conflict.')
+                self.logger.info('Name conflict.')
+
                 event.ignore()
                 msg=QtWidgets.QMessageBox()
                 msg.setIcon(QtWidgets.QMessageBox.Critical)
@@ -316,7 +313,6 @@ class MyHeaderView(QtWidgets.QHeaderView):
         perc=[]
         total_w=self.length() # width of the table
         total_w2=self.size().width()   # new available space after resizing
-        print('resize', total_w, total_w2)
         for c in range(self.count()):
             wii=self.sectionSize(c)
             ws.append(wii)
@@ -502,7 +498,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
             self.is_fold=True
             self.fold_button.setText('+')
             #self.fold_button.setIcon(QIcon.fromTheme('list-add'))
-        print('foldText: self.is_fold',self.is_fold)
+
         return
 
     def unfoldText(self):
@@ -556,6 +552,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
     def __init__(self,font_dict,parent=None):
         super(MetaTabScroll,self).__init__(parent)
 
+        self.logger=logging.getLogger('default_logger')
         self.font_dict=font_dict
         self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
         self.label_font=QFont('Serif',12,QFont.Bold)
@@ -615,7 +612,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.fields_dict['files_l']=[]
         self.v_layout.addWidget(self.createLabel('Files'))
         self.file_insert_idx=self.v_layout.count()
-        print('MetaTabScroll: number of widgets in v_layout',self.v_layout.count())
+
+        print('# <MetaTabScroll>: NO of widgets in v_layout=%d' %self.v_layout.count())
+        self.logger.info('NO of widgets in v_layout=%d' %self.v_layout.count())
 
         #---------------Add add file button---------------
         add_file_button=QtWidgets.QPushButton()
@@ -657,7 +656,10 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
     @pyqtSlot(str)
     def fieldEdited(self,field):
-        print('fieldedited: field:',field)
+
+        print('# <fieldEdited>: Changed field=%s' %field)
+        self.logger.info('Changed field=%s' %field)
+
         print(self._meta_dict)
         self.meta_edited.emit([field,])
 
@@ -758,7 +760,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         h_layout.addWidget(le)
         h_layout.addWidget(button)
 
-        print('createFileField: insert at',self.file_insert_idx)
+        print('# <createFileField>: Insert at %s' %self.file_insert_idx)
+        self.logger.info('Insert at %s' %self)
+
         self.v_layout.insertLayout(self.file_insert_idx,h_layout)
         self.file_insert_idx+=1
 
@@ -777,7 +781,12 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         if idx is None:
             #for ii in range(len(self.fields_dict['files'])):
             for leii in self.fields_dict['files_l']:
-                print('delFileField',leii,self.file_insert_idx)
+
+                print('# <delFile>: Del %s. Current file_insert_idx=%s'\
+                        %(leii, self.file_insert_idx))
+                self.logger.info('Del %s. Current file_insert_idx=%s'\
+                        %(leii, self.file_insert_idx))
+
                 delFile(leii)
         else:
             if idx in range(len(self.fields_dict['files_l'])):
@@ -792,7 +801,10 @@ class MetaTabScroll(QtWidgets.QScrollArea):
          '',"PDF files (*.pdf);; All files (*)")[0]
 
         if fname:
-            print('addFileButtonClicked: new file', fname)
+
+            print('# <addFileButtonClicked>: New file=%s' %fname)
+            self.logger.info('New file=%s' %fname)
+
             self.createFileField(fname)
             self.fieldEdited()
 
@@ -800,7 +812,10 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
     def foldChanged(self,field,isfold):
         self.fold_dict[field]=isfold
-        print('foldChanged: field:',field,'isfold',isfold)
+
+        print('# <foldChanged>: Field=%s. isfold=%s' %(field, isfold))
+        self.logger.info('Field=%s. isfold=%s' %(field, isfold))
+
         return
 
 
@@ -901,15 +916,12 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
 
         if checkDictChanged(self.empty_dict,self.scroll._meta_dict):
             self.buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(True)
-            print('MetaDataEntryDialog.showEvent:, enabled')
         else:
             self.buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
-            print('MetaDataEntryDialog.showEvent:, disabled')
 
     def showEvent(self,e):
         if not self.initialized:
             self.buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
-            print('MetaDataEntryDialog.showEvent:, disabled')
             self.initialized=True
 
         self.scroll.fields_dict['title'].setFocus()

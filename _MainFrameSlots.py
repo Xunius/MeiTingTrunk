@@ -16,7 +16,6 @@ import logging
 
 
 
-
 def addPDF(abpath):
     try:
         pdfmetaii=retrievepdfmeta.getPDFMeta_pypdf2(abpath)
@@ -65,56 +64,56 @@ class MainFrameSlots:
     #######################################################################
 
     def updateTabelData(self,docid,meta_dict,field_list=None):
-        # need to update 'added' time
-        print('updateTabelData')
+
         if docid is None:
 
             newid=max(self.meta_dict.keys())+1
 
             # update folder_data
             foldername,folderid=self._current_folder
-            if folderid not in ['0', '-2']:
+            if folderid not in ['-1', '-2', '-3']:
                 self.folder_data[folderid].append(newid)
 
                 if (folderid, foldername) not in meta_dict['folders_l']:
                     meta_dict['folders_l'].append((folderid,foldername))
-                    print('updateTabelData:, add current_folder', foldername,\
-                            meta_dict['folders_l'])
-            #self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
+                    print('# <updateTabelData>: Add new doc to folder %s. meta_dict["folders_l"]=%s' %(foldername, meta_dict['folders_l']))
+                    self.logger.info('Add new doc to folder %s. meta_dict["folders_l"]=%s' %(foldername, meta_dict['folders_l']))
 
             # update meta_dict
-            print('updateTabelData: add new doc, give id:',newid)
+            print('# <updateTabelData>: Add new doc. Given id=%s' %newid)
+            self.logger.info('Add new doc. Given id=%s' %newid)
+
             self.meta_dict[newid]=meta_dict
-            #self.loadDocTable(folder=(foldername,folderid),sortidx=4)
-            #self.doc_table.model().rowsInserted.emit()
             self.loadDocTable(docids=self._current_docids+[newid,])
             self.doc_table.scrollToBottom()
             self.doc_table.selectRow(self.doc_table.model().rowCount(None)-1)
 
         else:
             if docid in self.meta_dict:
-                #self.meta_dict[docid].update(meta_dict)
+                print('# <updateTabelData>: Updating existing doc. docid=%s' %docid)
+                self.logger.info('Updating existing doc. docid=%s' %docid)
+
                 for kk in field_list:
                     if kk=='authors_l':
                         self.meta_dict[docid]['firstNames_l']=meta_dict['firstNames_l']
                         self.meta_dict[docid]['lastName_l']=meta_dict['lastName_l']
                     else:
                         self.meta_dict[docid][kk]=meta_dict[kk]
-                    print('updateTabelData: update key:',kk,self.meta_dict[docid][kk])
             else:
+                print('wtf?')
                 self.meta_dict[docid]=meta_dict
 
             self.loadDocTable(docids=self._current_docids,
                     sel_row=self.doc_table.currentIndex().row())
 
     def updateNotes(self,docid,note_text):
-        print('updateNotes: docid',docid)
-
         if docid is None:
             return
 
         self.meta_dict[docid]['notes']=note_text
-        print('updateNotes: new notes:',self.meta_dict[docid]['notes'])
+        print('# <updateNotes>: New notes for docid=%s: %s' %(docid,note_text))
+        self.logger.info('New notes for docid=%s: %s' %(docid,note_text))
+
         return
 
 
@@ -128,15 +127,19 @@ class MainFrameSlots:
     
 
     def addActionTriggered(self,action):
-        print('addActionTriggered:', action)
-        action_text=action.text()
-        print(action.text())
 
+        action_text=action.text()
+
+        print('# <addActionTriggered>: action.text()=%s' %action_text)
+        self.logger.info('action.text()=%s' %action_text)
 
         if action_text=='Add PDF File':
             fname = QtWidgets.QFileDialog.getOpenFileNames(self, 'Choose a PDF file',
-         '',"PDF files (*.pdf);; All files (*)")
-            print('addActionTriggered: chosen PDF file:', fname)
+         '',"PDF files (*.pdf);; All files (*)")[0]
+
+            print('# <addActionTriggered>: Chosen PDF file=%s' %fname)
+            self.logger.info('Chosen PDF file=%s' %fname)
+
             if fname:
                 faillist=[]
                 self.doc_table.clearSelection()
@@ -147,19 +150,17 @@ class MainFrameSlots:
                 resqueue=Queue()
 
                 # add progress bar
-                #if len(fname[0])>2:
                 pb=QtWidgets.QProgressBar(self)
                 pb.setSizePolicy(getXExpandYMinSizePolicy())
-                #pb.setGeometry(0,0,10,100)
-                pb.setMaximum(len(fname[0]))
+                pb.setMaximum(len(fname))
                 self.status_bar.showMessage('Adding PDF files...')
                 self.status_bar.addPermanentWidget(pb)
 
-                for ii,fii in enumerate(fname[0]):
+                for ii,fii in enumerate(fname):
                     jobqueue.put((fii,))
 
                 threads=[]
-                for ii in range(min(3,len(fname[0]))):
+                for ii in range(min(3,len(fname))):
                     tii=WorkerThread(addPDF,jobqueue,resqueue,self)
                     threads.append(tii)
                     tii.start()
@@ -180,11 +181,8 @@ class MainFrameSlots:
                     except:
                         break
 
-
-
-
                 '''
-                for ii,fii in enumerate(fname[0]):
+                for ii,fii in enumerate(fname):
                     try:
                         pb.setValue(ii+1)
 
@@ -198,7 +196,9 @@ class MainFrameSlots:
                         faillist.append(fii)
                 '''
 
-                print('faillist:',faillist)
+                print('# <addActionTriggered>: failist for PDF importing: %s' %faillist)
+                self.logger.info('failist for PDF importing: %s' %faillist)
+
                 pb.hide()
                 self.status_bar.clearMessage()
                 self.doc_table.setSelectionMode(
@@ -208,18 +208,22 @@ class MainFrameSlots:
         elif action_text=='Add BibTex File':
             fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a bibtex file',
          '',"Bibtex files (*.bib);; All files (*)")
-            print('addActionTriggered: chosen bib file:', fname)
+
+            print('# <addActionTriggered>: Chosen bib file=%s' %fname)
+            self.logger.info('Chosen bib file=%s' %fname)
+
             if fname:
                 try:
                     bib_entries=bibparse.readBibFile(fname[0])
-                    print('parsed bib file:', bib_entries)
                     self.doc_table.clearSelection()
                     self.doc_table.setSelectionMode(
                             QtWidgets.QAbstractItemView.MultiSelection)
                     for eii in bib_entries:
                         self.updateTabelData(None,eii)
                 except Exception as e:
-                    print('failed to parse bib file')
+                    print('# <addActionTriggered>: Failed to parse bib file.')
+                    self.logger.info('Failed to parse bib file.')
+
                     msg=QtWidgets.QMessageBox()
                     msg.setIcon(QtWidgets.QMessageBox.Critical)
                     msg.setWindowTitle('Error')
@@ -233,10 +237,10 @@ class MainFrameSlots:
         elif action_text=='Add Entry Manually':
             dialog=widgets.MetaDataEntryDialog(self.font_dict,self)
             dl_ret,dl_dict=dialog.exec_()
-            print('addActionTriggered:, dl_ret',dl_ret)
+
             if dl_ret:
-                print('addActionTriggered: return value:',dl_dict)
-                #print(ret['title'].toPlainText())
+                print('# <addActionTriggered>: Add Entry Manually. Return value=%s' %dl_ret)
+                self.logger.info('Add Entry Manually. Return value=%s' %dl_ret)
                 self.updateTabelData(None, dl_dict)
 
         return
@@ -244,7 +248,9 @@ class MainFrameSlots:
 
     def addFolderButtonClicked(self,action):
 
-        print('addFolderButtonClicked:, action=', action)
+        print('# <addFolderButtonClicked>: action.text()=%s' %action.text())
+        self.logger.info('action.text()=%s' %action.text())
+
         item=self._current_folder_item
         if item:
             folderid=item.data(1,0)
@@ -259,10 +265,6 @@ class MainFrameSlots:
             newitem.setFlags(newitem.flags() | Qt.ItemIsEditable)
 
             action_text=action.text()
-            print(action.text())
-
-            self.libtree.itemChanged.connect(self.addNewFolderToDict,
-                    Qt.QueuedConnection)
 
             if action_text=='Create Folder':
                 toplevelids=[self.libtree.topLevelItem(jj).data(1,0) for jj\
@@ -270,7 +272,7 @@ class MainFrameSlots:
 
                 if folderid in toplevelids:
                     self.libtree.addTopLevelItem(newitem)
-                    parentid='0'
+                    parentid='-1'
                 else:
                     item.parent().addChild(newitem)
                     parentid=item.parent().data(1,0)
@@ -282,20 +284,27 @@ class MainFrameSlots:
             self.libtree.scrollToItem(newitem)
             self.libtree.editItem(newitem)
             self.folder_dict[newid]=('New folder',parentid)
-            print('addFolderButtonClicked: new entry in folder_dict:',\
-                    self.folder_dict[newid],'newid',newid)
+
+            print('# <addFolderButtonClicked>: Folder new id=%s. New entry in folder_dict=%s' %(newid, self.folder_dict[newid]))
+            self.logger.info('Folder new id=%s. New entry in folder_dict=%s' %(newid, self))
 
 
 
     def addNewFolderToDict(self,item,column):
 
-        print('addNewFolderToDict','item=',item,'column=',column)
-        print('item.data',item.data(0,0),item.data(1,0))
+        print('# <addNewFolderToDict>: item.data(0,0)=%s. item.data(1,0)=%s'\
+                %(item.data(0,0), item.data(1,0)))
+        self.logger.info('item.data(0,0)=%s. item.data(1,0)=%s'\
+                %(item.data(0,0), item.data(1,0)))
 
         foldername,folderid=item.data(0,0), item.data(1,0)
         if folderid not in ['-1', '-2', '-3']:
             fnameold,parentid=self.folder_dict[folderid]
-            print('old foldername=',fnameold,'parentid=',parentid)
+
+            print('# <addNewFolderToDict>: Old folder name=%s. parentid=%s'\
+                    %(fnameold, parentid))
+            self.logger.info('Old folder name=%s. parentid=%s'\
+                    %(fnameold, parentid))
 
             # add new folder
             if folderid not in self.folder_data:
@@ -304,7 +313,9 @@ class MainFrameSlots:
             # check validity of new name
             valid=checkFolderName(foldername,folderid,self.folder_dict)
             if valid!=0:
-                print('## found invalid name.',foldername)
+
+                print('# <addNewFolderToDict>: Found invalid name: %s' %foldername)
+                self.logger.info('Found invalid name: %s' %foldername)
 
                 msg=QtWidgets.QMessageBox()
                 msg.setIcon(QtWidgets.QMessageBox.Critical)
@@ -324,6 +335,10 @@ class MainFrameSlots:
 
             self.folder_dict[folderid]=[foldername,parentid]
             print('new foldername and parentid =',self.folder_dict[folderid])
+            print('# <addNewFolderToDict>: New folder name=%s. parentid=%s'\
+                    %(self.folder_dict[folderid][0], self.folder_dict[folderid][1]))
+            self.logger.info('New folder name=%s. parentid=%s'\
+                    %(self.folder_dict[folderid][0], self.folder_dict[folderid][1]))
 
         self.sortFolders()
         self.libtree.setCurrentItem(item)
@@ -351,9 +366,18 @@ class MainFrameSlots:
 
         #move_folder_id, new_parent_id=arg_tuple
         folder_name=self.folder_dict[move_folder_id][0]
-        print('changeFolderParent: folder_dict[id] before:',self.folder_dict[move_folder_id])
+
+        print('# <changeFolderParent>: folder_dict[id] before change=%s'\
+                %self.folder_dict[move_folder_id])
+        self.logger.info('folder_dict[id] before change=%s'\
+                %self.folder_dict[move_folder_id])
+
         self.folder_dict[move_folder_id]=(folder_name, new_parent_id)
-        print('changeFolderParent: folder_dict[id] after:',self.folder_dict[move_folder_id])
+
+        print('# <changeFolderParent>: folder_dict[id] after change=%s'\
+                %self.folder_dict[move_folder_id])
+        self.logger.info('folder_dict[id] after change=%s'\
+                %self.folder_dict[move_folder_id])
         return
 
 
@@ -370,13 +394,16 @@ class MainFrameSlots:
         '''Select folder by clicking'''
         folder=item.data(0,0)
         folderid=item.data(1,0)
-        print('clickSelFolder: folder', folder,'folderid',folderid)
+
+        print('# <clickSelFolder>: Select folder %s. folderid=%s' \
+                %(folder, folderid))
+        self.logger.info('Select folder %s. folderid=%s' \
+                %(folder, folderid))
 
         if item==self.all_folder:
             self.loadDocTable(folder=None,sortidx=4)
         else:
             self.loadDocTable((folder,folderid),sortidx=4)
-            #self.create_subfolder_action.setEnabled(True)
 
         if item==self.all_folder:
             self.add_button.setDisabled(True)
@@ -408,11 +435,15 @@ class MainFrameSlots:
 
     def selFolder(self,selected,deselected):
         '''Select folder by changing current'''
-        #item=self.libtree.selectedItems()
+
         item=self._current_folder_item
         if item:
             column=0
-            print('selFolder:',item.data(0,0),item.data(1,0),'selected column', column)
+            print('# <selFolder>: Selected item.data(0,0)=%s, item.data(1,0)=%s' \
+                    %(item.data(0,0), item.data(1,0)))
+            self.logger.info('Selected item.data(0,0)=%s, item.data(1,0)=%s' \
+                    %(item.data(0,0), item.data(1,0)))
+
             self.clickSelFolder(item,column)
 
 
@@ -451,13 +482,15 @@ class MainFrameSlots:
                     rename_action.setEnabled(True)
 
             action=menu.exec_(QCursor.pos())
-            print('libTreeMenu: action:',action)
+
+            print('# <libTreeMenu>: action.text()=%s' %action.text())
+            self.logger.info('action.text()=%s' %action.text())
 
             if menu_type=='trash':
                 if action==restore_action:
-                    print('libTreeMenu: restore action')
+                    pass
                 elif action==clear_action:
-                    print('libTreeMenu: clear action')
+                    pass
             else:
                 if action==add_action:
                     self.addFolderButtonClicked(add_action)
@@ -477,14 +510,16 @@ class MainFrameSlots:
 
         if ask:
             choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
-                    'Deleting a folder will delete all sub-folders and documents inside.\n\nConfirm?',
-                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+                'Deleting a folder will delete all sub-folders and documents inside.\n\nConfirm?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
 
         if not ask or (ask and choice==QtWidgets.QMessageBox.Yes):
 
             self.libtree._trashed_folder_ids.append(item.data(1,0))
             print('trashFolder: add folder id to trashed_folders',self.libtree._trashed_folder_ids)
+            print('# <trashFolder>: Add folder id to _trashed_folders. _trashed_folders=%s' %self.libtree._trashed_folders)
+            self.logger.info('Add folder id to _trashed_folders. _trashed_folders=%s' %self.libtree._trashed_folders)
 
             root=self.libtree.invisibleRootItem()
             (item.parent() or root).removeChild(item)
@@ -512,13 +547,22 @@ class MainFrameSlots:
 
         self.libtree._trashed_doc_ids.extend(orphan_docs)
 
-        print('posttrashFolder: delfolderids:',delfolderids)
-        print('posttrashFolder: docs to del', deldocids)
-        print('posttrashFolder: orphan_docs', orphan_docs)
+        print('# <postTrashFolder>: delfolderids=%s' %delfolderids)
+        self.logger.info('delfolderids=%s' %delfolderids)
+
+        print('# <postTrashFolder>: Docs to del=%s' %deldocids)
+        self.logger.info('Docs to del=%s' %deldocids)
+
+        print('# <postTrashFolder>: Orphan docs=%s' %orphan_docs)
+        self.logger.info('Orphan docs=%s' %orphan_docs)
 
         for idii in orphan_docs:
             self.meta_dict[idii]['pend_delete']=True
-            print(idii,"meta_dict['pend_delete]",idii,self.meta_dict[idii]['pend_delete'])
+
+            print('# <postTrashFolder>: Set pend_delete to orphan doc %s %s' \
+                    %(idii, self.meta_dict[idii]['pend_delete']))
+            self.logger.info('Set pend_delete to orphan doc %s %s' \
+                    %(idii, self.meta_dict[idii]['pend_delete']))
 
         for fii in delfolderids:
             #print('del folder',fii,self.folder_dict[fii])
@@ -555,7 +599,9 @@ class MainFrameSlots:
     
     def filterItemClicked(self,item):
 
-        print('filteritemclicked:, item:', item, item.text())
+        print('# <filterItemClicked>: Clicked item.text()=%s' %item.text())
+        self.logger.info('Clicked item.text()=%s' %item.text())
+
         filter_type=self.filter_type_combbox.currentText()
         filter_text=item.text()
         current_folder=self._current_folder
@@ -594,13 +640,18 @@ class MainFrameSlots:
 
         sel=self.filter_type_combbox.currentText()
         current_folder=self._current_folder
-        print('filter type cb select:',sel,type(sel))
-        #if sel=='':
-            #return
+
+        print('# <filterTypeCombboxChange>: Filter type combobox select=%s'\
+                %sel)
+        self.logger.info('Filter type combobox select=%s'\
+                %sel)
 
         if current_folder:
-            print('filtertypecombochange: currentfolder:',\
-                    current_folder[0], current_folder[1])
+
+            print('# <filterTypeCombboxChange>: current_folder=%s, folderid_d=%s'\
+                    %(current_folder[0], current_folder[1]))
+            self.logger.info('current_folder=%s, folderid_d=%s'\
+                    %(current_folder[0], current_folder[1]))
 
             #---------------Get items in folder---------------
             foldername,folderid=current_folder
@@ -638,7 +689,10 @@ class MainFrameSlots:
     #######################################################################
 
     def docTableClicked(self):
-        print('docTableClicked: clicked, set to extendedselection')
+
+        print('# <docTableClicked>: Doc clicked. Set to extendedselection.')
+        self.logger.info('Doc clicked. Set to extendedselection.')
+
         self.doc_table.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
 
@@ -647,7 +701,10 @@ class MainFrameSlots:
         '''
         rowid=current.row()
         docid=self._tabledata[rowid][0]
-        print('selDoc: rowid', rowid, 'docid', docid)
+
+        print('# <selDoc>: Select rowid=%s. docid=%s' %(rowid, docid))
+        self.logger.info('Select rowid=%s. docid=%s' %(rowid, docid))
+
         self.loadMetaTab(docid)
         self.loadBibTab(docid)
         self.loadNoteTab(docid)
@@ -655,8 +712,10 @@ class MainFrameSlots:
         #-------------------Get folders-------------------
         metaii=self.meta_dict[docid]
         folders=metaii['folders_l']
-        folders=[fii[1] for fii in folders]
-        print('folders of docid', folders, docid)
+        folders=[str(fii[0]) for fii in folders]
+
+        print('# <selDoc>: Ids of folders of docid=%s: %s' %(docid, folders))
+        self.logger.info('Ids of folders of docid=%s: %s' %(docid, folders))
 
         def iterItems(treewidget, root):
             if root is not None:
@@ -682,7 +741,8 @@ class MainFrameSlots:
 
         #------------Search folders in libtree------------
         for fii in folders:
-            mii=self.libtree.findItems(fii, Qt.MatchExactly | Qt.MatchRecursive)
+            mii=self.libtree.findItems(fii, Qt.MatchExactly | Qt.MatchRecursive,
+                    column=1)
             if len(mii)>0:
                 for mjj in mii:
                     mjj.setBackground(0, hi_color)
@@ -704,14 +764,19 @@ class MainFrameSlots:
 
         sel_rows=self.doc_table.selectionModel().selectedRows()
         sel_rows=[ii.row() for ii in sel_rows]
-        print('docTableMenu:, sel_rows:',sel_rows)
+
+        print('# <docTableMenu>: Seleted rows=%s' %sel_rows)
+        self.logger.info('Seleted rows=%s' %sel_rows)
 
         if len(sel_rows)>0:
 
             docids=[self._tabledata[ii][0] for ii in sel_rows]
             has_files=[self.meta_dict[docii]['has_file'] for docii in docids]
 
-            print('docTableMenu: docids', docids, 'has_files',has_files)
+            print('# <docTableMenu>: Selected docids=%s. has_files=%s'\
+                    %(docids, has_files))
+            self.logger.info('Selected docids=%s. has_files=%s'\
+                    %(docids, has_files))
 
             if any(has_files):
                 open_action.setEnabled(True)
@@ -725,11 +790,16 @@ class MainFrameSlots:
                 del_from_folder_action.setEnabled(True)
 
             action=menu.exec_(QCursor.pos())
-            print('docTableMenu: action:',action)
+
+            print('# <docTableMenu>: action.text()=%s' %action.text())
+            self.logger.info('action.text()=%s' %action.text())
 
             if action==open_action:
                 open_docs=[docids[ii] for ii in range(len(docids)) if has_files[ii]]
-                print('open_docs:', open_docs)
+
+                print('# <docTableMenu>: Open docs: %s' %open_docs)
+                self.logger.info('Open docs: %s' %open_docs)
+
                 self.openDoc(open_docs)
 
             elif action==del_from_folder_action:
@@ -746,20 +816,30 @@ class MainFrameSlots:
 
 
     def openDoc(self,docids):
-        print('openDoc:',docids)
+
+        print('# <openDoc>: docids=%s' %docids)
+        self.logger.info('docids=%s' %docids)
+
         for docii in docids:
             file_pathii=self.meta_dict[docii]['files_l'][0] # take the 1st file
-            print('openDoc: docii=',docii,'file_pathii',file_pathii)
+
+            print('# <openDoc>: docid=%s. file_path=%s' %(docii, file_pathii))
+            self.logger.info('docid=%s. file_path=%s' %(docii, file_pathii))
+
             prop=subprocess.call(('xdg-open', file_pathii))
         return
 
 
     def delFromFolder(self,docids,foldername,folderid):
-        print('delFromFolder:',docids,foldername,folderid)
+
+        print('# <delFromFolder>: docids=%s. foldername=%s. folderid=%s'\
+                %(docids, foldername, folderid))
+        self.logger.info('docids=%s. foldername=%s. folderid=%s'\
+                %(docids, foldername, folderid))
+
         # check orphan docs
         for idii in docids:
             self.folder_data[folderid].remove(idii)
-            print('delFromFolder: idii in folder_data?',idii,idii in self.folder_data)
 
         orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,docids,
                 self.libtree._trashed_folder_ids)
@@ -771,7 +851,9 @@ class MainFrameSlots:
 
 
     def delDoc(self,docids):
-        print('delDoc:',docids)
+
+        print('# <delDoc>: docids=%s' %docids)
+        self.logger.info('docids=%s' %docids)
 
         choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
                 'Confirm deleting a document permanently?',
@@ -783,16 +865,26 @@ class MainFrameSlots:
                 for kk,vv in self.folder_data.items():
                     if idii in vv:
                         vv.remove(idii)
-                        print('delDoc: docid',idii,'in folder_data[kk]',kk,
-                                idii in self.folder_data[kk])
+
+                        print('# <delDoc>: docid %s in folder_data[%s]?: %s'\
+                                %(idii, kk, idii in self.folder_data[kk]))
+                        self.logger.info('docid %s in folder_data[%s]?: %s'\
+                                %(idii, kk, idii in self.folder_data[kk]))
+
                 del self.meta_dict[idii]
-                print('delDoc: docid',idii,'in meta_dict?',
-                        idii in self.meta_dict)
+
+                print('# <delDoc>: docid %s in meta_dict?: %s'\
+                        %(idii, idii in self.meta_dict))
+                self.logger.info('docid %s in meta_dict?: %s'\
+                        %(idii, idii in self.meta_dict))
 
                 if idii in self.libtree._trashed_doc_ids:
                     self.libtree._trashed_doc_ids.remove(idii)
-                print('delDoc: docid',idii,'in _trashed_doc_ids?',
-                        idii in self.libtree._trashed_doc_ids)
+
+                print('# <delDoc>: docid %s in _trashed_doc_ids?: %s'\
+                        %(idii, idii in self.libtree._trashed_doc_ids))
+                self.logger.info('docid %s in _trashed_doc_ids?: %s'\
+                        %(idii, idii in self.libtree._trashed_doc_ids))
 
             self.loadDocTable(folder=self._current_folder)
 
@@ -800,27 +892,34 @@ class MainFrameSlots:
         return
 
     def exportToBib(self,docids):
-        print('exportToBib:',docids)
+
+        print('# <exportToBib>: docids=%s' %docids)
+        self.logger.info('docids=%s' %docids)
 
         if len(docids)==1:
             default_path='%s.bib' %(self.meta_dict[docids[0]]['citationkey'])
         else:
             default_path='./bibtex.bib'
 
-        print('exportToBib: default path',default_path)
+        print('# <exportToBib>: Default export path=%s' %default_path)
+        self.logger.info('Default export path=%s' %default_path)
 
         fname = QtWidgets.QFileDialog.getSaveFileName(self,
                 'Save Citaitons to bib File',
                 default_path,
                 "bib Files (*.bib);; All files (*)")[0]
-        print('exportToBib: chosen bib file:', fname)
+
+        print('# <exportToBib>: Chosen bib file=%s' %fname)
+        self.logger.info('Chosen bib file=%s' %fname)
 
         if fname:
             text=''
             omit_keys=self.settings.value('export/bib/omit_fields', [], str)
 
             for idii in docids:
-                print('exportToBib: parsing bib for id',idii)
+
+                print('# <exportToBib>: Parsing bib for docid=%s' %idii)
+                self.logger.info('Parsing bib for docid=%s' %idii)
                 metaii=self.meta_dict[idii]
 
                 #textii=export2bib.parseMeta(metaii,'',metaii['folders_l'],True,False,
@@ -831,7 +930,9 @@ class MainFrameSlots:
 
             with open(fname,'w') as fout:
                 fout.write(text)
-            print('exportToBib: file saved')
+
+            print('# <exportToBib>: File saved to %s' %fname)
+            self.logger.info('File saved to %s' %fname)
 
         return
 
@@ -845,7 +946,9 @@ class MainFrameSlots:
         for idii in docids:
             docii=self.meta_dict[idii]
 
-            print('copyToClipboard',docii['authors_l'])
+            print('# <copyToClipboard>: docii["authors_l"]=%s' %docii['authors_l'])
+            self.logger.info('docii["authors_l"]=%s' %docii['authors_l'])
+
             authorsii=parseAuthors(docii['authors_l'])[2]
             if len(authorsii)==0:
                 authorsii='UNKNOWN'
@@ -862,7 +965,7 @@ class MainFrameSlots:
             meta['issue']=docii['issue']
             meta['pages']=docii['pages']
 
-            print('copyToClipboard: metaii',meta)
+            print('# <copyToClipboard>: metaii=%s', meta)
 
             meta_list.append(meta)
 
@@ -889,7 +992,9 @@ class MainFrameSlots:
 
     def docDoubleClicked(self,idx):
         row_idx=idx.row()
-        print('docDoubleClicked:',idx,'row_idx',row_idx)
+
+        print('# <docDoubleClicked>: Clicked row=%s' %row_idx)
+        self.logger.info('Clicked row=%s' %row_idx)
 
         docid=self._tabledata[row_idx][0]
         files=self.meta_dict[docid]['files_l']
@@ -900,7 +1005,10 @@ class MainFrameSlots:
         elif nfiles==1:
             self.openDoc([docid,])
         else:
-            print('multiple files')
+
+            print('# <docDoubleClicked>: Selected multiple files.')
+            self.logger.info('Selected multiple files.')
+
             dialog=QtWidgets.QDialog()
             dialog.resize(500,500)
             dialog.setWindowTitle('Open Files Externally')
@@ -930,15 +1038,19 @@ class MainFrameSlots:
             layout.addWidget(buttons)
 
             rec=dialog.exec_()
-            print('doubleClicked:, rec',rec)
+
+            print('# <docDoubleClicked>: return from dialog: %s' %rec)
+            self.logger.info('return from dialog: %s' %rec)
 
             if rec:
                 sel_files=listwidget.selectionModel().selectedRows()
-                print('sel_files',sel_files)
+                #print('sel_files',sel_files)
                 sel_files=[listwidget.item(ii.row()) for ii in sel_files]
-                print('sel_files',sel_files)
+                #print('sel_files',sel_files)
                 sel_files=[ii.data(0) for ii in sel_files]
-                print('sel_files',sel_files)
+
+                print('# <docDoubleClicked>: Selected files=%s' %sel_files)
+                self.logger.info('Selected files=%s' %sel_files)
 
                 if len(sel_files)>0:
                     for fii in sel_files:
@@ -1043,4 +1155,10 @@ class MainFrameSlots:
         self.doc_table.model().arraydata=[]
         self.libtree.clear()
         self.filter_item_list.clear()
-        print('# <clearData>: data cleared.')
+
+        self.add_button.setEnabled(False)
+        self.add_folder_button.setEnabled(False)
+        self.duplicate_check_button.setEnabled(False)
+
+        print('# <clearData>: Data cleared.')
+        self.logger.info('Data cleared.')

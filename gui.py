@@ -317,6 +317,10 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         self.add_folder_button=self.createAddFolderButton()
         self.duplicate_check_button=self.createDuplicateCheckButton()
 
+        self.add_button.setEnabled(False)
+        self.add_folder_button.setEnabled(False)
+        self.duplicate_check_button.setEnabled(False)
+
         h_layout0.addWidget(self.add_button)
         h_layout0.addWidget(self.add_folder_button)
         h_layout0.addWidget(self.duplicate_check_button)

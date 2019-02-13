@@ -7,6 +7,7 @@ Update time: 2018-09-27 19:44:32.
 import os
 import time
 import sqlite3
+import logging
 from collections import MutableMapping
 
 DOC_ATTRS=[\
@@ -130,8 +131,8 @@ def readSqlite(dbin):
 
         if metaii['confirmed'] is None or metaii['confirmed']=='false':
             folder_data['-2'].append(idii)
-        #if metaii['pend_delete']:
-            #folder_data['-3'].append(idii)
+        if metaii['pend_delete']:
+            folder_data['-3'].append(idii)
 
         # note: convert folder id to str
         # TODO: convert back to int when writing to sqlite
@@ -333,14 +334,20 @@ def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
 
 def findOrphanDocs(folder_data,docids,trashed_folder_ids):
     idsinfolders=[]
+    logger=logging.getLogger('default_logger')
+
     for kk,vv in folder_data.items():
         if kk not in ['-1','-2','-3']+trashed_folder_ids:
             idsinfolders.extend(vv)
 
     result=[idii for idii in docids if idii not in idsinfolders]
-    print('findOrphanDocs: exclude folders:',['-1','-2','-3']+trashed_folder_ids)
-    #print('findOrphanDocs: idsinfolders:',idsinfolders)
-    print('findOrphanDocs: result:',result)
+
+    print('# <findOrphanDocs>: excluded folders= ["-1","-2","-3"]+%s' %trashed_folder_ids)
+    logger.info('excluded folders= ["-1","-2","-3"]+%s' %trashed_folder_ids)
+
+    print('# <findOrphanDocs>: Orphan docs=%s' %result)
+    logger.info('Orphan docs=%s' %result)
+
     return result
 
 
@@ -398,7 +405,7 @@ def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
 
     if filter_type=='Filter by authors':
         t_last,t_first=map(str.strip,filter_text.split(','))
-        print('t_last: %s, t_first: %s, text: %s' %(t_last,t_first,filter_text))
+        #print('t_last: %s, t_first: %s, text: %s' %(t_last,t_first,filter_text))
         for kk in docids:
             authors=meta_dict[kk]['authors_l']
             if filter_text in authors:
@@ -422,7 +429,7 @@ def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
             if filter_text in keywords:
                 results.append(kk)
 
-    print(results)
+    #print(results)
 
     return results
 
