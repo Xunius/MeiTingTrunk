@@ -11,13 +11,13 @@ from lib import bibparse
 #from lib import export2bib
 from lib import retrievepdfmeta
 from lib.tools import getXExpandYMinSizePolicy, WorkerThread, parseAuthors
+import logging
 
 
 
 
 
 def addPDF(abpath):
-    print('addPDF. abpath=',abpath)
     try:
         pdfmetaii=retrievepdfmeta.getPDFMeta_pypdf2(abpath)
         pdfmetaii=retrievepdfmeta.prepareMeta(pdfmetaii)
@@ -29,17 +29,16 @@ def addPDF(abpath):
     return rec,pdfmetaii
 
 
-
-
-
-
-
-
 def checkFolderName(foldername,folderid,folder_dict):
+
+    logger=logging.getLogger('default_logger')
 
     toplevelids=[kk for kk,vv in folder_dict.items() if vv[1]=='-1']
 
-    print('checkFolderName:, toplevelids = ',toplevelids,'folderid=',folderid)
+    print('# <checkFolderName>: toplevelids=%s. folderid=%s' \
+            %(toplevelids, folderid))
+    logger.info('toplevelids=%s. folderid=%s' \
+            %(toplevelids, folderid))
 
     if folderid in toplevelids:
         siblings=[folder_dict[ii][0] for ii in toplevelids]
@@ -48,7 +47,10 @@ def checkFolderName(foldername,folderid,folder_dict):
         siblings=[ii[0] for ii in folder_dict.values() if ii[1]==parentid]
 
     if foldername in siblings:
-        print('checkFolderName: foldername=',foldername,'siblings:',siblings)
+        print('# <checkFolderName>: foldername in siblings. foldername=%s. siblings=%s' \
+                %(foldername, siblings))
+        logger.info('foldername in siblings. foldername=%s. siblings=%s' \
+                %(foldername, siblings))
         return 1
 
     return 0
@@ -258,6 +260,9 @@ class MainFrameSlots:
 
             action_text=action.text()
             print(action.text())
+
+            self.libtree.itemChanged.connect(self.addNewFolderToDict,
+                    Qt.QueuedConnection)
 
             if action_text=='Create Folder':
                 toplevelids=[self.libtree.topLevelItem(jj).data(1,0) for jj\
@@ -1038,4 +1043,4 @@ class MainFrameSlots:
         self.doc_table.model().arraydata=[]
         self.libtree.clear()
         self.filter_item_list.clear()
-        print('clearData: data cleared')
+        print('# <clearData>: data cleared.')

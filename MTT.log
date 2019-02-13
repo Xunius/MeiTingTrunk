@@ -1,0 +1,296 @@
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 15:37:12,457,INFO: num of docs in folder 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 15:41:52,024,INFO: num of docs in folder 1012
+<gui.py-loadSettings()>: 2019-02-12 22:31:29,352,INFO: settings.fielName()=/home/guangzhi/codes/pyRefManager/settings.ini
+<gui.py-loadSettings()>: 2019-02-12 22:31:29,352,INFO: storage_folder=/home/guangzhi/codes/pyRefManager
+<gui.py-closeEvent()>: 2019-02-12 22:32:18,643,INFO: settings.sync()
+<gui.py-loadSettings()>: 2019-02-12 22:32:21,097,INFO: settings.fielName()=/home/guangzhi/codes/pyRefManager/settings.ini
+<gui.py-loadSettings()>: 2019-02-12 22:32:21,097,INFO: storage_folder=/home/guangzhi/codes/pyRefManager
+<gui.py-closeEvent()>: 2019-02-12 22:32:28,415,INFO: settings.sync()
+<gui.py-loadSettings()>: 2019-02-12 22:34:48,839,INFO: settings.fielName()=/home/guangzhi/codes/pyRefManager/settings.ini
+<gui.py-loadSettings()>: 2019-02-12 22:34:48,840,INFO: storage_folder=/home/guangzhi/codes/pyRefManager
+<gui.py-openDatabaseTriggered()>: 2019-02-12 22:34:57,236,INFO: Connected to database: /home/guangzhi/codes/pyRefManager/new4.sqlite
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:34:58,283,INFO: num of docs in folder 1012
+<gui.py-helpMenuTriggered()>: 2019-02-12 22:35:11,837,INFO: action=<PyQt5.QtWidgets.QAction object at 0x7f4437f03a68>, action.text()=Help
+<gui.py-closeEvent()>: 2019-02-12 22:35:27,288,INFO: settings.sync()
+<gui.py-loadSettings()>: 2019-02-12 22:37:51,209,INFO: settings.fielName()=/home/guangzhi/codes/pyRefManager/settings.ini
+<gui.py-loadSettings()>: 2019-02-12 22:37:51,209,INFO: storage_folder=/home/guangzhi/codes/pyRefManager
+<gui.py-openDatabaseTriggered()>: 2019-02-12 22:37:54,592,INFO: Connected to database: /home/guangzhi/codes/pyRefManager/new4.sqlite
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:37:55,606,INFO: load table None. sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:37:55,628,INFO: num of docs in folder 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:37:58,293,INFO: load table ('Asia_monsoon', '2'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:37:58,296,INFO: num of docs in folder 23
+<gui.py-closeEvent()>: 2019-02-12 22:39:56,186,INFO: settings.sync()
+<gui.py-loadSettings()>: 2019-02-12 22:40:01,171,INFO: settings.fielName()=/home/guangzhi/codes/pyRefManager/settings.ini
+<gui.py-loadSettings()>: 2019-02-12 22:40:01,171,INFO: storage_folder=/home/guangzhi/codes/pyRefManager
+<gui.py-openDatabaseTriggered()>: 2019-02-12 22:40:05,266,INFO: Connected to database: /home/guangzhi/codes/pyRefManager/new4.sqlite
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:40:06,365,INFO: load table None. sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:40:06,365,INFO: Before difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:40:06,365,INFO: After difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:40:06,386,INFO: num of docs in folder 1012
+<gui.py-closeEvent()>: 2019-02-12 22:41:19,343,INFO: settings.sync()
+<gui.py-loadSettings()>: 2019-02-12 22:41:21,167,INFO: settings.fielName()=/home/guangzhi/codes/pyRefManager/settings.ini
+<gui.py-loadSettings()>: 2019-02-12 22:41:21,167,INFO: storage_folder=/home/guangzhi/codes/pyRefManager
+<gui.py-openDatabaseTriggered()>: 2019-02-12 22:41:25,045,INFO: Connected to database: /home/guangzhi/codes/pyRefManager/new4.sqlite
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:41:26,073,INFO: load table None. sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:41:26,073,INFO: NO before difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:41:26,073,INFO: NO after difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:41:26,133,INFO: num of docs in folder 1012
+<gui.py-closeEvent()>: 2019-02-12 22:44:49,187,INFO: settings.sync()
+<gui.py-loadSettings()>: 2019-02-12 22:44:51,776,INFO: settings.fielName()=/home/guangzhi/codes/pyRefManager/settings.ini
+<gui.py-loadSettings()>: 2019-02-12 22:44:51,776,INFO: storage_folder=/home/guangzhi/codes/pyRefManager
+<gui.py-openDatabaseTriggered()>: 2019-02-12 22:44:55,965,INFO: Connected to database: /home/guangzhi/codes/pyRefManager/new4.sqlite
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:44:57,010,INFO: load table None. sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:44:57,010,INFO: NO before difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:44:57,010,INFO: NO after difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:44:57,031,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:44:57,032,INFO: len(data)=1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:44:57,070,INFO: current_row=0, docid=333
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:45:39,174,INFO: load table ('Asia_monsoon', '2'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:45:39,189,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:45:39,190,INFO: len(data)=23
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:45:39,190,INFO: current_row=0, docid=830
+<gui.py-closeEvent()>: 2019-02-12 22:47:35,049,INFO: settings.sync()
+<gui.py-loadSettings()>: 2019-02-12 22:47:36,981,INFO: settings.fielName()=/home/guangzhi/codes/pyRefManager/settings.ini
+<gui.py-loadSettings()>: 2019-02-12 22:47:36,981,INFO: storage_folder=/home/guangzhi/codes/pyRefManager
+<gui.py-openDatabaseTriggered()>: 2019-02-12 22:47:40,815,INFO: Connected to database: /home/guangzhi/codes/pyRefManager/new4.sqlite
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:47:41,847,INFO: load table None. sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:47:41,847,INFO: NO before difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:47:41,848,INFO: NO after difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:47:41,869,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:47:41,869,INFO: len(data)=1012
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:47:41,871,INFO: docid=333
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:47:41,883,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:47:41,883,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:47:41,883,INFO: noteii=None
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:47:41,909,INFO: current_row=0, docid=333
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:47:41,909,INFO: docid=333
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:47:41,910,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:47:41,911,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:47:41,911,INFO: noteii=None
+<gui.py-closeEvent()>: 2019-02-12 22:47:56,732,INFO: settings.sync()
+<gui.py-loadSettings()>: 2019-02-12 22:51:03,685,INFO: settings.fielName()=/home/guangzhi/codes/pyRefManager/settings.ini
+<gui.py-loadSettings()>: 2019-02-12 22:51:03,686,INFO: storage_folder=/home/guangzhi/codes/pyRefManager
+<gui.py-openDatabaseTriggered()>: 2019-02-12 22:51:07,883,INFO: Connected to database: /home/guangzhi/codes/pyRefManager/new4.sqlite
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:08,885,INFO: load table None. sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:08,886,INFO: NO before difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:08,886,INFO: NO after difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:08,906,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:08,907,INFO: len(data)=1012
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:51:08,909,INFO: docid=333
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:51:08,920,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:51:08,920,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:51:08,920,INFO: noteii=None
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:08,945,INFO: current_row=0, docid=333
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:51:08,946,INFO: docid=333
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:51:08,947,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:51:08,948,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:51:08,948,INFO: noteii=None
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:13,812,INFO: load table ('Asia_monsoon', '2'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:13,819,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:13,820,INFO: len(data)=23
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:13,820,INFO: current_row=0, docid=830
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:51:13,820,INFO: docid=830
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:51:13,824,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:51:13,824,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:51:13,824,INFO: noteii=None
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:51:23,074,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=72
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:23,079,INFO: load table ('ENSO', '72'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:23,079,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:51:23,079,INFO: len(data)=0
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:06,495,INFO: load table ('CMIP5', '38'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:06,496,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:06,497,INFO: len(data)=3
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:06,498,INFO: current_row=0, docid=369
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:56:06,498,INFO: docid=369
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:56:06,502,INFO: docid=369
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:56:06,502,INFO: docid=369
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:56:06,502,INFO: noteii=None
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:11,053,INFO: load table ('ENSO', '16'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:11,058,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:11,058,INFO: len(data)=65
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:11,058,INFO: current_row=0, docid=357
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:56:11,058,INFO: docid=357
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:56:11,061,INFO: docid=357
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:56:11,061,INFO: docid=357
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:56:11,061,INFO: noteii=None
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:12,302,INFO: load table ('CMIP5', '38'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:12,304,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:12,304,INFO: len(data)=3
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:12,305,INFO: current_row=0, docid=369
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:56:12,305,INFO: docid=369
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:56:12,315,INFO: docid=369
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:56:12,317,INFO: docid=369
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:56:12,317,INFO: noteii=None
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:56:15,656,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=73
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:15,673,INFO: load table ('k', '73'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:15,673,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:15,673,INFO: len(data)=0
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:16,874,INFO: load table ('CMIP5', '38'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:16,875,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:16,876,INFO: len(data)=3
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:16,876,INFO: current_row=0, docid=369
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:56:16,877,INFO: docid=369
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:56:16,884,INFO: docid=369
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:56:16,884,INFO: docid=369
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:56:16,884,INFO: noteii=None
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:56:19,171,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=74
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:56:19,172,INFO: foldername in siblings. foldername=k. siblings=['k', 'New folder']
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:56:23,147,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=74
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:23,151,INFO: load table ('m', '74'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:23,151,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:23,152,INFO: len(data)=0
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:25,011,INFO: load table ('Cloud_physics', '11'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:25,012,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:25,012,INFO: len(data)=3
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:56:25,013,INFO: current_row=0, docid=99
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:56:25,014,INFO: docid=99
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:56:25,017,INFO: docid=99
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:56:25,017,INFO: docid=99
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:56:25,017,INFO: noteii=None
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:56:31,010,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=75
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:56:31,010,INFO: foldername in siblings. foldername=ENSO. siblings=['ENSO', 'New folder']
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:57:31,346,INFO: load table ('Asia_monsoon', '2'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:57:31,348,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:57:31,349,INFO: len(data)=23
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:57:31,349,INFO: current_row=0, docid=830
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:57:31,350,INFO: docid=830
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:57:31,353,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:57:31,353,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:57:31,353,INFO: noteii=None
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:57:34,260,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=76
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:57:34,261,INFO: foldername in siblings. foldername=ENSO. siblings=['ENSO', 'New folder', 'New folder']
+<gui.py-closeEvent()>: 2019-02-12 22:57:41,613,INFO: settings.sync()
+<gui.py-loadSettings()>: 2019-02-12 22:58:19,468,INFO: settings.fielName()=/home/guangzhi/codes/pyRefManager/settings.ini
+<gui.py-loadSettings()>: 2019-02-12 22:58:19,469,INFO: storage_folder=/home/guangzhi/codes/pyRefManager
+<gui.py-openDatabaseTriggered()>: 2019-02-12 22:58:22,869,INFO: Connected to database: /home/guangzhi/codes/pyRefManager/new4.sqlite
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:23,872,INFO: load table None. sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:23,872,INFO: NO before difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:23,872,INFO: NO after difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:23,893,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:23,894,INFO: len(data)=1012
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:58:23,896,INFO: docid=333
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:58:23,906,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:23,907,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:23,907,INFO: noteii=None
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:23,932,INFO: current_row=0, docid=333
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:58:23,932,INFO: docid=333
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:58:23,934,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:23,934,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:23,934,INFO: noteii=None
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:58:27,764,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=72
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:27,767,INFO: load table ('Asia_monsoon', '2'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:27,772,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:27,772,INFO: len(data)=23
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:27,773,INFO: current_row=0, docid=830
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:58:27,773,INFO: docid=830
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:58:27,778,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:27,778,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:27,778,INFO: noteii=None
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:27,783,INFO: load table ('ENSO', '72'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:27,783,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:27,783,INFO: len(data)=0
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:32,695,INFO: load table None. sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:32,695,INFO: NO before difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:32,696,INFO: NO after difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:32,751,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:32,752,INFO: len(data)=1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:32,752,INFO: current_row=0, docid=333
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:58:32,752,INFO: docid=333
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:58:32,753,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:32,754,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:32,754,INFO: noteii=None
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:58:35,404,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=73
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:58:35,405,INFO: foldername in siblings. foldername=ENSO. siblings=['ENSO', 'New folder']
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:58:42,859,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=73
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:42,863,INFO: load table ('Asia_monsoon', '2'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:42,867,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:42,868,INFO: len(data)=23
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:42,868,INFO: current_row=0, docid=830
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:58:42,868,INFO: docid=830
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:58:42,871,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:42,871,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:42,871,INFO: noteii=None
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:42,875,INFO: load table ('k', '73'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:42,876,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:42,876,INFO: len(data)=0
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:45,328,INFO: load table None. sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:45,329,INFO: NO before difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:45,329,INFO: NO after difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:45,351,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:45,352,INFO: len(data)=1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:45,352,INFO: current_row=0, docid=333
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:58:45,352,INFO: docid=333
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:58:45,353,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:45,354,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:45,354,INFO: noteii=None
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:58:47,962,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=74
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:58:47,962,INFO: foldername in siblings. foldername=ENSO. siblings=['ENSO', 'k', 'New folder']
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 22:58:50,947,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=74
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:50,951,INFO: load table ('Asia_monsoon', '2'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:50,955,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:50,956,INFO: len(data)=23
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:50,956,INFO: current_row=0, docid=830
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 22:58:50,956,INFO: docid=830
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 22:58:50,959,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:50,959,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 22:58:50,959,INFO: noteii=None
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:50,963,INFO: load table ('QG', '74'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:50,963,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 22:58:50,964,INFO: len(data)=0
+<gui.py-closeEvent()>: 2019-02-12 23:00:28,988,INFO: settings.sync()
+<gui.py-loadSettings()>: 2019-02-12 23:00:32,120,INFO: settings.fielName()=/home/guangzhi/codes/pyRefManager/settings.ini
+<gui.py-loadSettings()>: 2019-02-12 23:00:32,120,INFO: storage_folder=/home/guangzhi/codes/pyRefManager
+<gui.py-openDatabaseTriggered()>: 2019-02-12 23:00:35,688,INFO: Connected to database: /home/guangzhi/codes/pyRefManager/new4.sqlite
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:36,681,INFO: load table None. sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:36,682,INFO: NO before difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:36,682,INFO: NO after difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:36,702,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:36,703,INFO: len(data)=1012
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 23:00:36,705,INFO: docid=333
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 23:00:36,717,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 23:00:36,718,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 23:00:36,718,INFO: noteii=None
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:36,743,INFO: current_row=0, docid=333
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 23:00:36,743,INFO: docid=333
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 23:00:36,745,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 23:00:36,745,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 23:00:36,745,INFO: noteii=None
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 23:00:39,718,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=72
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:39,722,INFO: load table ('Asia_monsoon', '2'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:39,726,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:39,727,INFO: len(data)=23
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:39,727,INFO: current_row=0, docid=830
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 23:00:39,727,INFO: docid=830
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 23:00:39,732,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 23:00:39,732,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 23:00:39,732,INFO: noteii=None
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:39,736,INFO: load table ('ENSO', '72'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:39,736,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:00:39,736,INFO: len(data)=0
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:41,442,INFO: load table None. sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:41,442,INFO: NO before difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:41,442,INFO: NO after difference trashed_docs: 1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:41,464,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:41,465,INFO: len(data)=1012
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:41,465,INFO: current_row=0, docid=333
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 23:03:41,465,INFO: docid=333
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 23:03:41,467,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 23:03:41,467,INFO: docid=333
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 23:03:41,467,INFO: noteii=None
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 23:03:46,072,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=73
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 23:03:46,072,INFO: foldername in siblings. foldername=ENSO. siblings=['ENSO', 'New folder']
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 23:03:46,083,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=73
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 23:03:46,084,INFO: foldername in siblings. foldername=ENSO. siblings=['ENSO', 'New folder']
+<_MainFrameSlots.py-checkFolderName()>: 2019-02-12 23:03:55,410,INFO: toplevelids=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '47', '65', '66', '67', '68', '69', '70', '71', '0']. folderid=73
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:55,414,INFO: load table ('Asia_monsoon', '2'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:55,418,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:55,419,INFO: len(data)=23
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:55,419,INFO: current_row=0, docid=830
+<_MainFrameLoadData.py-loadMetaTab()>: 2019-02-12 23:03:55,419,INFO: docid=830
+<_MainFrameLoadData.py-loadBibTab()>: 2019-02-12 23:03:55,422,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 23:03:55,422,INFO: docid=830
+<_MainFrameLoadData.py-loadNoteTab()>: 2019-02-12 23:03:55,422,INFO: noteii=None
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:55,426,INFO: load table ('QG', '73'). sort indicator section=0. sort order=1
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:55,427,INFO: sort idx=4
+<_MainFrameLoadData.py-loadDocTable()>: 2019-02-12 23:03:55,427,INFO: len(data)=0
+<gui.py-closeEvent()>: 2019-02-12 23:04:59,865,INFO: settings.sync()

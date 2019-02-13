@@ -1,4 +1,6 @@
 import sys,os
+import logging
+import logging.config
 #import operator
 import sqlite3
 from PyQt5 import QtWidgets, QtCore
@@ -24,6 +26,32 @@ OMIT_KEYS=[
         'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
         'lastName_l', 'pend_delete', 'folders_l', 'type', 'id'
         ]
+
+
+LOG_CONFIG={
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'standard': {
+                'format': '<%(filename)s-%(funcName)s()>: %(asctime)s,%(levelname)s: %(message)s'},
+            },
+        'handlers': {
+            'default': {
+                'level': 'INFO',
+                'class': 'logging.FileHandler',
+                'formatter': 'standard',
+                'filename': 'MTT.log',
+                },
+            },
+        'loggers': {
+            'default_logger': {
+                'handlers': ['default'],
+                'level': 'INFO',
+                'propagate': True
+                }
+            }
+        }
+
 
 
 # TODO:
@@ -60,8 +88,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(MainWindow,self).__init__()
 
-        #self.db=db
-        #meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
+        self.logger=logging.getLogger('default_logger')
         self.settings=self.loadSettings()
         self.is_loaded=False
 
@@ -99,23 +126,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def loadSettings(self):
         settings=self.initSettings()
-        print(settings.fileName())
 
-        aa=settings.value('display/fonts/meta_title')
-        print('settings',settings)
-        print('fonat',aa)
-
-        aa=settings.value('export/bib/omit_fields', [], str)
-        print('omit_fields',aa)
+        print('# <loadSettings>: settings.fielName()=%s' %settings.fileName())
+        self.logger.info('settings.fielName()=%s' %settings.fileName())
 
         storage_folder=settings.value('saving/storage_folder')
-        print('storage_folder',storage_folder)
+        print('# <loadSettings>: storage_folder=%s' %storage_folder)
+        self.logger.info('storage_folder=%s' %storage_folder)
 
         #---------------Create output folder---------------
         storage_folder=os.path.expanduser(storage_folder)
         if not os.path.exists(storage_folder):
             os.makedirs(storage_folder)
-            print("Create folder %s" %storage_folder)
+
+            print('# <loadSettings>: Create folder %s' %storage_folder)
+            self.logger.info('Create folder %s' %storage_folder)
 
 
         return settings
@@ -173,7 +198,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.show()
 
     def closeEvent(self,event):
-        print('settings sync')
+        print('# <closeEvent>: settings.sync()')
+        self.logger.info('settings.sync()')
         self.settings.sync()
 
 
@@ -206,7 +232,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.main_frame.status_bar.showMessage('Opening database...')
             db = sqlite3.connect(fname)
-            print('Connected to database:')
+
+            print('# <openDatabaseTriggered>: Connected to database: %s' %fname)
+            self.logger.info('Connected to database: %s' %fname)
+
             self.db=db
             meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
             self.main_frame.loadLibTree(db,meta_dict,folder_data,folder_dict)
@@ -232,7 +261,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def helpMenuTriggered(self,action):
-        print('helpMenuTriggered: action:',action,action.text())
+        print('# <helpMenuTriggered>: action=%s, action.text()=%s' %(action,action.text()))
+        self.logger.info('action=%s, action.text()=%s' %(action,action.text()))
         return
 
 
@@ -257,6 +287,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         #if isinstance(self.folder_dict,dict):
             #self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
         self.settings=settings
+        self.logger=logging.getLogger('default_logger')
 
         # get font configs
         self.font_dict={
@@ -686,6 +717,7 @@ if __name__=='__main__':
         print('Failed to connect to database:')
     '''
 
+    logging.config.dictConfig(LOG_CONFIG)
     app=QtWidgets.QApplication(sys.argv)
     mainwindow=MainWindow()
     sys.exit(app.exec_())

@@ -164,10 +164,12 @@ class MainFrameLoadData:
 
         tablemodel=self.doc_table.model()
 
-        print('load tabel', folder)
         hh=self.doc_table.horizontalHeader()
-        print('sort indicator section:', hh.sortIndicatorSection())
-        print('sort indicator order:', hh.sortIndicatorOrder())
+
+        print('# <loadDocTable>: load table %s. sort indicator section=%s. sort order=%s'\
+                %(folder, hh.sortIndicatorSection(), hh.sortIndicatorOrder()))
+        self.logger.info('load table %s. sort indicator section=%s. sort order=%s'\
+                %(folder, hh.sortIndicatorSection(), hh.sortIndicatorOrder()))
 
         #-----------Get list of doc ids to load-----------
         if docids is None:
@@ -175,26 +177,37 @@ class MainFrameLoadData:
             # load All folder
             if folder is None:
                 docids=self.meta_dict.keys()
-                print('loadDocTable: before difference trashed_docs',len(docids))
+
+                print('# <loadDocTable>: NO before difference trashed_docs: %d'\
+                        %len(docids))
+                self.logger.info('NO before difference trashed_docs: %d'\
+                        %len(docids))
+
                 docids=list(set(docids).difference(self.libtree._trashed_doc_ids))
-                print('loadDocTable: after difference trashed_docs',len(docids))
+
+                print('# <loadDocTable>: NO after difference trashed_docs: %d'\
+                        %len(docids))
+                self.logger.info('NO after difference trashed_docs: %d'\
+                        %len(docids))
+
             elif folder is not None and folder[0]=='All' and folder[1]=='-1':
                 docids=self.meta_dict.keys()
-            #elif folder is not None and folder[0]=='Needs Review' and folder[1]=='-2':
-                #docids=self.folder_data['-2']
             else:
                 folderid=folder[1]
                 docids=self.folder_data[folderid]
 
         data=prepareDocs(self.meta_dict,docids)
-
-        print('num of docs in folder',len(docids))
         tablemodel.arraydata=data
+
         if sortidx is not None and sortidx in range(tablemodel.columnCount(None)):
-            print('loaddoctable:, sort idx', sortidx)
+            print('# <loadDocTable>: sort idx=%s' %sortidx)
+            self.logger.info('sort idx=%s' %sortidx)
+
             tablemodel.sort(sortidx,Qt.AscendingOrder)
 
-        print('loadDocTable: -----------', len(data))
+        print('# <loadDocTable>: len(data)=%d' %len(data))
+        self.logger.info('len(data)=%d' %len(data))
+
         #------------Load meta data on 1st row------------
         if len(data)>0:
             self.enableMetaTab()
@@ -204,7 +217,11 @@ class MainFrameLoadData:
                 self.doc_table.selectRow(sel_row)
             current_row=self.doc_table.currentIndex().row()
             docid=self._current_doc
-            print('current_row',current_row, docid)
+
+            print('# <loadDocTable>: current_row=%s, docid=%s'\
+                    %(current_row, docid))
+            self.logger.info('current_row=%s, docid=%s'\
+                    %(current_row, docid))
             self.selDoc(self.doc_table.currentIndex(),None)
         else:
             # clear meta tab
@@ -215,7 +232,10 @@ class MainFrameLoadData:
 
 
     def loadMetaTab(self,docid=None):
-        print('loadMetaTab',docid)
+
+        print('# <loadMetaTab>: docid=%s' %docid)
+        self.logger.info('docid=%s' %docid)
+
         if docid is None:
             return
 
@@ -233,7 +253,6 @@ class MainFrameLoadData:
         for fii in fields:
             tii=metaii[fii]
             if tii is None:
-                #self.t_meta.fields_dict[fii].clear()
                 self._current_meta_dict[fii].clear()
                 continue
             elif fii=='files_l':
@@ -247,7 +266,6 @@ class MainFrameLoadData:
                 self._current_meta_dict[fii].setText(conv(tii))
 
             if fii in ['authors_l','abstract','tags_l','keywords_l']:
-                print('loadMetaTab: is_fold',fii,self.t_meta.fold_dict[fii])
                 if self.t_meta.fold_dict[fii]:
                     self._current_meta_dict[fii].foldText()
 
@@ -258,17 +276,12 @@ class MainFrameLoadData:
 
 
     def loadBibTab(self,docid=None):
-        print('loadBibTab',docid)
+        print('# <loadBibTab>: docid=%s' %docid)
+        self.logger.info('docid=%s' %docid)
         if docid is None:
             return
 
         metaii=self.meta_dict[docid]
-        #import bibtexparser
-        #bb=bibtexparser.bibdatabase.BibDatabase()
-
-        #text=export2bib.parseMeta(metaii,'',metaii['folders_l'],True,False,
-                #True)
-
         omit_keys=self.settings.value('export/bib/omit_fields', [], str)
         text=bibparse.metaDictToBib(metaii,bibparse.INV_ALT_KEYS,
                 omit_keys)
@@ -279,12 +292,15 @@ class MainFrameLoadData:
 
 
     def loadNoteTab(self,docid=None):
-        print('loadNoteTab',docid)
+        print('# <loadNoteTab>: docid=%s' %docid)
+        self.logger.info('docid=%s' %docid)
         if docid is None:
             return
 
         noteii=self.meta_dict[docid]['notes']
-        print('loadNoteTab', noteii)
+
+        print('# <loadNoteTab>: noteii=%s' %noteii)
+        self.logger.info('noteii=%s' %noteii)
 
         self.note_textedit.clear()
         self.note_textedit.setText(noteii)
