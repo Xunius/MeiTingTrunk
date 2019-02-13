@@ -211,18 +211,18 @@ class MainFrameLoadData:
         #------------Load meta data on 1st row------------
         if len(data)>0:
             self.enableMetaTab()
-            if sel_row is None:
-                self.doc_table.selectRow(0)
-            else:
+            if sel_row is not None:
+                #self.doc_table.selectRow(0)
+            #else:
                 self.doc_table.selectRow(sel_row)
-            current_row=self.doc_table.currentIndex().row()
-            docid=self._current_doc
+                current_row=self.doc_table.currentIndex().row()
+                docid=self._current_doc
 
-            print('# <loadDocTable>: current_row=%s, docid=%s'\
-                    %(current_row, docid))
-            self.logger.info('current_row=%s, docid=%s'\
-                    %(current_row, docid))
-            self.selDoc(self.doc_table.currentIndex(),None)
+                print('# <loadDocTable>: current_row=%s, docid=%s'\
+                        %(current_row, docid))
+                self.logger.info('current_row=%s, docid=%s'\
+                        %(current_row, docid))
+                self.selDoc(self.doc_table.currentIndex(),None)
         else:
             # clear meta tab
             self.clearMetaTab()

@@ -112,7 +112,6 @@ def readBibFile(bibfile):
         bib=bibtexparser.load(fin,parser=parser)
 
     results=[]
-    __import__('pdb').set_trace()
 
     for eii in bib.entries:
         eii=splitNames(eii)

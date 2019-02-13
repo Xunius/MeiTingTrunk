@@ -84,7 +84,7 @@ class MainFrameSlots:
             self.logger.info('Add new doc. Given id=%s' %newid)
 
             self.meta_dict[newid]=meta_dict
-            self.loadDocTable(docids=self._current_docids+[newid,])
+            self.loadDocTable(docids=self._current_docids+[newid,],sel_row=None)
             self.doc_table.scrollToBottom()
             self.doc_table.selectRow(self.doc_table.model().rowCount(None)-1)
 
@@ -207,14 +207,14 @@ class MainFrameSlots:
 
         elif action_text=='Add BibTex File':
             fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a bibtex file',
-         '',"Bibtex files (*.bib);; All files (*)")
+         '',"Bibtex files (*.bib);; All files (*)")[0]
 
             print('# <addActionTriggered>: Chosen bib file=%s' %fname)
             self.logger.info('Chosen bib file=%s' %fname)
 
             if fname:
                 try:
-                    bib_entries=bibparse.readBibFile(fname[0])
+                    bib_entries=bibparse.readBibFile(fname)
                     self.doc_table.clearSelection()
                     self.doc_table.setSelectionMode(
                             QtWidgets.QAbstractItemView.MultiSelection)
@@ -401,9 +401,9 @@ class MainFrameSlots:
                 %(folder, folderid))
 
         if item==self.all_folder:
-            self.loadDocTable(folder=None,sortidx=4)
+            self.loadDocTable(folder=None,sortidx=4,sel_row=0)
         else:
-            self.loadDocTable((folder,folderid),sortidx=4)
+            self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
 
         if item==self.all_folder:
             self.add_button.setDisabled(True)
@@ -612,8 +612,8 @@ class MainFrameSlots:
                     filter_type,filter_text,folderid)
 
             if len(filter_docids)>0:
-                self.loadDocTable(None,filter_docids,sortidx=4)
-                self.doc_table.selectRow(0)
+                self.loadDocTable(None,filter_docids,sortidx=4,sel_row=0)
+                #self.doc_table.selectRow(0)
 
             sel=self.filter_type_combbox.currentText()
 
@@ -845,7 +845,7 @@ class MainFrameSlots:
                 self.libtree._trashed_folder_ids)
         self.libtree._trashed_doc_ids.extend(orphan_docs)
 
-        self.loadDocTable(folder=(foldername,folderid))
+        self.loadDocTable(folder=(foldername,folderid),sel_row=None)
 
         return
 
@@ -886,7 +886,7 @@ class MainFrameSlots:
                 self.logger.info('docid %s in _trashed_doc_ids?: %s'\
                         %(idii, idii in self.libtree._trashed_doc_ids))
 
-            self.loadDocTable(folder=self._current_folder)
+            self.loadDocTable(folder=self._current_folder,sel_row=None)
 
 
         return
@@ -1131,9 +1131,9 @@ class MainFrameSlots:
 
                 # TODO: keep a record of previous sortidx?
                 if folder=='All' and folderid=='-1':
-                    self.loadDocTable(None,sortidx=4)
+                    self.loadDocTable(None,sortidx=4,sel_row=0)
                 else:
-                    self.loadDocTable((folder,folderid),sortidx=4)
+                    self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
                 self.doc_table.selectRow(0)
 
         return
