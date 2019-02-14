@@ -6,9 +6,14 @@ Update time: 2018-09-27 19:44:32.
 
 import os
 import time
+import uuid
 import sqlite3
 import logging
 from collections import MutableMapping
+try:
+    from . import bibparse
+except:
+    import bibparse
 
 DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',
@@ -52,6 +57,7 @@ class DocMeta(MutableMapping):
                 'files_l': [],
                 'folders_l': [],
                 'tags_l': [],
+                'urls_l': [],
                 'pend_delete': False,
                 'notes': None
                 }
@@ -151,6 +157,29 @@ def readSqlite(dbin):
     return meta, folder_data, folder_dict
 
 
+def fetchField(db,query,values,ncol=1,ret_type='str'):
+    if ret_type not in ['str','list']:
+        raise Exception("<ret_type> is one of ['str','list'].")
+
+    aa=db.execute(query,values).fetchall()
+
+    if len(aa)==0:
+        if ret_type=='str':
+            return None
+        else:
+            return []
+
+    if ncol==1:
+        aa=[ii[0] for ii in aa]
+    if ret_type=='str':
+        if len(aa)==1:
+            return aa[0]
+        else:
+            return '; '.join(aa)
+    else:
+        return aa
+
+
 def getMetaData(db, docid):
     '''Get meta-data of a doc by docid.
     '''
@@ -233,27 +262,6 @@ def getMetaData(db, docid):
             return aa
     '''
 
-    def fetchField(db,query,values,ncol=1,ret_type='str'):
-        if ret_type not in ['str','list']:
-            raise Exception("<ret_type> is one of ['str','list'].")
-
-        aa=db.execute(query,values).fetchall()
-
-        if len(aa)==0:
-            if ret_type=='str':
-                return None
-            else:
-                return []
-
-        if ncol==1:
-            aa=[ii[0] for ii in aa]
-        if ret_type=='str':
-            if len(aa)==1:
-                return aa[0]
-            else:
-                return '; '.join(aa)
-        else:
-            return aa
 
     #------------------Get file meta data------------------
     fields=['id','citationkey','title','issue','pages',\
@@ -367,7 +375,7 @@ def getFolders(db):
     df=dict([(str(ii[0]), (ii[1], str(ii[2]))) for ii in data])
 
     # add Default
-    df['0']=('Default', '-1')
+    #df['0']=('Default', '-1')
 
     return df
 
@@ -642,6 +650,28 @@ def getFolderDocList(db,folderid,verbose=True):
 
 
 
+def saveFoldersToDatabase(db,folder_dict,lib_folder):
+
+    cout=db.cursor()
+
+    for idii,vv in folder_dict.items():
+        idii=int(idii)
+        nameii,pidii=vv
+        pathii=os.path.join(lib_folder,nameii)
+        pathii=os.path.abspath(pathii)
+
+        print('# <saveFoldersToDatabase>: update folder id', idii,
+                'name',nameii, 'parentid', pidii, 'path',pathii)
+
+        query='''INSERT OR REPLACE INTO Folders (id, name, parentId, path) \
+                 VALUES (?,?,?,?)'''
+
+        cout.execute(query, (idii, nameii, pidii, pathii))
+
+    db.commit()
+
+    return 0
+
 
 def createNewDatabase(file_path,lib_folder):
 
@@ -658,7 +688,6 @@ def createNewDatabase(file_path,lib_folder):
     #--------------Create documents table--------------
     query='''CREATE TABLE IF NOT EXISTS Documents (
     id INTEGER PRIMARY KEY,
-    uuid TEXT NOT NULL UNIQUE,
     %s)'''
     columns=[]
     for kii in DOC_ATTRS:
@@ -676,7 +705,6 @@ def createNewDatabase(file_path,lib_folder):
 
     #------------Create DocumentTags table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentTags (
-    id INTEGER PRIMARY KEY,
     docid INT,
     tag TEXT)'''
 
@@ -685,7 +713,6 @@ def createNewDatabase(file_path,lib_folder):
 
     #------------Create DocumentNotes table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentNotes (
-    id INTEGER PRIMARY KEY,
     docid INT,
     note TEXT,
     modifiedTime TEXT,
@@ -697,7 +724,6 @@ def createNewDatabase(file_path,lib_folder):
     
     #----------Create DocumentKeywords table----------
     query='''CREATE TABLE IF NOT EXISTS DocumentKeywords (
-    id INTEGER PRIMARY KEY,
     docid INT,
     text TEXT)'''
 
@@ -706,7 +732,6 @@ def createNewDatabase(file_path,lib_folder):
 
     #-----------Create DocumentFolders table-----------
     query='''CREATE TABLE IF NOT EXISTS DocumentFolders (
-    id INTEGER PRIMARY KEY,
     docid INT,
     folderid INT
     )'''
@@ -716,7 +741,7 @@ def createNewDatabase(file_path,lib_folder):
 
     #---------------Create Folders table---------------
     query='''CREATE TABLE IF NOT EXISTS Folders (
-    id INTEGER,
+    id INTEGER PRIMARY KEY,
     name TEXT,
     parentId INT,
     path TEXT,
@@ -728,7 +753,6 @@ def createNewDatabase(file_path,lib_folder):
 
     #--------Create DocumentContributors table--------
     query='''CREATE TABLE IF NOT EXISTS DocumentContributors (
-    id INTEGER PRIMARY KEY,
     docid INT,
     contribution TEXT,
     firstNames TEXT,
@@ -740,7 +764,6 @@ def createNewDatabase(file_path,lib_folder):
 
     #------------Create DocumentFiles table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentFiles (
-    id INTEGER PRIMARY KEY,
     docid INT,
     abspath TEXT
     )'''
@@ -750,7 +773,6 @@ def createNewDatabase(file_path,lib_folder):
 
     #------------Create DocumentUrls table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentUrls (
-    id INTEGER PRIMARY KEY,
     docid INT,
     url TEXT
     )'''
@@ -763,28 +785,248 @@ def createNewDatabase(file_path,lib_folder):
     VALUES (?,?,?,?)'''
 
     cout.execute(query, (0, 'Default', -1, os.path.join(lib_folder,'Default')))
+    dbout.commit()
+
+    #-----------------Add sample file-----------------
+    fname='./sample_bib.bib'
+    bib_entries=bibparse.readBibFile(fname)
+
+    print('# <createNewDatabase>: sample bib file.')
+    print(bib_entries)
+    print(type(bib_entries[0]))
+
+    doc=bib_entries[0]
+    doc['folders_l']=[(0,'Default')]
+    doc['files_l']=['./sample_pdf.pdf',]
+
+
+    metaDictToDatabase(dbout,1,bib_entries[0],lib_folder)
 
     return dbout
 
 
-def metaDictToDatabase(db,meta_dict,lib_folder):
+def metaDictToDatabase(db,docid,meta_dict,lib_folder):
+
+    logger=logging.getLogger('default_logger')
+
+    query='''SELECT DISTINCT id
+    FROM Documents
+    '''
+    docids=db.execute(query).fetchall()
+    docids=[ii[0] for ii in docids]
+
+    if docid in docids:
+        print('# <metaDictToDatabase>: docid %s in database. Updating...' %docid)
+        logger.info('docid %s in database. Updating...' %docid)
+
+        rec=updateToDatabase(db,docid,meta_dict,lib_folder,logger)
+    else:
+        print('# <metaDictToDatabase>: docid %s not in database. Inserting...' %docid)
+        logger.info('docid %s not in database. Inserting...' %docid)
+
+        rec=addToDatabase(db,docid,meta_dict,lib_folder,logger)
+
+    print('# <metaDictToDatabase>: rec=%s' %rec)
+
+    return rec
+
+
+def addToDatabase(db,docid,meta_dict,lib_folder,logger):
 
     cout=db.cursor()
 
-    #----------------Copy folders table----------------
-    query='''SELECT id, name, parentId
-    FROM Folders
-    '''
-
-    ret=cout.execute(query).fetchall()
-    #max_folderid=
-
     folders=meta_dict['folders_l']
 
+    print('# <addToDatabase>: Add doc to database. docid=%s' %docid)
+    logger.info('Add doc to database. docid=%s' %docid)
+
+    print('# <addToDatabase>: folders of doc:', folders)
+
+    #--------------Update Documents table--------------
+    key_list=[]
+    value_list=[]
+
+    for kk,vv in meta_dict.items():
+        print('# <addToDatabase>: kk=',kk,'vv=',vv)
+
+        if kk in DOC_ATTRS:
+            key_list.append(kk)
+            value_list.append(vv)
+
+    #uuidstr=str(uuid.uuid4())
+    query='''INSERT OR IGNORE INTO Documents (id, %s) VALUES (%s)''' \
+            %(', '.join(key_list), ','.join(['?',]*(1+len(key_list))))
+
+    print('# <addToDatabase>: query:')
+
+    cout.execute(query,[docid,]+value_list)
+    db.commit()
+
+    #------------------Update authors------------------
+    authors=list(zip(meta_dict['firstNames_l'], meta_dict['lastName_l']))
+    print('# <addToDatabase>: authors:', authors)
+
+    query='''INSERT OR IGNORE INTO DocumentContributors (docid, contribution, \
+            firstNames, lastName) VALUES (?,?,?,?)'''
+
+    for ii,nameii in enumerate(authors):
+        fii,lii=nameii
+
+        # TODO: distinguish DocumentAuthor from Editor
+        cout.execute(query,[docid,'DocumentAuthor',fii,lii])
+    db.commit()
+
+    #-------------------Update files-------------------
+    files=meta_dict['files_l']
+    if len(files)>0:
+        query='''INSERT OR IGNORE INTO DocumentFiles (docid, abspath)
+        VALUES (?,?)'''
+
+        for fii in files:
+            absii=os.path.expanduser(fii)
+            absii=os.path.abspath(absii)
+            print('# <addToDatabase>: file:',fii,'abspath',absii)
+
+            cout.execute(query,(docid,absii))
+        db.commit()
+
+
+    #------------------Update folder------------------
+    query='''INSERT OR IGNORE INTO DocumentFolders (docid, folderid)
+    VALUES (?,?)'''
+
     for fii in folders:
+        cout.execute(query,(docid,fii[0]))
+    db.commit()
 
-        #--------------create folder--------------
-        query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
-        VALUES (?,?,?,?)'''
+    #-----------------Update keywords-----------------
+    keywords=meta_dict['keywords_l']
+    if len(keywords)>0:
 
-        cout.execute(query, (0, 'Default', -1, os.path.join(lib_folder,'Default')))
+        query='''INSERT OR IGNORE INTO DocumentKeywords (docid, text)
+        VALUES (?,?)'''
+
+        for kii in keywords:
+            cout.execute(query,(docid,kii))
+        db.commit()
+
+    #-------------------Update tags-------------------
+    urls=meta_dict['urls_l']
+    if len(keywords)>0:
+
+        query='''INSERT OR IGNORE INTO DocumentUrls (docid, url)
+        VALUES (?,?)'''
+
+        for kii in urls:
+            cout.execute(query,(docid,kii))
+        db.commit()
+
+    print('# <addToDatabase>: Finished adding doc to database.')
+    logger.info('Finished adding doc to database.')
+
+    return 0
+
+
+def updateToDatabase(db,docid,meta_dict,lib_folder,logger):
+    
+    cout=db.cursor()
+
+    folders=meta_dict['folders_l']
+    print('# <updateToDatabase>: folders:', folders)
+
+    #-----------------Get old folders-----------------
+    query_folder=\
+    '''
+    SELECT Folders.id, Folders.name
+    FROM Folders
+    LEFT JOIN DocumentFolders ON DocumentFolders.folderid=Folders.id
+    WHERE (DocumentFolders.docid=?)
+    '''
+
+    old_folders=fetchField(db,query_folder,(docid,),2,'list')
+    #union=set(folders+old_folders)
+    del_folders=list(set(old_folders).difference(folders))
+    new_folders=list(set(folders).difference(old_folders))
+
+    print('# <updateToDatabase>: old_folders:',old_folders,'del_folders',del_folders,\
+            'new_folders',new_folders)
+
+    for fii in del_folders:
+
+        query='''DELETE FROM DocumentFolders
+        WHERE (DocumentFolders.docid=? AND DocumentFolders.folderid=?)
+        '''
+        cout.execute(query, (docid, int(fii[0])))
+
+    for fii in new_folders:
+
+        query='''INSERT OR IGNORE INTO DocumentFolders (docid, folderid)
+        VALUES (?,?)'''
+
+        cout.execute(query, (docid, int(fii[0])))
+
+    #--------------Update Documents table--------------
+    key_list=[]
+    value_list=[]
+
+    for kk,vv in meta_dict.items():
+        print('# <updateToDatabase>: kk=',kk,'vv=',vv)
+
+        if kk in DOC_ATTRS:
+            key_list.append(kk)
+            value_list.append(vv)
+
+    query='''REPLACE INTO Documents (id, %s) VALUES (%s)''' \
+            %(', '.join(key_list), ','.join(['?',]*(1+len(key_list))))
+
+    print('docid=',docid)
+    print('# <updateToDatabase>: query:')
+    print(query)
+
+    cout.execute(query,[docid,]+value_list)
+    db.commit()
+
+    #-----------------Get old authors-----------------
+    query_firstnames=\
+    '''
+    SELECT DocumentContributors.firstNames
+    FROM DocumentContributors
+    WHERE (DocumentContributors.docid=?)
+    '''
+
+    query_lastnames=\
+    '''
+    SELECT DocumentContributors.lastName
+    FROM DocumentContributors
+    WHERE (DocumentContributors.docid=?)
+    '''
+
+    old_firstnames=fetchField(db,query_firstnames,(docid,),1,'list')
+    old_lastnames=fetchField(db,query_lastnames,(docid,),1,'list')
+
+    if old_firstnames!=meta_dict['firstNames_l'] or old_lastnames!=\
+            meta_dict['lastName_l']:
+
+        #----------------Remove old authors----------------
+        query='''DELETE FROM DocumentContributors
+        WHERE (DocumentContributors.docid=?)
+        '''
+        print('# <updateToDatabase>: delete old authors query:', query)
+
+        cout.execute(query, (docid,))
+
+        #------------------Update authors------------------
+        authors=list(zip(meta_dict['firstNames_l'], meta_dict['lastName_l']))
+        print('# <updateToDatabase>: authors:', authors)
+
+        query='''INSERT OR IGNORE INTO DocumentContributors (docid, contribution, \
+                firstNames, lastName) VALUES (?,?,?,?)'''
+
+        for ii,nameii in enumerate(authors):
+            fii,lii=nameii
+
+            # TODO: distinguish DocumentAuthor from Editor
+            cout.execute(query,[docid,'DocumentAuthor',fii,lii])
+        db.commit()
+
+    return 0

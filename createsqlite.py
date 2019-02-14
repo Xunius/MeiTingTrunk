@@ -18,7 +18,7 @@ else:
     from urllib import unquote
     from urlparse import urlparse
 
-FILE_OUT_NAME='new3.sqlite'
+FILE_OUT_NAME='new5.sqlite'
 FILE_IN_NAME='mendeley.sqlite'
 LIB_FOLDER='~/Papers2'
 FILE_FOLDER=os.path.join(LIB_FOLDER,'collections')
@@ -109,8 +109,7 @@ if __name__=='__main__':
 
     #--------------Create documents table--------------
     query='''CREATE TABLE IF NOT EXISTS Documents (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    uuid TEXT NOT NULL UNIQUE,
+    id INTEGER PRIMARY KEY,
     %s)'''
     columns=[]
     for kii in DOC_ATTRS:
@@ -122,13 +121,12 @@ if __name__=='__main__':
     columns=', '.join(columns)
     query=query %columns
 
-    print 'Creating empty table...'
+    print('Creating empty table...')
     cout.execute(query)
     dbout.commit()
 
     #------------Create DocumentTags table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentTags (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
     docid INT,
     tag TEXT)'''
 
@@ -137,7 +135,6 @@ if __name__=='__main__':
 
     #------------Create DocumentNotes table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentNotes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
     docid INT,
     note TEXT,
     modifiedTime TEXT,
@@ -149,7 +146,6 @@ if __name__=='__main__':
     
     #----------Create DocumentKeywords table----------
     query='''CREATE TABLE IF NOT EXISTS DocumentKeywords (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
     docid INT,
     text TEXT)'''
 
@@ -158,7 +154,6 @@ if __name__=='__main__':
 
     #-----------Create DocumentFolders table-----------
     query='''CREATE TABLE IF NOT EXISTS DocumentFolders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
     docid INT,
     folderid INT
     )'''
@@ -168,7 +163,7 @@ if __name__=='__main__':
 
     #---------------Create Folders table---------------
     query='''CREATE TABLE IF NOT EXISTS Folders (
-    id INTEGER,
+    id INTEGER PRIMARY KEY,
     name TEXT,
     parentId INT,
     path TEXT,
@@ -181,7 +176,6 @@ if __name__=='__main__':
 
     #--------Create DocumentContributors table--------
     query='''CREATE TABLE IF NOT EXISTS DocumentContributors (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
     docid INT,
     contribution TEXT,
     firstNames TEXT,
@@ -193,7 +187,6 @@ if __name__=='__main__':
 
     #------------Create DocumentFiles table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentFiles (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
     docid INT,
     abspath TEXT
     )'''
@@ -203,7 +196,6 @@ if __name__=='__main__':
 
     #------------Create DocumentUrls table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentUrls (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
     docid INT,
     url TEXT
     )'''
@@ -255,7 +247,7 @@ if __name__=='__main__':
     for ii,docii in enumerate(docids):
 
         ii+=1
-        print '\n# <createsqlite>: Copying doc ', ii
+        print('\n# <createsqlite>: Copying doc ', ii)
         
         meta_query='''SELECT %s from Documents
         WHERE Documents.id = ?''' %', '.join(DOC_ATTRS)
@@ -285,12 +277,12 @@ if __name__=='__main__':
         ['contribution', 'firstNames', 'Lastname'], docii)
 
         # insert to table
-        uuidstr=str(uuid.uuid4())
+        #uuidstr=str(uuid.uuid4())
         query='''INSERT INTO Documents (
-        uuid, %s )
-        VALUES (%s)''' %(', '.join(DOC_ATTRS), ', '.join(['?']*(len(DOC_ATTRS)+1)))
+        %s )
+        VALUES (%s)''' %(', '.join(DOC_ATTRS), ', '.join(['?']*len(DOC_ATTRS)))
 
-        cout.execute(query, (uuidstr,)+metaii)
+        cout.execute(query, metaii)
 
         for tagii in tags:
             query='''INSERT INTO DocumentTags (docid, tag)

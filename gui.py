@@ -21,7 +21,6 @@ import _MainFrameSlots
 
 __version__='v0.1'
 
-FILE_IN='new4.sqlite'
 OMIT_KEYS=[
         'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
         'lastName_l', 'pend_delete', 'folders_l', 'type', 'id'
@@ -84,6 +83,7 @@ LOG_CONFIG={
 # PDF preview
 # add doc strings!!
 # make long actions threaded
+# need to deal with folder changes in sqlite
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -192,6 +192,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
         #-----------------Connect signals-----------------
+        create_database_action.triggered.connect(self.createDatabaseTriggered)
         open_database_action.triggered.connect(self.openDatabaseTriggered)
         close_database_action.triggered.connect(self.closeDatabaseTriggered)
         preference_action.triggered.connect(self.preferenceTriggered)
@@ -218,6 +219,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if fname:
             print('createDatabaseTriggered: database file:',fname)
+
+            storage_folder=self.settings.value('saving/storage_folder')
+            db=sqlitedb.createNewDatabase(fname,storage_folder)
 
         return
 
@@ -715,14 +719,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
 if __name__=='__main__':
 
-    '''
-    abpath_in=os.path.abspath(FILE_IN)
-    try:
-        dbin = sqlite3.connect(abpath_in)
-        print('Connected to database:')
-    except:
-        print('Failed to connect to database:')
-    '''
 
     logging.config.dictConfig(LOG_CONFIG)
     app=QtWidgets.QApplication(sys.argv)

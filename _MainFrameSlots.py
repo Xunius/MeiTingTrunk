@@ -155,6 +155,13 @@ class MainFrameSlots:
             self.loadDocTable(docids=self._current_docids,
                     sel_row=self.doc_table.currentIndex().row())
 
+
+        self.saveToDatabase(docid)
+
+        return
+
+
+
     def updateNotes(self,docid,note_text):
         if docid is None:
             return
@@ -162,6 +169,21 @@ class MainFrameSlots:
         self.meta_dict[docid]['notes']=note_text
         print('# <updateNotes>: New notes for docid=%s: %s' %(docid,note_text))
         self.logger.info('New notes for docid=%s: %s' %(docid,note_text))
+
+        return
+
+
+    def saveToDatabase(self,docid):
+
+        print('# <saveToDatabase>: Saving folders to database.')
+        self.logger.info('Saving folders to database')
+
+        #----------------Save folders first----------------
+        #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
+                #self.settings.value('saving/storage_folder'))
+
+        sqlitedb.metaDictToDatabase(self.db,docid,self.meta_dict[docid],
+                self.settings.value('saving/storage_folder'))
 
         return
 
@@ -381,6 +403,9 @@ class MainFrameSlots:
         self.sortFolders()
         self.libtree.setCurrentItem(item)
 
+        sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
+                self.settings.value('saving/storage_folder'))
+
         return
 
     def sortFolders(self):
@@ -406,16 +431,19 @@ class MainFrameSlots:
         folder_name=self.folder_dict[move_folder_id][0]
 
         print('# <changeFolderParent>: folder_dict[id] before change=%s'\
-                %self.folder_dict[move_folder_id])
+                %str(self.folder_dict[move_folder_id]))
         self.logger.info('folder_dict[id] before change=%s'\
-                %self.folder_dict[move_folder_id])
+                %str(self.folder_dict[move_folder_id]))
 
         self.folder_dict[move_folder_id]=(folder_name, new_parent_id)
 
         print('# <changeFolderParent>: folder_dict[id] after change=%s'\
-                %self.folder_dict[move_folder_id])
+                %str(self.folder_dict[move_folder_id]))
         self.logger.info('folder_dict[id] after change=%s'\
-                %self.folder_dict[move_folder_id])
+                %str(self.folder_dict[move_folder_id]))
+
+        sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
+                self.settings.value('saving/storage_folder'))
         return
 
 
@@ -555,9 +583,8 @@ class MainFrameSlots:
         if not ask or (ask and choice==QtWidgets.QMessageBox.Yes):
 
             self.libtree._trashed_folder_ids.append(item.data(1,0))
-            print('trashFolder: add folder id to trashed_folders',self.libtree._trashed_folder_ids)
-            print('# <trashFolder>: Add folder id to _trashed_folders. _trashed_folders=%s' %self.libtree._trashed_folders)
-            self.logger.info('Add folder id to _trashed_folders. _trashed_folders=%s' %self.libtree._trashed_folders)
+            print('# <trashFolder>: Add folder id to _trashed_folders. _trashed_folders=%s' %self.libtree._trashed_folder_ids)
+            self.logger.info('Add folder id to _trashed_folders. _trashed_folders=%s' %self.libtree._trashed_folder_ids)
 
             root=self.libtree.invisibleRootItem()
             (item.parent() or root).removeChild(item)
@@ -567,6 +594,8 @@ class MainFrameSlots:
             else:
                 newparent.addChild(item)
 
+            folderid=item.data(1,0)
+            self.changeFolderParent(folderid,'-3')
             self.postTrashFolder(item)
 
         return
@@ -577,6 +606,8 @@ class MainFrameSlots:
     def postTrashFolder(self,item):
 
         folderid=item.data(1,0)
+
+
         delfolderids,deldocids=sqlitedb.walkFolderTree(self.folder_dict,
                 self.folder_data,folderid)
 
@@ -878,6 +909,9 @@ class MainFrameSlots:
         # check orphan docs
         for idii in docids:
             self.folder_data[folderid].remove(idii)
+            print('####',self.meta_dict[idii]['folders_l'])
+            if (int(folderid),foldername) in self.meta_dict[idii]['folders_l']:
+                self.meta_dict[idii]['folders_l'].remove((int(folderid),foldername))
 
         orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,docids,
                 self.libtree._trashed_folder_ids)

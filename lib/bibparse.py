@@ -70,7 +70,8 @@ def customizations(record):
     record = bibcus.page_double_hyphen(record)
     #record = bibcus.doi(record)
     record = splitFields(record, 'folder')
-    record = splitFields(record, 'url')
+    record = splitFields(record, 'url', '\n')
+    record = splitFields(record, 'file', ',|;|\n')
     record = getPublication(record)
     return record
 
@@ -124,6 +125,9 @@ def readBibFile(bibfile):
         # be in a native bib entry
         if 'folders_l' in eii:
             del eii['folders_l']
+
+        # WARNING TEMP solution
+        #eii['urls_l']=[eii['urls_l'],]
 
         docii=sqlitedb.DocMeta()
         docii.update(eii)

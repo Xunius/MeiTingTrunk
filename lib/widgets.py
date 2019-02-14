@@ -13,6 +13,7 @@ from .tools import getHLine, getXExpandYMinSizePolicy, getXMinYExpandSizePolicy,
     parseAuthors, getXExpandYExpandSizePolicy
 
 
+LOGGER=logging.getLogger('default_logger')
 
 
 class TreeWidgetDelegate(QtWidgets.QItemDelegate):
@@ -47,7 +48,7 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
         print('# <startDrag>: move_item.data(0,0)=%s, move_item.data(1,0)=%s'\
                 %(move_item.data(0,0), move_item.data(1,0)))
-        self.logger.info('move_item.data(0,0)=%s, move_item.data(1,0)=%s'\
+        LOGGER.info('move_item.data(0,0)=%s, move_item.data(1,0)=%s'\
                 %(move_item.data(0,0), move_item.data(1,0)))
 
         self._move_item=move_item
@@ -66,11 +67,11 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
         print('# <dropEvent>: parentidx.row()=%s. newparent=.data(0,0=%s.'\
                 %(parentidx.row(), newparent.data(0,0)))
-        self.logger.info('parentidx.row()=%s. newparent=.data(0,0=%s.'\
+        LOGGER.info('parentidx.row()=%s. newparent=.data(0,0=%s.'\
                 %(parentidx.row(), newparent.data(0,0)))
 
         print('# <dropEvent>: dropIndicatorPosition=%s' %indicatorpos)
-        self.logger.info('dropIndicatorPosition=%s' %indicatorpos)
+        LOGGER.info('dropIndicatorPosition=%s' %indicatorpos)
 
         # on item
         if indicatorpos==0:
@@ -80,7 +81,7 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
             children_names=[ii.data(0,0) for ii in children]
 
             print('# <dropEvent>: Got children=%s' %children_names)
-            self.logger.info('Got children=%s' %children_names)
+            LOGGER.info('Got children=%s' %children_names)
 
             if newparent.data(0,0) in ['All', 'Needs Review']:
                 event.ignore()
@@ -90,7 +91,7 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
             elif newparent.data(1,0) in ['-3']+self._trashed_folder_ids:
 
                 print('# <dropEvent>: Trashing folder.')
-                self.logger.info('Trashing folder.')
+                LOGGER.info('Trashing folder.')
 
                 self.folder_del_signal.emit(self._move_item,newparent,True)
                 return 
@@ -99,7 +100,7 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
             if self._move_item.data(0,0) in children_names:
 
                 print('# <dropEvent>: Name conflict.')
-                self.logger.info('Name conflict.')
+                LOGGER.info('Name conflict.')
 
                 event.ignore()
                 msg=QtWidgets.QMessageBox()
@@ -552,7 +553,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
     def __init__(self,font_dict,parent=None):
         super(MetaTabScroll,self).__init__(parent)
 
-        self.logger=logging.getLogger('default_logger')
+        LOGGER=logging.getLogger('default_logger')
         self.font_dict=font_dict
         self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
         self.label_font=QFont('Serif',12,QFont.Bold)
@@ -614,7 +615,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.file_insert_idx=self.v_layout.count()
 
         print('# <MetaTabScroll>: NO of widgets in v_layout=%d' %self.v_layout.count())
-        self.logger.info('NO of widgets in v_layout=%d' %self.v_layout.count())
+        LOGGER.info('NO of widgets in v_layout=%d' %self.v_layout.count())
 
         #---------------Add add file button---------------
         add_file_button=QtWidgets.QPushButton()
@@ -658,7 +659,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
     def fieldEdited(self,field):
 
         print('# <fieldEdited>: Changed field=%s' %field)
-        self.logger.info('Changed field=%s' %field)
+        LOGGER.info('Changed field=%s' %field)
 
         print(self._meta_dict)
         self.meta_edited.emit([field,])
@@ -761,7 +762,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         h_layout.addWidget(button)
 
         print('# <createFileField>: Insert at %s' %self.file_insert_idx)
-        self.logger.info('Insert at %s' %self)
+        LOGGER.info('Insert at %s' %self)
 
         self.v_layout.insertLayout(self.file_insert_idx,h_layout)
         self.file_insert_idx+=1
@@ -784,7 +785,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
                 print('# <delFile>: Del %s. Current file_insert_idx=%s'\
                         %(leii, self.file_insert_idx))
-                self.logger.info('Del %s. Current file_insert_idx=%s'\
+                LOGGER.info('Del %s. Current file_insert_idx=%s'\
                         %(leii, self.file_insert_idx))
 
                 delFile(leii)
@@ -803,7 +804,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         if fname:
 
             print('# <addFileButtonClicked>: New file=%s' %fname)
-            self.logger.info('New file=%s' %fname)
+            LOGGER.info('New file=%s' %fname)
 
             self.createFileField(fname)
             self.fieldEdited()
@@ -814,7 +815,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.fold_dict[field]=isfold
 
         print('# <foldChanged>: Field=%s. isfold=%s' %(field, isfold))
-        self.logger.info('Field=%s. isfold=%s' %(field, isfold))
+        LOGGER.info('Field=%s. isfold=%s' %(field, isfold))
 
         return
 

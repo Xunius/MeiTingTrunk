@@ -118,11 +118,6 @@ class MainFrameLoadData:
         needsreview_icon=style.standardIcon(QtWidgets.QStyle.SP_MessageBoxInformation)
         trash_icon=style.standardIcon(QtWidgets.QStyle.SP_TrashIcon)
 
-        #-------------Get all level 1 folders-------------
-        folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if\
-                vv[1]=='-1']
-        folders1.sort()
-
         #-------------Create preserved folders-------------
         self.all_folder=QtWidgets.QTreeWidgetItem(['All','-1'])
         self.all_folder.setIcon(0,diropen_icon)
@@ -138,6 +133,13 @@ class MainFrameLoadData:
 
         self.sys_folders=[self.all_folder,self.needsreview_folder,self.trash_folder]
 
+        #-------------Get all level 1 folders-------------
+        folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if\
+                vv[1] in ['-1',]]
+        print('# <loadLibTree>: folders1',folders1)
+        #folders1.append(('Trash', '-3'))
+        folders1.sort()
+
         #------------------Add separator------------------
         separator=QtWidgets.QTreeWidgetItem([' ',None])
         separator.setFlags(Qt.NoItemFlags)
@@ -148,6 +150,17 @@ class MainFrameLoadData:
         #------------Add folders from database------------
         for fnameii,idii in folders1:
             addFolder(self.libtree,idii,self.folder_dict)
+
+        #---------------Add folders in trash---------------
+        self.libtree._trashed_folder_ids=[kk for kk,vv in self.folder_dict.items()\
+                if vv[1]=='-3']
+        trashed_folders=[(self.folder_dict[kk][0], kk) for kk in \
+                self.libtree._trashed_folder_ids]
+        print('# <loadLibTree>: trashed_folder_ids',self.libtree._trashed_folder_ids)
+        print('# <loadLibTree>: trashed_folders',trashed_folders)
+
+        for fnameii,idii in trashed_folders:
+            addFolder(self.trash_folder,idii,self.folder_dict)
 
         self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
         self.libtree.itemDoubleClicked.connect(self.renameFolder)
