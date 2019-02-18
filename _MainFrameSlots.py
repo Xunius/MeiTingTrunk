@@ -515,7 +515,7 @@ class MainFrameSlots:
             self.add_button.setDisabled(True)
             self.create_subfolder_action.setDisabled(True)
             self.create_folder_action.setEnabled(True)
-            #self.add_folder_button.setDisabled(True)
+            self.add_folder_button.setEnabled(True)
         elif item==self.needsreview_folder:
             self.add_button.setDisabled(True)
             self.add_folder_button.setDisabled(True)
@@ -816,12 +816,12 @@ class MainFrameSlots:
         fav=self._tabledata[row][1].isChecked()
         read=self._tabledata[row][2].isChecked()
 
-        self.meta_dict[docid]['favourite']=fav
-        self.meta_dict[docid]['read']=read
+        self.meta_dict[docid]['favourite']='true' if fav else 'false'
+        self.meta_dict[docid]['read']='true' if read else 'false'
 
-        print('# <modelDataChanged>: Changed row=%s. Changed docid=%s. meta_dict["favourite"]=%s. meta_dict["read"]=%s' \
+        print('# <modelDataChanged>: Changed row=%s. Changed docid=%s. meta_dict["favourite"]=%s. meta_dict["read"]=%s. confirmed=%s' \
                 %(row, docid, self.meta_dict[docid]['favourite'],\
-                self.meta_dict[docid]['read']))
+                self.meta_dict[docid]['read'], self.meta_dict[docid]['confirmed']))
         self.logger.info('Changed row=%s. Changed docid=%s. meta_dict["favourite"]=%s. meta_dict["read"]=%s' \
                 %(row, docid, self.meta_dict[docid]['favourite'],\
                 self.meta_dict[docid]['read']))
@@ -880,6 +880,13 @@ class MainFrameSlots:
                 for mjj in mii:
                     mjj.setBackground(0, hi_color)
 
+        #------------Show confirm review frame------------
+        if self.meta_dict[docid]['confirmed'] in [None, 'false']:
+            self.confirm_review_frame.setVisible(True)
+        else:
+            self.confirm_review_frame.setVisible(False)
+        
+
         # re-connect libtree item change signal
         #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
 
@@ -891,6 +898,7 @@ class MainFrameSlots:
         open_action=menu.addAction('Open File Externally')
         del_from_folder_action=menu.addAction('Delete From Current Folder')
         del_action=menu.addAction('Delete From Library')
+        mark_needsreview_action=menu.addAction('Mark document as Needs Review')
         menu.addSeparator()
         #export_menu=menu.addMenu('Export Citation')
         export_bib_action=menu.addAction('Export bib to File')
@@ -942,6 +950,9 @@ class MainFrameSlots:
 
                 elif action==del_action:
                     self.delDoc(docids)
+
+                elif action==mark_needsreview_action:
+                    self.markDocNeedsReview(docids)
 
                 elif action==export_bib_action:
                     self.exportToBib(docids)
@@ -1030,6 +1041,23 @@ class MainFrameSlots:
 
 
         return
+
+    
+    def markDocNeedsReview(self,docids):
+        print('# <markDocNeedsReview>: docids=%s' %docids)
+        self.logger.info('docids=%s' %docids)
+
+        for idii in docids:
+            self.meta_dict[idii]['confirmed']='false'
+            if idii not in self.folder_data['-2']:
+                self.folder_data['-2'].append(idii)
+
+        row=self.doc_table.currentIndex().row()
+        self.loadDocTable(folder=self._current_folder,sortidx=4,
+                sel_row=row)
+
+        return
+
 
     def exportToBib(self,docids):
 
@@ -1230,6 +1258,25 @@ class MainFrameSlots:
             tii.setReadOnly(False)
 
         return
+
+    def confirmReviewButtonClicked(self):
+        docid=self._current_doc
+
+        print('# <confirmReviewButtonClicked>: Before: self.meta_dict[docid]["confirmed"]', self.meta_dict[docid]['confirmed'])
+
+        self.meta_dict[docid]['confirmed']='true'
+
+        print('# <confirmReviewButtonClicked>: After: self.meta_dict[docid]["confirmed"]', self.meta_dict[docid]['confirmed'])
+
+        self.confirm_review_frame.setVisible(False)
+        idx=self.doc_table.currentIndex()
+        self.doc_table.model().dataChanged.emit(idx,idx)
+
+        # del doc from needs review folder
+        if docid in self.folder_data['-2']:
+            self.folder_data['-2'].remove(docid)
+
+        self.loadDocTable(folder=self._current_folder,sortidx=4,sel_row=idx.row())
 
 
 

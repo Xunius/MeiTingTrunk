@@ -406,7 +406,7 @@ def fetchMetaData(meta_dict,key,docids,unique,sort):
 def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
 
     results=[]
-    if current_folder=='0':
+    if current_folder=='-1':
         docids=meta_dict.keys()
     else:
         docids=folder_data[current_folder]

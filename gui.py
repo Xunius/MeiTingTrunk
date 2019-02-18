@@ -84,7 +84,8 @@ LOG_CONFIG={
 # add doc strings!!
 # make long actions threaded
 # [y] need to deal with folder changes in sqlite
-# add doc drag drop to folders
+# [y] add doc drag drop to folders
+# change needs review states.
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -297,30 +298,9 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
     def __init__(self,settings):
         super(MainFrame,self).__init__()
 
-        #self.db=db
-        #self.meta_dict=meta_dict
-        #self.folder_data=folder_data
-        #self.folder_dict=folder_dict
-        #if isinstance(self.folder_dict,dict):
-            #self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
         self.settings=settings
         self.logger=logging.getLogger('default_logger')
-
-        # get font configs
-        '''
-        self.font_dict={
-            'meta_title': self.settings.value('display/fonts/meta_title',QFont),
-            'meta_authors': self.settings.value('display/fonts/meta_authors',QFont),
-            'meta_keywords': self.settings.value('display/fonts/meta_keywords',QFont)
-            }
-        '''
-
-
         self.initUI()
-
-        #--------------------Load data--------------------
-        #self.loadLibTree()
-
 
     def initUI(self):
 
@@ -414,9 +394,20 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         frame.setLayout(h_layout)
         h_split.addWidget(frame)
 
+        #------------------Add right pane------------------
+        fr1=QtWidgets.QFrame()
+        v_la2=QtWidgets.QVBoxLayout()
+        fr1.setLayout(v_la2)
+
+        #-------------Add confirm review frame-------------
+        self.confirm_review_frame=self.createConfirmReviewFrame()
+        v_la2.addWidget(self.confirm_review_frame)
+
         #---------------------Add tabs---------------------
         self.tabs=self.createTabs()
-        h_split.addWidget(self.tabs)
+        v_la2.addWidget(self.tabs)
+
+        h_split.addWidget(fr1)
 
         #------------------Add status bar------------------
         self.status_bar=QtWidgets.QStatusBar()
@@ -579,6 +570,27 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
         frame.setLayout(h_la)
 
+        # Start up as hidden
+        frame.setVisible(False)
+
+        return frame
+
+    def createConfirmReviewFrame(self):
+
+        frame=QtWidgets.QFrame()
+        frame.setStyleSheet('background: rgb(235,225,190)')
+        h_la=QtWidgets.QHBoxLayout()
+
+        # confirm button
+        self.confirm_review_button=QtWidgets.QToolButton(self)
+        self.confirm_review_button.setText('Confirm')
+        self.confirm_review_button.clicked.connect(self.confirmReviewButtonClicked)
+
+        label=QtWidgets.QLabel('Meta data is correct?')
+        h_la.addWidget(label)
+        h_la.addWidget(self.confirm_review_button)
+
+        frame.setLayout(h_la)
         # Start up as hidden
         frame.setVisible(False)
 
