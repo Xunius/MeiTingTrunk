@@ -4,7 +4,7 @@ import logging.config
 #import operator
 import sqlite3
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt, QVariant, QSettings
+from PyQt5.QtCore import Qt, QVariant, QSettings, QTimer
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics,\
         QCursor
 from lib import sqlitedb
@@ -18,6 +18,8 @@ from lib.widgets import TableModel, MyHeaderView, AdjustableTextEdit,\
 
 import _MainFrameLoadData
 import _MainFrameSlots
+
+import resource
 
 __version__='v0.1'
 
@@ -54,14 +56,16 @@ LOG_CONFIG={
 
 
 # TODO:
-# show docs in sub folders?
+# [NO] show docs in sub folders?
 # [y] fold long fields in meta data tab?
 # [y] create bib texts when clicking into the bibtex tab and changing doc
 # [y] add icons to folders
 # doc types, books, generic etc
-# insert images to note?
-# add add folder functionality
-# add add doc functionalities, by doi, bib, RIS
+# [NO] insert images to note?
+# [y] add add folder functionality
+# add add doc functionalities, by doi
+# [y] add add doc functionalities, by bib
+# add add doc functionalities, by RIS
 # import from Mendeley, zotero, Endnote?
 # autosave, auto backup
 # export to text (clipboard, styles), bibtex, ris.
@@ -74,7 +78,7 @@ LOG_CONFIG={
 # possible issue with local time with added time
 # [y] add logger
 # get all bib entries for multiple selected docs?
-# right click menus
+# [y] right click menus
 # option menu
 # RIS
 # import/export menu
@@ -85,7 +89,7 @@ LOG_CONFIG={
 # make long actions threaded
 # [y] need to deal with folder changes in sqlite
 # [y] add doc drag drop to folders
-# change needs review states.
+# [y] change needs review states.
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -756,5 +760,16 @@ if __name__=='__main__':
 
     logging.config.dictConfig(LOG_CONFIG)
     app=QtWidgets.QApplication(sys.argv)
+
+    splash_pic=QPixmap(':/logo.png')
+    print('# <__init__>: splash_pic', splash_pic)
+    splash=QtWidgets.QSplashScreen(splash_pic, Qt.WindowStaysOnTopHint)
+    splash.show()
+    splash.showMessage('Loading ...')
+
+    QTimer.singleShot(2000, splash.close)
+
+    app.processEvents()
+
     mainwindow=MainWindow()
     sys.exit(app.exec_())
