@@ -38,7 +38,8 @@ def prepareDocs(meta_dict,docids):
             entryii['title'],
             entryii['publication'],
             entryii['year'],
-            entryii['added']
+            entryii['added'],
+            entryii['confirmed']
             ]
 
         data.append(aii)

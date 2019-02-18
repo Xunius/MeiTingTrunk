@@ -116,6 +116,15 @@ class MainWindow(QtWidgets.QMainWindow):
                 QFont('Times', 11, QFont.StyleItalic))
             settings.setValue('display/fonts/statusbar',
                 QFont('Serif', 10)),
+            settings.setValue('display/fonts/doc_table',
+                QFont('Serif', 10)),
+            settings.setValue('display/fonts/bibtex',
+                QFont('Serif', 10)),
+            settings.setValue('display/fonts/notes',
+                QFont('Serif', 10)),
+            settings.setValue('display/fonts/scratch_pad',
+                QFont('Serif', 10)),
+
             settings.setValue('display/folder/highlight_color_br',
                     QBrush(QColor(200,200,255)))
             settings.setValue('export/bib/omit_fields', OMIT_KEYS)
@@ -298,11 +307,13 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         self.logger=logging.getLogger('default_logger')
 
         # get font configs
+        '''
         self.font_dict={
             'meta_title': self.settings.value('display/fonts/meta_title',QFont),
             'meta_authors': self.settings.value('display/fonts/meta_authors',QFont),
             'meta_keywords': self.settings.value('display/fonts/meta_keywords',QFont)
             }
+        '''
 
 
         self.initUI()
@@ -595,12 +606,14 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         tv.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
 
         header=['docid','favourite','read','has_file','author','title',
-                'journal','year','added']
-        tablemodel=TableModel(self,[],header)
+                'journal','year','added','confirmed']
+        tablemodel=TableModel(self,[],header,self.settings)
+        tablemodel.dataChanged.connect(self.modelDataChanged)
         tv.setModel(tablemodel)
         hh.setModel(tablemodel)
         hh.initresizeSections()
         tv.setColumnHidden(0,True)
+        tv.setColumnHidden(9,True)
 
         tv.selectionModel().currentChanged.connect(self.selDoc)
         tv.clicked.connect(self.docTableClicked)
@@ -634,7 +647,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         self.t_notes=self.createNoteTab()
         self.t_bib=self.createBiBTab()
         self.t_scratchpad=self.createScratchTab()
-        self.t_meta=MetaTabScroll(self.font_dict,self)
+        self.t_meta=MetaTabScroll(self.settings,self)
         #self.t_meta.meta_edited.connect(lambda: self.updateTabelData(
             #self._current_doc,self.t_meta._meta_dict))
         self.t_meta.meta_edited.connect(lambda field_list: self.updateTabelData(\
@@ -658,7 +671,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         #self.note_textedit=QtWidgets.QTextEdit(self)
         #self.note_textedit.setFont(self.font_dict['meta_keywords'])
         #self.note_textedit.setSizePolicy(getXExpandYExpandSizePolicy())
-        self.note_textedit=NoteTextEdit(self.font_dict['meta_keywords'])
+        #self.note_textedit=NoteTextEdit(self.font_dict['meta_keywords'])
+        self.note_textedit=NoteTextEdit(self.settings)
         self.note_textedit.note_edited_signal.connect(lambda: self.updateNotes(
             self._current_doc,self.note_textedit.toPlainText()))
 
@@ -677,7 +691,9 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         v_layout=QtWidgets.QVBoxLayout()
 
         self.scratchpad_textedit=QtWidgets.QTextEdit(self)
-        self.scratchpad_textedit.setFont(self.font_dict['meta_keywords'])
+        #self.scratchpad_textedit.setFont(self.font_dict['meta_keywords'])
+        self.scratchpad_textedit.setFont(self.settings.value(
+            '/display/fonts/scratch_pad',QFont))
         self.scratchpad_textedit.setSizePolicy(getXExpandYExpandSizePolicy())
 
         v_layout.addWidget(self.scratchpad_textedit)
@@ -710,7 +726,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
         self.bib_textedit=QtWidgets.QTextEdit(self)
         self.bib_textedit.setReadOnly(True)
-        self.bib_textedit.setFont(self.font_dict['meta_keywords'])
+        #self.bib_textedit.setFont(self.font_dict['meta_keywords'])
+        self.bib_textedit.setFont(self.settings.value('/display/fonts/bibtex',QFont))
         v_layout.addLayout(h_layout)
         v_layout.addWidget(self.bib_textedit)
         frame.setLayout(v_layout)

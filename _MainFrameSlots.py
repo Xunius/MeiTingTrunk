@@ -802,6 +802,32 @@ class MainFrameSlots:
 
         self.doc_table.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
+        return
+
+
+    def modelDataChanged(self,index1,index2):
+        assert index1==index2, 'only one doc row is changed'
+        # NOTE that the row is in general different from
+        # self.doc_table.currentIndex().row(), the former may not change on
+        # clicking the checkboxes
+        row=index1.row()
+
+        docid=self._tabledata[row][0]
+        fav=self._tabledata[row][1].isChecked()
+        read=self._tabledata[row][2].isChecked()
+
+        self.meta_dict[docid]['favourite']=fav
+        self.meta_dict[docid]['read']=read
+
+        print('# <modelDataChanged>: Changed row=%s. Changed docid=%s. meta_dict["favourite"]=%s. meta_dict["read"]=%s' \
+                %(row, docid, self.meta_dict[docid]['favourite'],\
+                self.meta_dict[docid]['read']))
+        self.logger.info('Changed row=%s. Changed docid=%s. meta_dict["favourite"]=%s. meta_dict["read"]=%s' \
+                %(row, docid, self.meta_dict[docid]['favourite'],\
+                self.meta_dict[docid]['read']))
+
+        return
+
 
     def selDoc(self,current,previous):
         '''Actions on selecting a document in doc table
@@ -856,6 +882,7 @@ class MainFrameSlots:
 
         # re-connect libtree item change signal
         #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
+
 
 
     def docTableMenu(self,pos):

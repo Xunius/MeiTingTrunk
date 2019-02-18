@@ -244,7 +244,7 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
 
 class TableModel(QAbstractTableModel):
-    def __init__(self, parent, datain, headerdata):
+    def __init__(self, parent, datain, headerdata, settings):
         QAbstractTableModel.__init__(self, parent)
 
         self.ncol=len(headerdata)
@@ -253,6 +253,7 @@ class TableModel(QAbstractTableModel):
         else:
             self.arraydata=datain
         self.headerdata=headerdata
+        self.settings=settings
 
         self.icon_section={
                 'has_file': QIcon(':/has_file.png')
@@ -278,6 +279,13 @@ class TableModel(QAbstractTableModel):
         if role == Qt.BackgroundRole:
             if index.row()%2==0:
                 return QBrush(QColor(230,230,249))
+        if role == Qt.FontRole:
+            font=self.settings.value('display/fonts/doc_table',QFont)
+            if self.arraydata[index.row()][9] in [None, 'false']:
+                font.setBold(True)
+            else:
+                font.setBold(False)
+            return font
         if role==Qt.DisplayRole:
             if index.column() in self.icon_sec_indices:
                 return
@@ -395,7 +403,8 @@ class MyHeaderView(QtWidgets.QHeaderView):
         super(MyHeaderView,self).__init__(Qt.Horizontal,parent)
 
         self.colSizes={'docid':0, 'favourite': 20, 'read': 20, 'has_file': 20,
-            'author': 200, 'title': 500, 'journal':100,'year':50,'added':50}
+            'author': 200, 'title': 500, 'journal':100,'year':50,'added':50,
+            'confirmed':0}
 
     def initresizeSections(self):
         model=self.model()
@@ -689,11 +698,16 @@ class FileLineEdit(QtWidgets.QLineEdit):
 class MetaTabScroll(QtWidgets.QScrollArea):
 
     meta_edited=pyqtSignal(list) # send field names
-    def __init__(self,font_dict,parent=None):
+    def __init__(self,settings,parent=None):
         super(MetaTabScroll,self).__init__(parent)
 
         LOGGER=logging.getLogger('default_logger')
-        self.font_dict=font_dict
+        self.settings=settings
+        self.font_dict={
+            'meta_title': self.settings.value('display/fonts/meta_title',QFont),
+            'meta_authors': self.settings.value('display/fonts/meta_authors',QFont),
+            'meta_keywords': self.settings.value('display/fonts/meta_keywords',QFont)
+            }
         self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
         self.label_font=QFont('Serif',12,QFont.Bold)
 
@@ -1076,11 +1090,13 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
 class NoteTextEdit(QtWidgets.QTextEdit):
 
     note_edited_signal=pyqtSignal()
-    def __init__(self,font,parent=None):
+    def __init__(self,settings,parent=None):
+
+        self.settings=settings
 
         super(NoteTextEdit,self).__init__(parent=parent)
 
-        self.setFont(font)
+        self.setFont(self.settings.value('display/fonts/notes',QFont))
         self.setSizePolicy(getXExpandYExpandSizePolicy())
 
 
