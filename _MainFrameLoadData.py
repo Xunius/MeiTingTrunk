@@ -164,6 +164,7 @@ class MainFrameLoadData:
 
         #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
         self.libtree.itemDoubleClicked.connect(self.renameFolder)
+        self.libtree.add_doc_to_folder_signal.connect(self.addDocToFolder)
 
         self.sortFolders()
         self.libtree.setCurrentItem(self.all_folder)

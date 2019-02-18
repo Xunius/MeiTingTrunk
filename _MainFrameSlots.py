@@ -177,6 +177,44 @@ class MainFrameSlots:
         return
 
 
+    @pyqtSlot(int,str)
+    def addDocToFolder(self,docid,folderid):
+
+        print('# <addDocToFolder>: docid=%s, folderid=%s' %(docid,folderid))
+        self.logger.info('docid=%s, folderid=%s' %(docid,folderid))
+
+        docfolders=self.meta_dict[docid]['folders_l']
+        # note folderid here is an int
+        newfolder=(int(folderid), self.folder_dict[folderid][0])
+        if newfolder not in docfolders:
+            docfolders.append(newfolder)
+            self.meta_dict[docid]['folders_l']=docfolders
+
+        if docid not in self.folder_data[folderid]:
+            self.folder_data[folderid].append(docid)
+
+        print('# <addDocToFolder>: Updated meta_dict["folders_l"]=%s' %self.meta_dict[docid]['folders_l'])
+        self.logger.info('Updated meta_dict["folders_l"]=%s' %self.meta_dict[docid]['folders_l'])
+
+        print('# <addDocToFolder>: Updated folder_data=%s' %self.folder_data[folderid],
+                type(self.folder_data[folderid][0]))
+        self.logger.info('Updated folder_data=%s' %self.folder_data[folderid])
+
+        # add highlight to folder
+        hi_color=self.settings.value('display/folder/highlight_color_br',
+                QBrush)
+
+        mii=self.libtree.findItems(folderid, Qt.MatchExactly | Qt.MatchRecursive,
+                column=1)
+        if len(mii)>0:
+            for mjj in mii:
+                mjj.setBackground(0, hi_color)
+
+        return
+
+
+
+
     def saveToDatabase(self,docid):
 
         print('# <saveToDatabase>: Saving folders to database.')
@@ -353,14 +391,6 @@ class MainFrameSlots:
             self.logger.info('Folder new id=%s. New entry in folder_dict=%s' %(newid, self))
 
 
-    @pyqtSlot(QtWidgets.QWidget)
-    def treeCommit(self,widget):
-        print('# <treeCommit>: widget:',widget,widget.text())
-        #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
-
-
-        return
-
 
 
     @pyqtSlot(QtWidgets.QTreeWidgetItem, int)
@@ -399,15 +429,7 @@ class MainFrameSlots:
                 msg.setInformativeText('The given name\n\t%s\nconflicts with another folder name.\nPlease choose another name.' %foldername)
                 msg.exec_()
 
-                #recs=self.libtree.receivers(self.libtree.itemChanged)
-                #print('# <addNewFolderToDict>: recs',recs)
-                #if recs>0:
-                    #self.libtree.itemChanged.disconnect()
-
                 item.setData(0,0,fnameold)
-                #self.libtree.itemChanged.connect(self.addNewFolderToDict,
-                        #Qt.QueuedConnection)
-
                 self.libtree.editItem(item)
 
                 return
@@ -424,8 +446,6 @@ class MainFrameSlots:
 
         #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
                 #self.settings.value('saving/storage_folder'))
-
-        #self.libtree.itemChanged.disconnect()
 
         return
 
@@ -673,11 +693,7 @@ class MainFrameSlots:
 
         item=self._current_folder_item
         if item:
-            #folderid=item.data(1,0)
-            #self.libtree.itemChanged.disconnect()
             item.setFlags(item.flags() | Qt.ItemIsEditable)
-            #self.libtree.itemChanged.connect(self.addNewFolderToDict,
-                    #Qt.QueuedConnection)
             self.libtree.scrollToItem(item)
             self.libtree.editItem(item)
 
@@ -882,28 +898,31 @@ class MainFrameSlots:
 
             action=menu.exec_(QCursor.pos())
 
-            print('# <docTableMenu>: action.text()=%s' %action.text())
-            self.logger.info('action.text()=%s' %action.text())
+            if action:
+                print('# <docTableMenu>: action.text()=%s' %action.text())
+                self.logger.info('action.text()=%s' %action.text())
 
-            if action==open_action:
-                open_docs=[docids[ii] for ii in range(len(docids)) if has_files[ii]]
+                if action==open_action:
+                    open_docs=[docids[ii] for ii in range(len(docids)) if has_files[ii]]
 
-                print('# <docTableMenu>: Open docs: %s' %open_docs)
-                self.logger.info('Open docs: %s' %open_docs)
+                    print('# <docTableMenu>: Open docs: %s' %open_docs)
+                    self.logger.info('Open docs: %s' %open_docs)
 
-                self.openDoc(open_docs)
+                    self.openDoc(open_docs)
 
-            elif action==del_from_folder_action:
-                self.delFromFolder(docids, foldername, folderid)
+                elif action==del_from_folder_action:
+                    self.delFromFolder(docids, foldername, folderid)
 
-            elif action==del_action:
-                self.delDoc(docids)
+                elif action==del_action:
+                    self.delDoc(docids)
 
-            elif action==export_bib_action:
-                self.exportToBib(docids)
+                elif action==export_bib_action:
+                    self.exportToBib(docids)
 
-            elif action==copy_clipboard_action:
-                self.copyToClipboard(docids,style=None)
+                elif action==copy_clipboard_action:
+                    self.copyToClipboard(docids,style=None)
+
+        return
 
 
     def openDoc(self,docids):

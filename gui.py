@@ -500,12 +500,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         libtree.setContextMenuPolicy(Qt.CustomContextMenu)
         libtree.customContextMenuRequested.connect(self.libTreeMenu)
         delegate=TreeWidgetDelegate()
-        delegate.commitData.connect(self.treeCommit)
-        print('libtree.model()',libtree.model())
-        #libtree.model().dataChanged.connect(self.treeDataChanged)
         libtree.setItemDelegate(delegate)
 
-        #libtree.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
         libtree.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
         libtree.folder_move_signal.connect(self.changeFolderParent)
         libtree.folder_del_signal.connect(self.trashFolder)

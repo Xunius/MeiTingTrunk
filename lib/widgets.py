@@ -58,7 +58,7 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
     folder_move_signal=pyqtSignal(str,str)
     folder_del_signal=pyqtSignal(QtWidgets.QTreeWidgetItem,\
             QtWidgets.QTreeWidgetItem,bool)
-    add_doc_to_folder_signal=pyqtSignal(str,str)
+    add_doc_to_folder_signal=pyqtSignal(int,str)
 
     def __init__(self,parent=None):
         self.parent=parent
@@ -144,20 +144,21 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
         mime_data=event.mimeData()
 
-        # TODO: check if droping the same folder the doc is already in
-
         if mime_data.hasFormat('doc_table_item'):
-            dropped_docid=mime_data.data('doc_table_item')
-            print('# <dropEvent>: dropped doc id:', dropped_docid)
+            # decode byte to str
+            dropped_docid=mime_data.data('doc_table_item').data().decode('ascii')
+            dropped_docid=int(dropped_docid)
 
             pos=event.pos()
             newparent=self.itemAt(pos)
 
             parentidx=self.indexFromItem(newparent)
-            indicatorpos=self.dropIndicatorPosition()
+            #indicatorpos=self.dropIndicatorPosition()
 
             print('# <dropEvent>: doc id=',dropped_docid,'parentid=',
-                    newparent.data(1,0), 'indicatorpos=',indicatorpos)
+                    newparent.data(1,0))
+
+            self.add_doc_to_folder_signal.emit(dropped_docid, newparent.data(1,0))
 
             return
 

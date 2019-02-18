@@ -140,7 +140,7 @@ def readSqlite(dbin):
         if metaii['pend_delete']:
             folder_data['-3'].append(idii)
 
-        # note: convert folder id to str
+        # note: convert folder id to str, why?
         # TODO: convert back to int when writing to sqlite
         folderids=[str(ff[0]) for ff in folderii]
         for fii in folderids:
