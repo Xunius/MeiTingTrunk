@@ -652,6 +652,9 @@ def getFolderDocList(db,folderid,verbose=True):
 
 def saveFoldersToDatabase(db,folder_dict,lib_folder):
 
+    pass
+    """
+    
     cout=db.cursor()
 
     for idii,vv in folder_dict.items():
@@ -670,6 +673,7 @@ def saveFoldersToDatabase(db,folder_dict,lib_folder):
 
     db.commit()
 
+    """
     return 0
 
 

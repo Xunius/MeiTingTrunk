@@ -40,10 +40,14 @@ def checkFolderName(foldername,folderid,folder_dict):
             %(toplevelids, folderid))
 
     if folderid in toplevelids:
-        siblings=[folder_dict[ii][0] for ii in toplevelids]
+        siblings=[folder_dict[ii][0] for ii in toplevelids if ii!=folderid]
     else:
         parentid=folder_dict[folderid][1]
-        siblings=[ii[0] for ii in folder_dict.values() if ii[1]==parentid]
+        siblings=[]
+        for kk,vv in folder_dict.items():
+            if kk!=folderid and vv[1]==parentid:
+                siblings.append(vv[0])
+        #siblings=[ii[0] for ii in folder_dict.values() if ii[1]==parentid]
 
     if foldername in siblings:
         print('# <checkFolderName>: foldername in siblings. foldername=%s. siblings=%s' \
@@ -182,8 +186,8 @@ class MainFrameSlots:
         #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
                 #self.settings.value('saving/storage_folder'))
 
-        sqlitedb.metaDictToDatabase(self.db,docid,self.meta_dict[docid],
-                self.settings.value('saving/storage_folder'))
+        #sqlitedb.metaDictToDatabase(self.db,docid,self.meta_dict[docid],
+                #self.settings.value('saving/storage_folder'))
 
         return
 
@@ -349,9 +353,20 @@ class MainFrameSlots:
             self.logger.info('Folder new id=%s. New entry in folder_dict=%s' %(newid, self))
 
 
+    @pyqtSlot(QtWidgets.QWidget)
+    def treeCommit(self,widget):
+        print('# <treeCommit>: widget:',widget,widget.text())
+        #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
 
+
+        return
+
+
+
+    @pyqtSlot(QtWidgets.QTreeWidgetItem, int)
     def addNewFolderToDict(self,item,column):
 
+        print('# <addNewFolderToDict>: item', item,'column count',item.columnCount())
         print('# <addNewFolderToDict>: item.data(0,0)=%s. item.data(1,0)=%s'\
                 %(item.data(0,0), item.data(1,0)))
         self.logger.info('item.data(0,0)=%s. item.data(1,0)=%s'\
@@ -384,10 +399,14 @@ class MainFrameSlots:
                 msg.setInformativeText('The given name\n\t%s\nconflicts with another folder name.\nPlease choose another name.' %foldername)
                 msg.exec_()
 
-                self.libtree.itemChanged.disconnect()
+                #recs=self.libtree.receivers(self.libtree.itemChanged)
+                #print('# <addNewFolderToDict>: recs',recs)
+                #if recs>0:
+                    #self.libtree.itemChanged.disconnect()
+
                 item.setData(0,0,fnameold)
-                self.libtree.itemChanged.connect(self.addNewFolderToDict,
-                        Qt.QueuedConnection)
+                #self.libtree.itemChanged.connect(self.addNewFolderToDict,
+                        #Qt.QueuedConnection)
 
                 self.libtree.editItem(item)
 
@@ -403,8 +422,10 @@ class MainFrameSlots:
         self.sortFolders()
         self.libtree.setCurrentItem(item)
 
-        sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
-                self.settings.value('saving/storage_folder'))
+        #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
+                #self.settings.value('saving/storage_folder'))
+
+        #self.libtree.itemChanged.disconnect()
 
         return
 
@@ -427,7 +448,6 @@ class MainFrameSlots:
     @pyqtSlot(str,str)
     def changeFolderParent(self,move_folder_id,new_parent_id):
 
-        #move_folder_id, new_parent_id=arg_tuple
         folder_name=self.folder_dict[move_folder_id][0]
 
         print('# <changeFolderParent>: folder_dict[id] before change=%s'\
@@ -442,8 +462,8 @@ class MainFrameSlots:
         self.logger.info('folder_dict[id] after change=%s'\
                 %str(self.folder_dict[move_folder_id]))
 
-        sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
-                self.settings.value('saving/storage_folder'))
+        #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
+                #self.settings.value('saving/storage_folder'))
         return
 
 
@@ -549,23 +569,25 @@ class MainFrameSlots:
 
             action=menu.exec_(QCursor.pos())
 
-            print('# <libTreeMenu>: action.text()=%s' %action.text())
-            self.logger.info('action.text()=%s' %action.text())
+            if action:
 
-            if menu_type=='trash':
-                if action==restore_action:
-                    pass
-                elif action==clear_action:
-                    pass
-            else:
-                if action==add_action:
-                    self.addFolderButtonClicked(add_action)
-                elif action==addsub_action:
-                    self.addFolderButtonClicked(addsub_action)
-                elif action==del_action:
-                    self.trashFolder(item,None,True)
-                elif action==rename_action:
-                    self.renameFolder()
+                print('# <libTreeMenu>: action.text()=%s' %action.text())
+                self.logger.info('action.text()=%s' %action.text())
+
+                if menu_type=='trash':
+                    if action==restore_action:
+                        pass
+                    elif action==clear_action:
+                        pass
+                else:
+                    if action==add_action:
+                        self.addFolderButtonClicked(add_action)
+                    elif action==addsub_action:
+                        self.addFolderButtonClicked(addsub_action)
+                    elif action==del_action:
+                        self.trashFolder(item,None,True)
+                    elif action==rename_action:
+                        self.renameFolder()
 
         return
 
@@ -652,10 +674,10 @@ class MainFrameSlots:
         item=self._current_folder_item
         if item:
             #folderid=item.data(1,0)
-            self.libtree.itemChanged.disconnect()
+            #self.libtree.itemChanged.disconnect()
             item.setFlags(item.flags() | Qt.ItemIsEditable)
-            self.libtree.itemChanged.connect(self.addNewFolderToDict,
-                    Qt.QueuedConnection)
+            #self.libtree.itemChanged.connect(self.addNewFolderToDict,
+                    #Qt.QueuedConnection)
             self.libtree.scrollToItem(item)
             self.libtree.editItem(item)
 
@@ -804,7 +826,7 @@ class MainFrameSlots:
 
         root=self.libtree.invisibleRootItem()
         # disconnect libtree item change signal
-        self.libtree.itemChanged.disconnect()
+        #self.libtree.itemChanged.disconnect()
         for item in iterItems(self.libtree, root):
             item.setBackground(0, ori_color)
 
@@ -817,7 +839,7 @@ class MainFrameSlots:
                     mjj.setBackground(0, hi_color)
 
         # re-connect libtree item change signal
-        self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
+        #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
 
 
     def docTableMenu(self,pos):

@@ -83,7 +83,8 @@ LOG_CONFIG={
 # PDF preview
 # add doc strings!!
 # make long actions threaded
-# need to deal with folder changes in sqlite
+# [y] need to deal with folder changes in sqlite
+# add doc drag drop to folders
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -482,7 +483,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
     def createLibTree(self):
 
         #libtree=QtWidgets.QTreeWidget()
-        libtree=MyTreeWidget()
+        libtree=MyTreeWidget(self)
         libtree.setHeaderHidden(True)
         # column1: folder name, column2: folder id
         libtree.setColumnCount(2)
@@ -499,9 +500,13 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         libtree.setContextMenuPolicy(Qt.CustomContextMenu)
         libtree.customContextMenuRequested.connect(self.libTreeMenu)
         delegate=TreeWidgetDelegate()
+        delegate.commitData.connect(self.treeCommit)
+        print('libtree.model()',libtree.model())
+        #libtree.model().dataChanged.connect(self.treeDataChanged)
         libtree.setItemDelegate(delegate)
 
-        libtree.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
+        #libtree.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
+        libtree.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
         libtree.folder_move_signal.connect(self.changeFolderParent)
         libtree.folder_del_signal.connect(self.trashFolder)
 
@@ -588,6 +593,10 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         tv.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         tv.setShowGrid(True)
         tv.setSortingEnabled(True)
+
+        tv.setDragEnabled(True)
+        #tv.setSectionsMovable(True)
+        tv.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
 
         header=['docid','favourite','read','has_file','author','title',
                 'journal','year','added']
