@@ -724,7 +724,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
         frame=QtWidgets.QWidget()
         #frame.setStyleSheet('background-color:white')
-        scroll=QtWidgets.QScrollArea()
+        scroll=QtWidgets.QScrollArea(self)
         scroll.setWidgetResizable(True)
         scroll.setWidget(frame)
         v_layout=QtWidgets.QVBoxLayout()
@@ -761,6 +761,7 @@ if __name__=='__main__':
     logging.config.dictConfig(LOG_CONFIG)
     app=QtWidgets.QApplication(sys.argv)
 
+    '''
     splash_pic=QPixmap(':/logo.png')
     print('# <__init__>: splash_pic', splash_pic)
     splash=QtWidgets.QSplashScreen(splash_pic, Qt.WindowStaysOnTopHint)
@@ -770,6 +771,7 @@ if __name__=='__main__':
     QTimer.singleShot(2000, splash.close)
 
     app.processEvents()
+    '''
 
     mainwindow=MainWindow()
     sys.exit(app.exec_())

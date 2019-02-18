@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 import operator
 import logging
+from collections import OrderedDict
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, pyqtSignal, QPoint,\
         pyqtSlot, QMimeData, QByteArray, QEvent
@@ -10,7 +11,7 @@ from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont, QFontMetrics,\
 import resources
 from lib import sqlitedb
 from .tools import getHLine, getXExpandYMinSizePolicy, getXMinYExpandSizePolicy,\
-    parseAuthors, getXExpandYExpandSizePolicy
+    parseAuthors, getXExpandYExpandSizePolicy, getMinSizePolicy
 
 
 LOGGER=logging.getLogger('default_logger')
@@ -1114,6 +1115,19 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         self.settings=settings
 
+        self.font_dict=OrderedDict([
+            ('Meta Tab -> Title'      , 'display/fonts/meta_title')    ,
+            ('Meta Tab -> Authors'    , 'display/fonts/meta_authors')  ,
+            ('Meta Tab -> Keywords'   , 'display/fonts/meta_keywords') ,
+            ('Document Table Entries' , 'display/fonts/doc_table')     ,
+            ('Bibtex Tab'             , 'display/fonts/bibtex')        ,
+            ('Notes Tab'              , 'display/fonts/notes')         ,
+            ('Scratch Pad Tab'        , 'display/fonts/scratch_pad')
+            ])
+
+        self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
+        self.label_font=QFont('Serif',12,QFont.Bold)
+
         self.resize(800,600)
         self.setWindowTitle('Preferences')
         self.setWindowModality(Qt.ApplicationModal)
@@ -1121,23 +1135,25 @@ class PreferenceDialog(QtWidgets.QDialog):
         h_layout=QtWidgets.QHBoxLayout()
         self.setLayout(h_layout)
 
-        self.list=QtWidgets.QListWidget(self)
+        self.cate_list=QtWidgets.QListWidget(self)
         #self.list.setSizePolicy(getXMinYExpandSizePolicy())
-        self.list.setMaximumWidth(150)
-        h_layout.addWidget(self.list)
+        self.cate_list.setMaximumWidth(150)
+        h_layout.addWidget(self.cate_list)
 
         self.categories=['Display', 'Export', 'Citation Style', 'Savings']
-        self.list.addItems(self.categories)
+        self.cate_list.addItems(self.categories)
 
-        v_layout=QtWidgets.QVBoxLayout()
-        h_layout.addLayout(v_layout)
+        self.content_vlayout=QtWidgets.QVBoxLayout()
+        h_layout.addLayout(self.content_vlayout)
 
+        '''
         frame=QtWidgets.QWidget()
-        scroll=QtWidgets.QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(frame)
+        self.dummy_scroll=QtWidgets.QScrollArea(self)
+        self.dummy_scroll.setWidgetResizable(True)
+        self.dummy_scroll.setWidget(frame)
 
-        v_layout.addWidget(scroll)
+        self.content_vlayout.addWidget(self.dummy_scroll)
+        '''
 
         self.buttons=QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
@@ -1146,8 +1162,146 @@ class PreferenceDialog(QtWidgets.QDialog):
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
 
-        v_layout.addWidget(self.buttons)
+        self.content_vlayout.addWidget(self.buttons)
 
+        self.cate_list.currentItemChanged.connect(self.cateSelected)
+
+        self.cate_list.setCurrentRow(0)
+
+
+    @pyqtSlot(QtWidgets.QListWidgetItem)
+    def cateSelected(self,item):
+
+        item_text=item.text()
+        print('# <cateSelected>: item.text()=%s' %item_text)
+
+        if self.content_vlayout.count()>1:
+            self.content_vlayout.removeWidget(self.content_frame)
+
+        if item_text=='Display':
+            self.content_frame=self.loadDisplayOptions('Select Fonts')
+        elif item_text=='Export':
+            self.content_frame=self.loadExportOptions('Export Settings')
+        elif item_text=='Citation Style':
+            self.content_frame=self.loadCitationStyleOptions('Citation Styles')
+        elif item_text=='Savings':
+            self.content_frame=self.loadSavingsOptions('Choose Storage Folder')
+
+        self.content_vlayout.insertWidget(0,self.content_frame)
+
+
+    def createFrame(self,title):
+
+        frame=QtWidgets.QWidget(self)
+        scroll=QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(frame)
+        va=QtWidgets.QVBoxLayout()
+        frame.setLayout(va)
+        va.setSpacing(int(va.spacing()*2))
+
+        label=QtWidgets.QLabel(title)
+        label.setStyleSheet(self.label_color)
+        label.setFont(self.label_font)
+        va.addWidget(label)
+        va.addWidget(getHLine(self))
+
+        return scroll, va
+
+
+    def loadDisplayOptions(self,title):
+
+        scroll,va=self.createFrame(title)
+
+        ha=QtWidgets.QHBoxLayout()
+        ha.addStretch()
+
+        text_list=QtWidgets.QListWidget()
+        text_list.setSizePolicy(getXMinYExpandSizePolicy())
+        text_list.addItems(self.font_dict.keys())
+
+        ha.addWidget(text_list)
+
+        text_list.itemDoubleClicked.connect(self.chooseFont)
+        va.addLayout(ha)
+
+        return scroll
+
+
+    @pyqtSlot(QtWidgets.QListWidgetItem)
+    def chooseFont(self,item):
+        item_text=item.text()
+
+        print('# <chooseFont>: item.text()=%s' %item_text)
+
+        font_setting_name=self.font_dict[item_text]
+        default=self.settings.value(font_setting_name, QFont)
+
+        new_font,isok=QtWidgets.QFontDialog.getFont(default,
+                caption='Choose Font for %s' %item_text)
+
+        print('# <loadDisplayOptions>: new_font', new_font,'isok',isok)
+        if isok:
+            self.settings.setValue(font_setting_name, new_font)
+            newf=self.settings.value(font_setting_name, QFont)
+            print('# <chooseFont>: Font after change:', newf)
+
+        return
+
+
+
+    def loadSavingsOptions(self,title):
+
+        scroll, va=self.createFrame(title)
+
+        label2=QtWidgets.QLabel('Select folder to save document files and database file.')
+        va.addWidget(label2)
+
+        ha=QtWidgets.QHBoxLayout()
+        ha.addStretch()
+
+        storage_folder=self.settings.value('saving/storage_folder')
+        le=QtWidgets.QLineEdit()
+        le.setText(storage_folder)
+
+        va.addWidget(le)
+        va.addLayout(ha)
+        va.addStretch()
+        button=QtWidgets.QPushButton(self)
+        button.setText('Choose')
+
+        button.clicked.connect(self.chooseSaveFolder)
+        ha.addWidget(button)
+
+
+        return scroll
+
+
+    def chooseSaveFolder(self):
+        fname=QtWidgets.QFileDialog.getExistingDirectory(self,
+            'Choose a folder to save documents and database')
+        print('# <chooseSaveFolder>: fname=',fname)
+
+        if fname:
+            newf=self.settings.value('saving/storage_folder')
+            print('# <chooseFont>: Folder after change:', newf)
+
+        # TODO: apply change to database and meta_dict
+
+        return
+
+
+    def loadExportOptions(self,title):
+
+        scroll, va=self.createFrame(title)
+
+        return scroll
+
+    def loadCitationStyleOptions(self,title):
+
+        scroll, va=self.createFrame(title)
+
+        return scroll
 
 
 
