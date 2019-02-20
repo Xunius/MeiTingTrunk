@@ -1125,48 +1125,95 @@ class PreferenceDialog(QtWidgets.QDialog):
             ('Scratch Pad Tab'        , 'display/fonts/scratch_pad')
             ])
 
+        self.new_values={}
+
         self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
-        self.label_font=QFont('Serif',12,QFont.Bold)
+        self.title_label_font=QFont('Serif',12,QFont.Bold)
+        self.sub_title_label_font=QFont('Serif',10,QFont.Bold)
 
         self.resize(800,600)
         self.setWindowTitle('Preferences')
         self.setWindowModality(Qt.ApplicationModal)
 
+        v_layout=QtWidgets.QVBoxLayout()
         h_layout=QtWidgets.QHBoxLayout()
-        self.setLayout(h_layout)
+        #h_layout.setContentsMargins(10,40,10,20)
+        self.setLayout(v_layout)
+
+        title_label=QtWidgets.QLabel('    Change Preference Settings')
+        title_label.setFont(QFont('Serif',12,QFont.Bold))
+        v_layout.addWidget(title_label)
+
+        v_layout.addLayout(h_layout)
 
         self.cate_list=QtWidgets.QListWidget(self)
         #self.list.setSizePolicy(getXMinYExpandSizePolicy())
         self.cate_list.setMaximumWidth(150)
         h_layout.addWidget(self.cate_list)
 
-        self.categories=['Display', 'Export', 'Citation Style', 'Savings']
-        self.cate_list.addItems(self.categories)
+        #self.cate_list.setStyleSheet('''
+            #QListWidget::item { border: 0px solid rgb(235,235,240);
+            #font: 14px;
+            #background-color: rgb(205,205,245);
+            #color: rgb(100,10,13) };
+            #background-color: rgb(230,234,235);
+            #''')
+
+        self.cate_list.addItems(['Display', 'Export', 'Citation Style', 'Savings'])
 
         self.content_vlayout=QtWidgets.QVBoxLayout()
         h_layout.addLayout(self.content_vlayout)
 
-        '''
-        frame=QtWidgets.QWidget()
-        self.dummy_scroll=QtWidgets.QScrollArea(self)
-        self.dummy_scroll.setWidgetResizable(True)
-        self.dummy_scroll.setWidget(frame)
-
-        self.content_vlayout.addWidget(self.dummy_scroll)
-        '''
-
         self.buttons=QtWidgets.QDialogButtonBox(
-            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Apply |\
+                    QtWidgets.QDialogButtonBox.Cancel,
             Qt.Horizontal, self)
 
-        self.buttons.accepted.connect(self.accept)
+        self.buttons.accepted.connect(lambda: (self.applyChanges(), self.accept()))
         self.buttons.rejected.connect(self.reject)
+        self.buttons.button(QtWidgets.QDialogButtonBox.Apply).clicked.connect(
+                self.applyChanges)
 
         self.content_vlayout.addWidget(self.buttons)
 
         self.cate_list.currentItemChanged.connect(self.cateSelected)
-
         self.cate_list.setCurrentRow(0)
+
+    @pyqtSlot()
+    def applyChanges(self):
+
+        print('# <applyChanges>: Apply settings changes')
+        print('# <applyChanges>: Changes:',self.new_values)
+
+        for kk,vv in self.new_values.items():
+            self.settings.setValue(kk,vv)
+            #print('# <applyChanges>: new settings value:',self.settings.value(kk))
+
+        omit_keys=self.settings.value('export/bib/omit_fields', [], str)
+        if isinstance(omit_keys,str) and omit_keys=='':
+            omit_keys=[]
+        self.new_values={'export/bib/omit_fields': omit_keys}
+
+        print('# <applyChanges>: Refreshed new_values=',self.new_values)
+
+
+        #---------------Create output folder---------------
+        storage_folder=self.settings.value('saving/storage_folder')
+        if not os.path.exists(storage_folder):
+            os.makedirs(storage_folder)
+            print('# <applyChanges>: Create new storage folder %s' %storage_folder)
+            LOGGER.info('Create new storage folder %s' %storage_folder)
+
+        # TODO: apply change to database and meta_dict
+        # need to call saveFoldersToDatabase() with new folder, and
+        # metaDictToDatabase() for all docids. Then move database file over.
+        # may need to require a reboot if so.
+
+        #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
+                #self.settings.value('saving/storage_folder'))
+
+        return
+
 
 
     @pyqtSlot(QtWidgets.QListWidgetItem)
@@ -1179,13 +1226,13 @@ class PreferenceDialog(QtWidgets.QDialog):
             self.content_vlayout.removeWidget(self.content_frame)
 
         if item_text=='Display':
-            self.content_frame=self.loadDisplayOptions('Select Fonts')
+            self.content_frame=self.loadDisplayOptions()
         elif item_text=='Export':
-            self.content_frame=self.loadExportOptions('Export Settings')
+            self.content_frame=self.loadExportOptions()
         elif item_text=='Citation Style':
-            self.content_frame=self.loadCitationStyleOptions('Citation Styles')
+            self.content_frame=self.loadCitationStyleOptions()
         elif item_text=='Savings':
-            self.content_frame=self.loadSavingsOptions('Choose Storage Folder')
+            self.content_frame=self.loadSavingsOptions()
 
         self.content_vlayout.insertWidget(0,self.content_frame)
 
@@ -1202,16 +1249,16 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         label=QtWidgets.QLabel(title)
         label.setStyleSheet(self.label_color)
-        label.setFont(self.label_font)
+        label.setFont(self.title_label_font)
         va.addWidget(label)
         va.addWidget(getHLine(self))
 
         return scroll, va
 
 
-    def loadDisplayOptions(self,title):
+    def loadDisplayOptions(self):
 
-        scroll,va=self.createFrame(title)
+        scroll,va=self.createFrame('Select Fonts')
 
         ha=QtWidgets.QHBoxLayout()
         ha.addStretch()
@@ -1242,17 +1289,16 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         print('# <loadDisplayOptions>: new_font', new_font,'isok',isok)
         if isok:
-            self.settings.setValue(font_setting_name, new_font)
-            newf=self.settings.value(font_setting_name, QFont)
-            print('# <chooseFont>: Font after change:', newf)
+            self.new_values[font_setting_name]=new_font
+            print('# <chooseFont>: Font after change:', new_font)
 
         return
 
 
 
-    def loadSavingsOptions(self,title):
+    def loadSavingsOptions(self):
 
-        scroll, va=self.createFrame(title)
+        scroll, va=self.createFrame('Choose Storage Folder')
 
         label2=QtWidgets.QLabel('Select folder to save document files and database file.')
         va.addWidget(label2)
@@ -1273,6 +1319,23 @@ class PreferenceDialog(QtWidgets.QDialog):
         button.clicked.connect(self.chooseSaveFolder)
         ha.addWidget(button)
 
+        move_checkbox=QtWidgets.QCheckBox('Move document files to new location?')
+        move_checkbox.setChecked(True)
+
+        va.addWidget(getHLine(self))
+        va.addWidget(move_checkbox)
+        label=QtWidgets.QLabel('''
+        This will move the document files (PDFs) to folder <br/>
+            <span style="font:bold;">%s</span> <br/>
+        , and adjust file path in the database file correspondingly. <br/>
+        
+        Otherwise, files stay where they are.'''\
+                %(os.path.join(storage_folder,'collections')))
+        label.setTextFormat(Qt.RichText)
+
+        va.addWidget(label)
+        va.addStretch()
+
 
         return scroll
 
@@ -1280,31 +1343,99 @@ class PreferenceDialog(QtWidgets.QDialog):
     def chooseSaveFolder(self):
         fname=QtWidgets.QFileDialog.getExistingDirectory(self,
             'Choose a folder to save documents and database')
-        print('# <chooseSaveFolder>: fname=',fname)
 
         if fname:
-            newf=self.settings.value('saving/storage_folder')
-            print('# <chooseFont>: Folder after change:', newf)
+            print('# <chooseFont>: Folder after change:', fname)
+            self.new_values['saving/storage_folder']=fname
 
-        # TODO: apply change to database and meta_dict
 
         return
 
 
-    def loadExportOptions(self,title):
+    def loadExportOptions(self):
 
-        scroll, va=self.createFrame(title)
+        scroll, va=self.createFrame('Export Settings')
+
+        label=QtWidgets.QLabel('bibtex Export')
+        label.setFont(self.sub_title_label_font)
+        va.addWidget(label)
+
+        grid=QtWidgets.QGridLayout()
+
+        groupbox=QtWidgets.QGroupBox('Omit these fields in the exported bib entry.')
+        groupbox.setCheckable(True)
+
+        omittable_keys=[
+            'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
+            'lastName_l', 'pend_delete', 'folders_l', 'type', 'id',
+            'abstract', 'advisor', 'month', 'language', 'confirmed',
+            'deletionPending', 'note', 'publicLawNumber', 'sections',
+            'reviewedArticle', 'userType', 'shortTitle', 'sourceType',
+            'code', 'codeNumber', 'codeSection', 'codeVolume', 'citationKey',
+            'day', 'dateAccessed', 'internationalAuthor', 'internationalUserType',
+            'internationalTitle', 'internationalNumber', 'genre', 'lastUpdate',
+            'legalStatus', 'length', 'medium'
+            ]
+
+        omit_keys=self.settings.value('export/bib/omit_fields', [], str)
+        # likely something wrong with qt. When list is set empty by
+        # settings.setValue('key',[]), on the NEXT load of the program,
+        # settings.value('export/bib/omit_fields', [], str) gives ''
+        if isinstance(omit_keys,str) and omit_keys=='':
+            omit_keys=[]
+
+        for ii,keyii in enumerate(omittable_keys):
+            checkboxii=QtWidgets.QCheckBox(keyii,groupbox)
+            if keyii in omit_keys:
+                checkboxii.setChecked(True)
+            checkboxii.stateChanged.connect(self.omitKeyChanged)
+            grid.addWidget(checkboxii,int(ii/3),ii%3)
+
+        self.new_values['export/bib/omit_fields']=omit_keys
+
+        groupbox.toggled.connect(lambda on: self.omitKeysGroupChanged(on,
+            groupbox))
+
+        groupbox.setLayout(grid)
+
+        va.addWidget(groupbox)
+
 
         return scroll
 
-    def loadCitationStyleOptions(self,title):
 
-        scroll, va=self.createFrame(title)
+    def omitKeyChanged(self,on):
+        omit_keys=self.new_values.get('export/bib/omit_fields',[])
+        key=self.sender().text()
+        print('# <omitKeyChanged>: checkbox:',key)
+        if on and key not in omit_keys:
+            omit_keys.append(key)
+
+        self.new_values['export/bib/omit_fields']=omit_keys
+        print('# <omitKeyChanged>: new omit keys=',omit_keys)
+
+        return
+
+    def omitKeysGroupChanged(self, on, groupbox):
+        omit_keys=[]
+
+        for box in groupbox.findChildren(QtWidgets.QCheckBox):
+            box.setChecked(on)
+            box.setEnabled(True)
+            if box.isChecked():
+                omit_keys.append(box.text())
+
+        print('# <omitKeysChanged>: New omit keys=',omit_keys)
+        self.new_values['export/bib/omit_fields']=omit_keys
+
+        return
+
+
+    def loadCitationStyleOptions(self):
+
+        scroll, va=self.createFrame('Citation Styles')
 
         return scroll
-
-
-
 
 
 

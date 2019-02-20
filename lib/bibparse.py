@@ -152,7 +152,9 @@ def toOrdinaryDict(metadict,alt_dict,omit_keys):
             if isinstance(vv,(tuple,list)):
                 if len(vv)==0:
                     continue
-                #print('kk:',kk,'vv:',vv)
+                print('# <toOrdinaryDict>: kk=',kk,'vv=',vv)
+                if kk in ['folders_l',]:
+                    vv=[vii[1] for vii in vv]
                 vv='; '.join(vv)
             result[alt_dict[kk]]=vv
         else:

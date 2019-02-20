@@ -974,6 +974,7 @@ class MainFrameSlots:
             print('# <openDoc>: docid=%s. file_path=%s' %(docii, file_pathii))
             self.logger.info('docid=%s. file_path=%s' %(docii, file_pathii))
 
+            # what if file is not found?
             prop=subprocess.call(('xdg-open', file_pathii))
         return
 
@@ -1083,6 +1084,8 @@ class MainFrameSlots:
         if fname:
             text=''
             omit_keys=self.settings.value('export/bib/omit_fields', [], str)
+            if isinstance(omit_keys,str) and omit_keys=='':
+                omit_keys=[]
 
             for idii in docids:
 

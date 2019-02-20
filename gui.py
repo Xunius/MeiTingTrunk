@@ -24,9 +24,16 @@ import resource
 __version__='v0.1'
 
 OMIT_KEYS=[
-        'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
-        'lastName_l', 'pend_delete', 'folders_l', 'type', 'id'
-        ]
+    'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
+    'lastName_l', 'pend_delete', 'folders_l', 'type', 'id',
+    'abstract', 'advisor', 'month', 'language', 'confirmed',
+    'deletionPending', 'note', 'publicLawNumber', 'sections',
+    'reviewedArticle', 'userType', 'shortTitle', 'sourceType',
+    'code', 'codeNumber', 'codeSection', 'codeVolume', 'citationKey',
+    'day', 'dateAccessed', 'internationalAuthor', 'internationalUserType',
+    'internationalTitle', 'internationalNumber', 'genre', 'lastUpdate',
+    'legalStatus', 'length', 'medium'
+    ]
 
 
 LOG_CONFIG={
@@ -68,7 +75,7 @@ LOG_CONFIG={
 # add add doc functionalities, by RIS
 # import from Mendeley, zotero, Endnote?
 # autosave, auto backup
-# export to text (clipboard, styles), bibtex, ris.
+# export to text (clipboard, styles), bibtex, ris. citation styles things.
 # [y] collapse side tab
 # [y] seperate libraries
 # [y] use resource file to load icons/images
@@ -79,7 +86,7 @@ LOG_CONFIG={
 # [y] add logger
 # get all bib entries for multiple selected docs?
 # [y] right click menus
-# option menu
+# [y] option menu
 # RIS
 # import/export menu
 # [y] add trash can
@@ -90,6 +97,8 @@ LOG_CONFIG={
 # [y] need to deal with folder changes in sqlite
 # [y] add doc drag drop to folders
 # [y] change needs review states.
+# choose pdf viewer software.
+# add doi lookup button
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -156,6 +165,7 @@ class MainWindow(QtWidgets.QMainWindow):
         storage_folder=os.path.expanduser(storage_folder)
         if not os.path.exists(storage_folder):
             os.makedirs(storage_folder)
+            os.makedirs(os.path.join(storage_folder,'collections'))
 
             print('# <loadSettings>: Create folder %s' %storage_folder)
             self.logger.info('Create folder %s' %storage_folder)
@@ -762,7 +772,7 @@ if __name__=='__main__':
     app=QtWidgets.QApplication(sys.argv)
 
     '''
-    splash_pic=QPixmap(':/logo.png')
+    splash_pic=QPixmap(':/logo.jpg')
     print('# <__init__>: splash_pic', splash_pic)
     splash=QtWidgets.QSplashScreen(splash_pic, Qt.WindowStaysOnTopHint)
     splash.show()

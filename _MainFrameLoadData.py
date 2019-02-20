@@ -298,6 +298,8 @@ class MainFrameLoadData:
 
         metaii=self.meta_dict[docid]
         omit_keys=self.settings.value('export/bib/omit_fields', [], str)
+        if isinstance(omit_keys,str) and omit_keys=='':
+            omit_keys=[]
         text=bibparse.metaDictToBib(metaii,bibparse.INV_ALT_KEYS,
                 omit_keys)
 

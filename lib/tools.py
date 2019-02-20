@@ -4,6 +4,9 @@ Author: guangzhi XU (xugzhi1987@gmail.com; guangzhi.xu@outlook.com)
 Update time: 2018-09-29 21:20:32.
 '''
 
+import os
+import re
+import platform
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QThread, QObject, QMutex, pyqtSignal, pyqtSlot
 try:
@@ -41,13 +44,13 @@ def getVSpacer():
             QtWidgets.QSizePolicy.Expanding)
     return v_spacer
 
-def getHLine(parent):
+def getHLine(parent=None):
     h_line = QtWidgets.QFrame(parent)
     h_line.setFrameShape(QtWidgets.QFrame.HLine)
     h_line.setFrameShadow(QtWidgets.QFrame.Sunken)
     return h_line
 
-def getVLine(parent):
+def getVLine(parent=None):
     v_line = QtWidgets.QFrame(parent)
     v_line.setFrameShape(QtWidgets.QFrame.VLine)
     v_line.setFrameShadow(QtWidgets.QFrame.Sunken)
@@ -150,3 +153,20 @@ def parseAuthors(textlist):
     authors=sqlitedb.zipAuthors(firstnames,lastnames)
 
     return firstnames,lastnames,authors
+
+def removeInvalidPathChar(path):
+    '''Make dir and remove invalid windows path characters
+
+    ':' is illegal in Mac and windows. Strategy: remove, although legal in Linux.
+    '''
+    path=os.path.abspath(path)
+
+    if platform.system().lower()=='windows':
+        drive,remain=os.path.splitdrive(path)
+        remain=re.sub(r'[<>:"|?*]','_',remain)
+        remain=remain.strip()
+        path=os.path.join(drive,remain)
+    else:
+        path=re.sub(r'[<>:"|?*]','_',path)
+
+    return path

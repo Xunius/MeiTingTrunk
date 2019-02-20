@@ -5,7 +5,9 @@ Update time: 2018-09-27 19:44:32.
 '''
 
 import os
+import shutil
 import time
+import re
 import uuid
 import sqlite3
 import logging
@@ -50,7 +52,7 @@ class DocMeta(MutableMapping):
                 'type': 'article',
                 'read': None, 'favourite': None,
                 'pmid': None, 'added': str(int(time.time())),
-                'confirmed': False,
+                'confirmed': 'false',
                 'firstNames_l': [],
                 'lastName_l': [],
                 'keywords_l': [],
@@ -652,9 +654,6 @@ def getFolderDocList(db,folderid,verbose=True):
 
 def saveFoldersToDatabase(db,folder_dict,lib_folder):
 
-    pass
-    """
-    
     cout=db.cursor()
 
     for idii,vv in folder_dict.items():
@@ -673,7 +672,6 @@ def saveFoldersToDatabase(db,folder_dict,lib_folder):
 
     db.commit()
 
-    """
     return 0
 
 
@@ -888,10 +886,19 @@ def addToDatabase(db,docid,meta_dict,lib_folder,logger):
 
         for fii in files:
             absii=os.path.expanduser(fii)
-            absii=os.path.abspath(absii)
-            print('# <addToDatabase>: file:',fii,'abspath',absii)
+            #absii=tools.removeInvalidPathChar(absii)
+            folder,filename=os.path.split(absii)
+            filename=re.sub(r'[<>:"|?*]','_',filename)
+            newabsii=os.path.join(lib_folder,'collections')
+            newabsii=os.path.join(newabsii,filename)
 
-            cout.execute(query,(docid,absii))
+            print('# <addToDatabase>: file:',fii,'abspath',newabsii)
+
+            cout.execute(query,(docid,newabsii))
+
+            #--------------------Copy file--------------------
+            shutil.copy(absii, newabsii)
+            
         db.commit()
 
 
