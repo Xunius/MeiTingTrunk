@@ -961,7 +961,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             LOGGER.info('New file=%s' %fname)
 
             self.createFileField(fname)
-            self.fieldEdited()
+            self.fieldEdited('files_l')
 
         return
 
@@ -1033,7 +1033,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
 class MetaDataEntryDialog(QtWidgets.QDialog):
 
-    def __init__(self,font_dict,parent=None):
+    def __init__(self,settings,parent=None):
         super(MetaDataEntryDialog,self).__init__(parent)
 
         self.resize(500,700)
@@ -1042,7 +1042,7 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
 
         v_layout=QtWidgets.QVBoxLayout()
 
-        self.scroll=MetaTabScroll(font_dict,self)
+        self.scroll=MetaTabScroll(settings,self)
 
         self.buttons=QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
@@ -1114,6 +1114,7 @@ class PreferenceDialog(QtWidgets.QDialog):
         super(PreferenceDialog,self).__init__(parent=parent)
 
         self.settings=settings
+        self.parent=parent
 
         self.font_dict=OrderedDict([
             ('Meta Tab -> Title'      , 'display/fonts/meta_title')    ,
@@ -1159,7 +1160,7 @@ class PreferenceDialog(QtWidgets.QDialog):
             #background-color: rgb(230,234,235);
             #''')
 
-        self.cate_list.addItems(['Display', 'Export', 'Citation Style', 'Savings'])
+        self.cate_list.addItems(['Citation Style', 'Display', 'Export', 'Savings'])
 
         self.content_vlayout=QtWidgets.QVBoxLayout()
         h_layout.addLayout(self.content_vlayout)
@@ -1300,7 +1301,14 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         scroll, va=self.createFrame('Choose Storage Folder')
 
-        label2=QtWidgets.QLabel('Select folder to save document files and database file.')
+        #-------------Choose storage folder section-------------
+        label2=QtWidgets.QLabel('''
+        Select folder to save document files. <br/>
+        &nbsp;&nbsp; Document (e.g. PDFs) will be copied to the
+        <span style="font:bold;">
+        "Collections" </span> <br/> &nbsp;&nbsp; sub-folder of the chosen folder.
+        ''')
+        label2.setTextFormat(Qt.RichText)
         va.addWidget(label2)
 
         ha=QtWidgets.QHBoxLayout()
@@ -1312,29 +1320,47 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         va.addWidget(le)
         va.addLayout(ha)
-        va.addStretch()
         button=QtWidgets.QPushButton(self)
         button.setText('Choose')
 
         button.clicked.connect(self.chooseSaveFolder)
         ha.addWidget(button)
 
-        move_checkbox=QtWidgets.QCheckBox('Move document files to new location?')
+        #-------------Organize folders section-------------
+        va.addWidget(getHLine(self))
+        label3=QtWidgets.QLabel('Organize Folders')
+        label3.setStyleSheet(self.label_color)
+        label3.setFont(self.title_label_font)
+
+        va.addWidget(label3)
+        va.addWidget(getHLine(self))
+
+        move_checkbox=QtWidgets.QCheckBox('Copy document files to sub-folders?')
         move_checkbox.setChecked(True)
 
-        va.addWidget(getHLine(self))
+        #va.addWidget(getHLine(self))
         va.addWidget(move_checkbox)
         label=QtWidgets.QLabel('''
-        This will move the document files (PDFs) to folder <br/>
-            <span style="font:bold;">%s</span> <br/>
-        , and adjust file path in the database file correspondingly. <br/>
-        
-        Otherwise, files stay where they are.'''\
-                %(os.path.join(storage_folder,'collections')))
+        Choose folders to export attached documents.
+        This will copy documents (e.g. PDFs) from the
+        <span style="font:bold;">"Collections"</span>
+        folder a separate folder.
+        <span style="font:bold;">Note</span>
+        that this will result in duplicated disk usages.
+        ''')
         label.setTextFormat(Qt.RichText)
+        label.setWordWrap(True)
+
+
 
         va.addWidget(label)
-        va.addStretch()
+
+        # create folder list
+        if self.parent.is_loaded:
+
+            folder_dict=self.parent.main_frame.folder_dict
+            folder_tree=createFolderTree(folder_dict,self)
+            va.addWidget(folder_tree)
 
 
         return scroll
@@ -1376,6 +1402,7 @@ class PreferenceDialog(QtWidgets.QDialog):
             'internationalTitle', 'internationalNumber', 'genre', 'lastUpdate',
             'legalStatus', 'length', 'medium'
             ]
+        omittable_keys.sort()
 
         omit_keys=self.settings.value('export/bib/omit_fields', [], str)
         # likely something wrong with qt. When list is set empty by
@@ -1434,9 +1461,59 @@ class PreferenceDialog(QtWidgets.QDialog):
     def loadCitationStyleOptions(self):
 
         scroll, va=self.createFrame('Citation Styles')
+        va.addStretch()
 
         return scroll
 
+
+
+
+def createFolderTree(folder_dict,parent):
+
+    def addFolder(parent,folderid,folder_dict):
+
+        foldername,parentid=folder_dict[folderid]
+        fitem=QtWidgets.QTreeWidgetItem([foldername,str(folderid)])
+        style=QtWidgets.QApplication.style()
+        diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+        fitem.setIcon(0,diropen_icon)
+        sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
+        if parentid=='-1':
+            fitem.setFlags(fitem.flags() | Qt.ItemIsTristate |\
+                    Qt.ItemIsUserCheckable)
+            fitem.setCheckState(0, Qt.Unchecked)
+            parent.addTopLevelItem(fitem)
+        else:
+            fitem.setFlags(fitem.flags() | Qt.ItemIsUserCheckable)
+            fitem.setCheckState(0, Qt.Unchecked)
+            parent.addChild(fitem)
+        if len(sub_ids)>0:
+            for sii in sub_ids:
+                addFolder(fitem,sii,folder_dict)
+
+        return
+
+    folder_tree=QtWidgets.QTreeWidget(parent)
+    folder_tree.setColumnCount(2)
+    folder_tree.setHeaderHidden(True)
+    folder_tree.setColumnHidden(1,True)
+    folder_tree.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+    folder_tree.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+    folder_tree.header().setStretchLastSection(False)
+    folder_tree.header().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeToContents)
+    folder_tree.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
+
+    #-------------Get all level 1 folders-------------
+    folders1=[(vv[0],kk) for kk,vv in folder_dict.items() if\
+            vv[1] in ['-1',]]
+    folders1.sort()
+
+    #------------Add folders to tree------------
+    for fnameii,idii in folders1:
+        addFolder(folder_tree,idii,folder_dict)
+
+    return folder_tree
 
 
 

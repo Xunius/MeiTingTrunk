@@ -3,10 +3,11 @@ import logging
 import logging.config
 #import operator
 import sqlite3
-from PyQt5 import QtWidgets, QtCore
+import pathlib
+from PyQt5 import QtWidgets, QtCore, QtSvg
 from PyQt5.QtCore import Qt, QVariant, QSettings, QTimer
 from PyQt5.QtGui import QPixmap, QIcon, QFont, QBrush, QColor, QFontMetrics,\
-        QCursor
+        QCursor, QImage, QPainter
 from lib import sqlitedb
 from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy,\
         getXExpandYMinSizePolicy, getXExpandYExpandSizePolicy, getHSpacer, \
@@ -99,6 +100,8 @@ LOG_CONFIG={
 # [y] change needs review states.
 # choose pdf viewer software.
 # add doi lookup button
+# add option to set autosave and auto backup
+# add some actions to Edit menu
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -142,12 +145,28 @@ class MainWindow(QtWidgets.QMainWindow):
             settings.setValue('display/folder/highlight_color_br',
                     QBrush(QColor(200,200,255)))
             settings.setValue('export/bib/omit_fields', OMIT_KEYS)
-            settings.setValue('saving/storage_folder', folder_name)
+
+            storage_folder=os.path.join(str(pathlib.Path.home()), 'Documents/MMT')
+            settings.setValue('saving/storage_folder', storage_folder)
 
             settings.sync()
 
         else:
             settings=QSettings(settings_path,QSettings.IniFormat)
+
+        #---------------Make sure output folder exists---------------
+        storage_folder=settings.value('saving/storage_folder')
+        print('# <loadSettings>: storage_folder=%s' %storage_folder)
+        self.logger.info('storage_folder=%s' %storage_folder)
+
+        storage_folder=os.path.expanduser(storage_folder)
+        if not os.path.exists(storage_folder):
+            os.makedirs(storage_folder)
+            os.makedirs(os.path.join(storage_folder,'Collections'))
+
+            print('# <loadSettings>: Create folder %s' %storage_folder)
+            self.logger.info('Create folder %s' %storage_folder)
+
 
         return settings
 
@@ -157,18 +176,6 @@ class MainWindow(QtWidgets.QMainWindow):
         print('# <loadSettings>: settings.fielName()=%s' %settings.fileName())
         self.logger.info('settings.fielName()=%s' %settings.fileName())
 
-        storage_folder=settings.value('saving/storage_folder')
-        print('# <loadSettings>: storage_folder=%s' %storage_folder)
-        self.logger.info('storage_folder=%s' %storage_folder)
-
-        #---------------Create output folder---------------
-        storage_folder=os.path.expanduser(storage_folder)
-        if not os.path.exists(storage_folder):
-            os.makedirs(storage_folder)
-            os.makedirs(os.path.join(storage_folder,'collections'))
-
-            print('# <loadSettings>: Create folder %s' %storage_folder)
-            self.logger.info('Create folder %s' %storage_folder)
 
 
         return settings
@@ -212,6 +219,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.edit_menu.addAction(preference_action)
 
         self.tool_menu=self.menu_bar.addMenu('&Tool')
+        #organize_folder_action=QtWidgets.QAction('Organize Folders', self)
+        #self.tool_menu.addAction(organize_folder_action)
+        #if not self.is_loaded:
+            #organize_folder_action.isEnabled(False)
+
         self.help_menu=self.menu_bar.addMenu('&Help')
         self.help_menu.addAction('Help')
 
@@ -779,6 +791,22 @@ if __name__=='__main__':
     splash.showMessage('Loading ...')
 
     QTimer.singleShot(2000, splash.close)
+
+    app.processEvents()
+    '''
+    '''
+    svgrenderer=QtSvg.QSvgRenderer('./recaman/recaman_box_n_33_fillline.svg.svg')
+    qimage=QImage(522,305, QImage.Format_ARGB32)
+    painter=QPainter(qimage)
+    svgrenderer.render(painter)
+
+    splash_pic=QPixmap.fromImage(qimage)
+    print('# <__init__>: splash_pic', splash_pic)
+    splash=QtWidgets.QSplashScreen(splash_pic, Qt.WindowStaysOnTopHint)
+    splash.show()
+    #splash.showMessage('Loading ...')
+
+    QTimer.singleShot(3000, splash.close)
 
     app.processEvents()
     '''

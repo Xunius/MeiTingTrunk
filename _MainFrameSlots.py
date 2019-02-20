@@ -135,6 +135,7 @@ class MainFrameSlots:
             # update meta_dict
             print('# <updateTabelData>: Add new doc. Given id=%s' %newid)
             self.logger.info('Add new doc. Given id=%s' %newid)
+            docid=newid
 
             self.meta_dict[newid]=meta_dict
             self.loadDocTable(docids=self._current_docids+[newid,],sel_row=None)
@@ -217,15 +218,15 @@ class MainFrameSlots:
 
     def saveToDatabase(self,docid):
 
-        print('# <saveToDatabase>: Saving folders to database.')
-        self.logger.info('Saving folders to database')
+        #print('# <saveToDatabase>: Saving folders to database.')
+        #self.logger.info('Saving folders to database')
 
         #----------------Save folders first----------------
         #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
                 #self.settings.value('saving/storage_folder'))
 
-        #sqlitedb.metaDictToDatabase(self.db,docid,self.meta_dict[docid],
-                #self.settings.value('saving/storage_folder'))
+        sqlitedb.metaDictToDatabase(self.db,docid,self.meta_dict[docid],
+                self.settings.value('saving/storage_folder'))
 
         return
 
@@ -337,7 +338,7 @@ class MainFrameSlots:
                             QtWidgets.QAbstractItemView.ExtendedSelection)
 
         elif action_text=='Add Entry Manually':
-            dialog=widgets.MetaDataEntryDialog(self.font_dict,self)
+            dialog=widgets.MetaDataEntryDialog(self.settings,self)
             dl_ret,dl_dict=dialog.exec_()
 
             if dl_ret:
