@@ -5,9 +5,10 @@ import logging
 from collections import OrderedDict
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, pyqtSignal, QPoint,\
-        pyqtSlot, QMimeData, QByteArray, QEvent
+        pyqtSlot, QMimeData, QByteArray, QEvent, QRect
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont, QFontMetrics,\
-        QCursor, QRegExpValidator
+        QCursor, QRegExpValidator, QPainter
+from PyQt5.QtWidgets import QStyle, QStyleOptionSlider
 import resources
 from lib import sqlitedb
 from .tools import getHLine, getXExpandYMinSizePolicy, getXMinYExpandSizePolicy,\
@@ -704,11 +705,14 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         LOGGER=logging.getLogger('default_logger')
         self.settings=settings
-        self.font_dict={
-            'meta_title': self.settings.value('display/fonts/meta_title',QFont),
-            'meta_authors': self.settings.value('display/fonts/meta_authors',QFont),
-            'meta_keywords': self.settings.value('display/fonts/meta_keywords',QFont)
-            }
+        self.parent=parent
+
+        #self.font_dict={
+            #'meta_title': self.settings.value('display/fonts/meta_title',QFont),
+            #'meta_authors': self.settings.value('display/fonts/meta_authors',QFont),
+            #'meta_keywords': self.settings.value('display/fonts/meta_keywords',QFont)
+            #}
+
         self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
         self.label_font=QFont('Serif',12,QFont.Bold)
 
@@ -725,7 +729,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         #--------------------Add title--------------------
         title_te=AdjustableTextEdit('title')
         title_te.setFrameStyle(QtWidgets.QFrame.NoFrame)
-        title_te.setFont(self.font_dict['meta_title'])
+        title_te.setFont(self.settings.value('display/fonts/meta_title', QFont))
         self.fields_dict['title']=title_te
         self.v_layout.addWidget(title_te)
 
@@ -830,8 +834,8 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         qlabel=QtWidgets.QLabel(label)
         qlabel.setStyleSheet(self.label_color)
 
-        if font_name in self.font_dict:
-            te.setFont(self.font_dict[font_name])
+        #if font_name in self.font_dict:
+        te.setFont(self.settings.value('display/fonts/%s' %font_name, QFont))
 
         rnow=grid_layout.rowCount()
         grid_layout.addWidget(qlabel,rnow,0)
@@ -846,8 +850,8 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.fold_dict[key]=te.is_fold
         te.fold_change_signal.connect(self.foldChanged)
 
-        if font_name in self.font_dict:
-            te.setFont(self.font_dict[font_name])
+        #if font_name in self.font_dict:
+        te.setFont(self.settings.value('display/fonts/%s' %font_name, QFont))
 
         if key=='authors_l':
             te.label_enabled=True
@@ -876,8 +880,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         le=FileLineEdit()
         le.setReadOnly(True)
 
-        if font_name in self.font_dict:
-            le.setFont(self.font_dict[font_name])
+        #if font_name in self.font_dict:
+            #le.setFont(self.font_dict[font_name])
+        le.setFont(self.settings.value('display/fonts/%s' %font_name, QFont))
 
         if text is not None:
             le.setText(text)
@@ -908,7 +913,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             } 
         ''' %(int(font_height/2), max(1,font_height-2))
         )
-        button.clicked.connect(lambda: self.delFileField(
+        button.clicked.connect(lambda: self.delFileButtonClicked(
             self.fields_dict['files_l'].index(le)))
 
         le.del_button=button
@@ -920,6 +925,13 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         self.v_layout.insertLayout(self.file_insert_idx,h_layout)
         self.file_insert_idx+=1
+
+        return
+
+    def delFileButtonClicked(self, idx=None):
+
+        self.delFileField(idx)
+        self.fieldEdited('files_l')
 
         return
 
@@ -948,10 +960,15 @@ class MetaTabScroll(QtWidgets.QScrollArea):
                 leii=self.fields_dict['files_l'][idx]
                 delFile(leii)
 
+
         return
 
 
     def addFileButtonClicked(self):
+
+        if hasattr(self.parent, '_current_doc') and self.parent._current_doc is None:
+            return
+
         fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a PDF file',
          '',"PDF files (*.pdf);; All files (*)")[0]
 
@@ -1126,7 +1143,7 @@ class PreferenceDialog(QtWidgets.QDialog):
             ('Scratch Pad Tab'        , 'display/fonts/scratch_pad')
             ])
 
-        self.new_values={}
+        self.new_values={} # store changes before applying
 
         self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
         self.title_label_font=QFont('Serif',12,QFont.Bold)
@@ -1188,15 +1205,13 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         for kk,vv in self.new_values.items():
             self.settings.setValue(kk,vv)
-            #print('# <applyChanges>: new settings value:',self.settings.value(kk))
 
-        omit_keys=self.settings.value('export/bib/omit_fields', [], str)
-        if isinstance(omit_keys,str) and omit_keys=='':
-            omit_keys=[]
-        self.new_values={'export/bib/omit_fields': omit_keys}
+        #------------------Set new timer------------------
+        if 'saving/auto_save_min' in self.new_values:
+            self.parent.main_frame.auto_save_timer.setInterval(
+                    self.settings.value('saving/auto_save_min',1,int)*60*1000)
 
-        print('# <applyChanges>: Refreshed new_values=',self.new_values)
-
+        self.new_values={}
 
         #---------------Create output folder---------------
         storage_folder=self.settings.value('saving/storage_folder')
@@ -1204,6 +1219,8 @@ class PreferenceDialog(QtWidgets.QDialog):
             os.makedirs(storage_folder)
             print('# <applyChanges>: Create new storage folder %s' %storage_folder)
             LOGGER.info('Create new storage folder %s' %storage_folder)
+
+
 
         # TODO: apply change to database and meta_dict
         # need to call saveFoldersToDatabase() with new folder, and
@@ -1262,7 +1279,9 @@ class PreferenceDialog(QtWidgets.QDialog):
         scroll,va=self.createFrame('Select Fonts')
 
         ha=QtWidgets.QHBoxLayout()
-        ha.addStretch()
+        #ha.addStretch()
+        label=QtWidgets.QLabel('NOTE some changes requires re-booting.')
+        ha.addWidget(label,0,Qt.AlignTop)
 
         text_list=QtWidgets.QListWidget()
         text_list.setSizePolicy(getXMinYExpandSizePolicy())
@@ -1326,12 +1345,26 @@ class PreferenceDialog(QtWidgets.QDialog):
         button.clicked.connect(self.chooseSaveFolder)
         ha.addWidget(button)
 
+        #----------------Auto save section----------------
+        va.addWidget(getHLine(self))
+        label3=QtWidgets.QLabel('Auto save interval (min)')
+        label3.setStyleSheet(self.label_color)
+        label3.setFont(self.title_label_font)
+        va.addWidget(label3)
+        va.addWidget(getHLine(self))
+
+        slider=LabeledSlider(1,10,1,parent=self)
+        slider.sl.setValue(self.settings.value('saving/auto_save_min',2,int))
+        slider.sl.valueChanged.connect(self.changeSavingInterval)
+        slider.setMaximumWidth(400)
+
+        va.addWidget(slider)
+
         #-------------Organize folders section-------------
         va.addWidget(getHLine(self))
         label3=QtWidgets.QLabel('Organize Folders')
         label3.setStyleSheet(self.label_color)
         label3.setFont(self.title_label_font)
-
         va.addWidget(label3)
         va.addWidget(getHLine(self))
 
@@ -1377,6 +1410,15 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         return
 
+    def changeSavingInterval(self,value):
+        print('# <changeSavingInterval>: Change auto saving interval to %s' %value)
+        LOGGER.info('Change auto saving interval to %s' %value)
+
+        self.new_values['saving/auto_save_min']=value
+
+        return
+
+
 
     def loadExportOptions(self):
 
@@ -1388,8 +1430,8 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         grid=QtWidgets.QGridLayout()
 
-        groupbox=QtWidgets.QGroupBox('Omit these fields in the exported bib entry.')
-        groupbox.setCheckable(True)
+        self.groupbox=QtWidgets.QGroupBox('Omit these fields in the exported bib entry.')
+        self.groupbox.setCheckable(True)
 
         omittable_keys=[
             'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
@@ -1412,34 +1454,25 @@ class PreferenceDialog(QtWidgets.QDialog):
             omit_keys=[]
 
         for ii,keyii in enumerate(omittable_keys):
-            checkboxii=QtWidgets.QCheckBox(keyii,groupbox)
+            checkboxii=QtWidgets.QCheckBox(keyii,self.groupbox)
             if keyii in omit_keys:
                 checkboxii.setChecked(True)
             checkboxii.stateChanged.connect(self.omitKeyChanged)
             grid.addWidget(checkboxii,int(ii/3),ii%3)
 
-        self.new_values['export/bib/omit_fields']=omit_keys
+        self.groupbox.toggled.connect(lambda on: self.omitKeysGroupChanged(on,
+            self.groupbox))
 
-        groupbox.toggled.connect(lambda on: self.omitKeysGroupChanged(on,
-            groupbox))
+        self.groupbox.setLayout(grid)
 
-        groupbox.setLayout(grid)
-
-        va.addWidget(groupbox)
+        va.addWidget(self.groupbox)
 
 
         return scroll
 
 
     def omitKeyChanged(self,on):
-        omit_keys=self.new_values.get('export/bib/omit_fields',[])
-        key=self.sender().text()
-        print('# <omitKeyChanged>: checkbox:',key)
-        if on and key not in omit_keys:
-            omit_keys.append(key)
-
-        self.new_values['export/bib/omit_fields']=omit_keys
-        print('# <omitKeyChanged>: new omit keys=',omit_keys)
+        self.new_values['export/bib/omit_fields']=self.getOmitKeys()
 
         return
 
@@ -1452,10 +1485,20 @@ class PreferenceDialog(QtWidgets.QDialog):
             if box.isChecked():
                 omit_keys.append(box.text())
 
-        print('# <omitKeysChanged>: New omit keys=',omit_keys)
         self.new_values['export/bib/omit_fields']=omit_keys
 
         return
+
+    def getOmitKeys(self):
+
+        omit_keys=[]
+
+        for box in self.groupbox.findChildren(QtWidgets.QCheckBox):
+            if box.isChecked():
+                omit_keys.append(box.text())
+
+        return omit_keys
+
 
 
     def loadCitationStyleOptions(self):
@@ -1517,3 +1560,113 @@ def createFolderTree(folder_dict,parent):
 
 
 
+
+class LabeledSlider(QtWidgets.QWidget):
+    def __init__(self, minimum, maximum, interval=1, orientation=Qt.Horizontal,
+            labels=None, parent=None):
+        super(LabeledSlider, self).__init__(parent=parent)
+
+        levels=range(minimum, maximum+interval, interval)
+        if labels is not None:
+            if not isinstance(labels, (tuple, list)):
+                raise Exception("<labels> is a list or tuple.")
+            if len(labels) != len(levels):
+                raise Exception("Size of <labels> doesn't match levels.")
+            self.levels=list(zip(levels,labels))
+        else:
+            self.levels=list(zip(levels,map(str,levels)))
+
+        if orientation==Qt.Horizontal:
+            self.layout=QtWidgets.QVBoxLayout(self)
+        elif orientation==Qt.Vertical:
+            self.layout=QtWidgets.QHBoxLayout(self)
+        else:
+            raise Exception("<orientation> wrong.")
+
+        # gives some space to print labels
+        self.left_margin=10
+        self.top_margin=10
+        self.right_margin=10
+        self.bottom_margin=10
+
+        self.layout.setContentsMargins(self.left_margin,self.top_margin,
+                self.right_margin,self.bottom_margin)
+
+        self.sl=QtWidgets.QSlider(orientation, self)
+        self.sl.setMinimum(minimum)
+        self.sl.setMaximum(maximum)
+        self.sl.setValue(minimum)
+        if orientation==Qt.Horizontal:
+            self.sl.setTickPosition(QtWidgets.QSlider.TicksBelow)
+            #self.sl.setMinimumWidth(300) # just to make it easier to read
+        else:
+            self.sl.setTickPosition(QtWidgets.QSlider.TicksLeft)
+            #self.sl.setMinimumHeight(300) # just to make it easier to read
+        self.sl.setTickInterval(interval)
+        self.sl.setSingleStep(1)
+
+        self.layout.addWidget(self.sl)
+
+    def paintEvent(self, e):
+
+        super(LabeledSlider,self).paintEvent(e)
+
+        style=self.sl.style()
+        painter=QPainter(self)
+        st_slider=QStyleOptionSlider()
+        st_slider.initFrom(self.sl)
+        st_slider.orientation=self.sl.orientation()
+
+        length=style.pixelMetric(QStyle.PM_SliderLength, st_slider, self.sl)
+        available=style.pixelMetric(QStyle.PM_SliderSpaceAvailable, st_slider, self.sl)
+
+        for v, v_str in self.levels:
+
+            # get the size of the label
+            rect=painter.drawText(QRect(), Qt.TextDontPrint, v_str)
+
+            if self.sl.orientation()==Qt.Horizontal:
+                # I assume the offset is half the length of slider, therefore
+                # + length//2
+                x_loc=QStyle.sliderPositionFromValue(self.sl.minimum(),
+                        self.sl.maximum(), v, available)+length//2
+
+                # left bound of the text = center - half of text width + L_margin
+                left=x_loc-rect.width()//2+self.left_margin
+                bottom=self.rect().bottom()
+
+                # enlarge margins if clipping
+                if v==self.sl.minimum():
+                    if left<=0:
+                        self.left_margin=rect.width()//2-x_loc
+                    if self.bottom_margin<=rect.height():
+                        self.bottom_margin=rect.height()
+
+                    self.layout.setContentsMargins(self.left_margin,
+                            self.top_margin, self.right_margin,
+                            self.bottom_margin)
+
+                if v==self.sl.maximum() and rect.width()//2>=self.right_margin:
+                    self.right_margin=rect.width()//2
+                    self.layout.setContentsMargins(self.left_margin,
+                            self.top_margin, self.right_margin,
+                            self.bottom_margin)
+
+            else:
+                y_loc=QStyle.sliderPositionFromValue(self.sl.minimum(),
+                        self.sl.maximum(), v, available, upsideDown=True)
+
+                bottom=y_loc+length//2+rect.height()//2+self.top_margin-3
+                # there is a 3 px offset that I can't attribute to any metric
+
+                left=self.left_margin-rect.width()
+                if left<=0:
+                    self.left_margin=rect.width()+2
+                    self.layout.setContentsMargins(self.left_margin,
+                            self.top_margin, self.right_margin,
+                            self.bottom_margin)
+
+            pos=QPoint(left, bottom)
+            painter.drawText(pos, v_str)
+
+        return

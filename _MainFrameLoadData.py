@@ -60,14 +60,16 @@ class MainFrameLoadData:
     @property
     def _current_doc(self):
         if hasattr(self,'doc_table'):
+            if len(self._tabledata)==0:
+                return None
             current_row=self.doc_table.currentIndex().row()
-            if current_row < len(self._tabledata)-1:
+            if current_row < len(self._tabledata):
                 docid=self._tabledata[current_row][0]
                 return docid
             else:
                 print('_current_doc: current_row > row number',current_row,\
                         len(self._tabledata))
-                return self._tabledata[-1][0]
+                return None
         else:
             return None
 
@@ -137,8 +139,6 @@ class MainFrameLoadData:
         #-------------Get all level 1 folders-------------
         folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if\
                 vv[1] in ['-1',]]
-        print('# <loadLibTree>: folders1',folders1)
-        #folders1.append(('Trash', '-3'))
         folders1.sort()
 
         #------------------Add separator------------------
@@ -169,6 +169,8 @@ class MainFrameLoadData:
 
         self.sortFolders()
         self.libtree.setCurrentItem(self.all_folder)
+
+        self.changed_doc_ids=[] # store ids of changed docs, for auto save
 
         return
 

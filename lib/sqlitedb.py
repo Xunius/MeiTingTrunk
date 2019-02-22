@@ -840,9 +840,9 @@ def insertToDocuments(db,docid,meta_dict,action):
     value_list=[]
 
     for kk,vv in meta_dict.items():
-        print('# <insertToDocuments>: kk=',kk,'vv=',vv)
 
         if kk in DOC_ATTRS:
+            print('# <insertToDocuments>: kk=',kk,'vv=',vv)
             key_list.append(kk)
             value_list.append(vv)
 
@@ -854,8 +854,6 @@ def insertToDocuments(db,docid,meta_dict,action):
                 %(', '.join(key_list), ','.join(['?',]*(1+len(key_list))))
     else:
         raise Exception("action not defined.")
-
-    print('# <insertToDocuments>: query:')
 
     cout.execute(query,[docid,]+value_list)
     db.commit()
@@ -911,19 +909,20 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder):
             newabsii=os.path.join(lib_folder,'Collections')
             newabsii=os.path.join(newabsii,filename)
 
-            print('# <insertToDocumentFiles>: file:',fii,'abspath',newabsii)
-
             cout.execute(query,(docid,newabsii))
 
             #--------------------Copy file--------------------
             shutil.copy(absii, newabsii)
 
+            print('# <insertToDocumentFiles>: Add file: %s.' %newabsii)
+            LOGGER.info('Add file: %s.' %newabsii)
+
+            print('# <insertToDocumentFiles>: Copy file %s to %s' %(absii,newabsii))
+            LOGGER.info('Copy file %s to %s' %(absii,newabsii))
+
         db.commit()
 
     return 0
-
-
-
 
 
 def addToDatabase(db,docid,meta_dict,lib_folder):
@@ -1023,22 +1022,11 @@ def updateToDatabase(db,docid,meta_dict,lib_folder):
     old_folders=old_meta['folders_l']
     if set(old_folders) != set(folders):
 
-        #-----------------Get old folders-----------------
-        """
-        query_folder=\
-        '''
-        SELECT Folders.id, Folders.name
-        FROM Folders
-        LEFT JOIN DocumentFolders ON DocumentFolders.folderid=Folders.id
-        WHERE (DocumentFolders.docid=?)
-        '''
-        """
-
-        #old_folders=fetchField(db,query_folder,(docid,),2,'list')
         del_folders=list(set(old_folders).difference(folders))
         new_folders=list(set(folders).difference(old_folders))
 
-        print('# <updateToDatabase>: old_folders:',old_folders,'del_folders',del_folders,\
+        print('# <updateToDatabase>: old_folders:',old_folders,
+                'del_folders',del_folders,
                 'new_folders',new_folders)
 
         for fii in del_folders:
@@ -1060,65 +1048,17 @@ def updateToDatabase(db,docid,meta_dict,lib_folder):
     print('# <updateToDatabase>: rec of insertToDocuments=%s' %rec)
     LOGGER.info('rec of insertToDocuments=%s' %rec)
 
-    """
-    key_list=[]
-    value_list=[]
-
-    for kk,vv in meta_dict.items():
-        print('# <updateToDatabase>: kk=',kk,'vv=',vv)
-
-        if kk in DOC_ATTRS:
-            key_list.append(kk)
-            value_list.append(vv)
-
-    query='''REPLACE INTO Documents (id, %s) VALUES (%s)''' \
-            %(', '.join(key_list), ','.join(['?',]*(1+len(key_list))))
-
-    print('docid=',docid)
-    print('# <updateToDatabase>: query:')
-    print(query)
-
-    cout.execute(query,[docid,]+value_list)
-    db.commit()
-    """
-
     #-----------------Get old authors-----------------
     old_firstnames=old_meta['firstNames_l']
     old_lastnames=old_meta['lastName_l']
 
     #------------------Update authors------------------
-    if old_firstnames!=meta_dict['firstNames_l'] or old_lastnames!=\
-            meta_dict['lastName_l']:
-        print('# <updateToDatabase>: need to update authors')
-
     if old_meta['authors_l']!=meta_dict['authors_l']:
         # so order change is also a change
-        print('# <updateToDatabase>: need to update authors 2')
+        print('# <updateToDatabase>: need to update authors')
 
         #----------------Remove old authors----------------
         delFromTable(db, 'DocumentContributors', docid)
-
-        """
-        query='''DELETE FROM DocumentContributors
-        WHERE (DocumentContributors.docid=?)
-        '''
-        print('# <updateToDatabase>: delete old authors query:', query)
-
-        cout.execute(query, (docid,))
-
-        authors=list(zip(meta_dict['firstNames_l'], meta_dict['lastName_l']))
-        print('# <updateToDatabase>: authors:', authors)
-
-        query='''INSERT OR IGNORE INTO DocumentContributors (docid, contribution, \
-                firstNames, lastName) VALUES (?,?,?,?)'''
-
-        for ii,nameii in enumerate(authors):
-            fii,lii=nameii
-
-            # TODO: distinguish DocumentAuthor from Editor
-            cout.execute(query,[docid,'DocumentAuthor',fii,lii])
-        db.commit()
-        """
 
         #------------------Update authors------------------
         firsts=meta_dict['firstNames_l']
@@ -1135,7 +1075,6 @@ def updateToDatabase(db,docid,meta_dict,lib_folder):
 
             print('# <updateToDatabase>: rec of insertToDocumentAuthors=%s' %rec)
             LOGGER.info('rec of insertToDocumentAuthors=%s' %rec)
-
 
     #-------------------Update files-------------------
     if set(old_meta['files_l']) != set(meta_dict['files_l']):
@@ -1163,13 +1102,11 @@ def updateToDatabase(db,docid,meta_dict,lib_folder):
     notes=meta_dict['notes']
     if old_meta['notes'] != notes:
 
-        delFromTable(db, 'DocumentNotes', docid)
-
         if notes:
             mtime=datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
             # Get createdTime if old note exists
             query='''
-            SELECT DocumentNotes.createdTime) FROM DocumentNotes
+            SELECT (DocumentNotes.createdTime) FROM DocumentNotes
             WHERE (DocumentNotes.docid=?)
             '''
             ctime=fetchField(db,query,(docid,),1,'str')
@@ -1177,13 +1114,17 @@ def updateToDatabase(db,docid,meta_dict,lib_folder):
             if ctime is None:
                 ctime=mtime
 
+            delFromTable(db, 'DocumentNotes', docid)
+
             rec=insertToTable(db, 'DocumentNotes',
                     ('docid', 'note', 'modifiedTime', 'createdTime'),
                     [(docid, notes, mtime, ctime)]
                     )
-
             print('# <updateToDatabase>: rec of insertDocumentNotes=%s' %rec)
             LOGGER.info('rec of insertDocumentNotes=%s' %rec)
+        else:
+            delFromTable(db, 'DocumentNotes', docid)
+
 
     #-------------------Update tags-------------------
     if set(old_meta['tags_l']) != set(meta_dict['tags_l']):

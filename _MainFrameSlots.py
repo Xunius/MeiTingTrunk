@@ -66,7 +66,7 @@ class MainFrameSlots:
 
 
 
-    def threadedFuncCall(self,func,joblist,res_func,show_message):
+    def threadedFuncCall(self,func,joblist,res_func=None,show_message=''):
 
         faillist=[]
         jobqueue=Queue()
@@ -98,7 +98,8 @@ class MainFrameSlots:
                     results.append(resii[1])
                     pb.setValue(len(results))
                     #self.updateTabelData(None,resii[1])
-                    res_func(resii[1])
+                    if res_func is not None:
+                        res_func(resii[1])
                 else:
                     faillist.append(resii[2])
             except:
@@ -161,7 +162,8 @@ class MainFrameSlots:
                     sel_row=self.doc_table.currentIndex().row())
 
 
-        self.saveToDatabase(docid)
+        #self.saveToDatabase(docid)
+        self.changed_doc_ids.append(docid)
 
         return
 
@@ -174,6 +176,8 @@ class MainFrameSlots:
         self.meta_dict[docid]['notes']=note_text
         print('# <updateNotes>: New notes for docid=%s: %s' %(docid,note_text))
         self.logger.info('New notes for docid=%s: %s' %(docid,note_text))
+
+        self.changed_doc_ids.append(docid)
 
         return
 
@@ -211,6 +215,8 @@ class MainFrameSlots:
             for mjj in mii:
                 mjj.setBackground(0, hi_color)
 
+        self.changed_doc_ids.append(docid)
+
         return
 
 
@@ -227,6 +233,22 @@ class MainFrameSlots:
 
         sqlitedb.metaDictToDatabase(self.db,docid,self.meta_dict[docid],
                 self.settings.value('saving/storage_folder'))
+
+        if docid in self.changed_doc_ids:
+            self.changed_doc_ids.remove(docid)
+
+        return
+
+    def autoSaveToDatabase(self):
+        from datetime import datetime
+        mtime=datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+        print('########### <autoSaveToDatabase>: auto save called.', mtime)
+
+        for ii in self.changed_doc_ids:
+            print('# <autoSaveToDatabase>: Save doc %s' %ii)
+            self.logger.info('Save doc %s' %ii)
+
+        self.changed_doc_ids=[]
 
         return
 

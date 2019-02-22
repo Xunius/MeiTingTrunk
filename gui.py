@@ -102,6 +102,8 @@ LOG_CONFIG={
 # add doi lookup button
 # add option to set autosave and auto backup
 # add some actions to Edit menu
+# disable the add file button when no doc is selected, but not when adding new mannualy
+# ISSUE: cant align the f*cking slider labels
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -144,10 +146,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
             settings.setValue('display/folder/highlight_color_br',
                     QBrush(QColor(200,200,255)))
+
             settings.setValue('export/bib/omit_fields', OMIT_KEYS)
 
             storage_folder=os.path.join(str(pathlib.Path.home()), 'Documents/MMT')
             settings.setValue('saving/storage_folder', storage_folder)
+
+            settings.setValue('saving/auto_save_min', 1),
 
             settings.sync()
 
@@ -260,6 +265,8 @@ class MainWindow(QtWidgets.QMainWindow):
             storage_folder=self.settings.value('saving/storage_folder')
             db=sqlitedb.createNewDatabase(fname,storage_folder)
 
+            # need to load the new database and start timer
+
         return
 
 
@@ -285,6 +292,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.main_frame.loadLibTree(db,meta_dict,folder_data,folder_dict)
             self.main_frame.status_bar.clearMessage()
             self.is_loaded=True
+            self.main_frame.auto_save_timer.start()
+
+            print('# <openDatabaseTriggered>: Start auto save timer.')
+            self.logger.info('Start auto save timer.')
 
         return
 
@@ -295,8 +306,13 @@ class MainWindow(QtWidgets.QMainWindow):
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
         if choice==QtWidgets.QMessageBox.Yes:
+            #self.main_frame.saveToDatabase()
             self.main_frame.clearData()
             self.is_loaded=False
+
+            self.main_frame.auto_save_timer.stop()
+            print('# <closeDatabaseTriggered>: Stop auto save timer.')
+            self.logger.info('Stop auto save timer.')
 
 
 
@@ -327,6 +343,10 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         self.settings=settings
         self.logger=logging.getLogger('default_logger')
         self.initUI()
+        self.auto_save_timer=QTimer(self)
+        tinter=self.settings.value('saving/auto_save_min', 1, int)*60*1000
+        self.auto_save_timer.setInterval(tinter)
+        self.auto_save_timer.timeout.connect(self.autoSaveToDatabase)
 
     def initUI(self):
 
@@ -783,17 +803,15 @@ if __name__=='__main__':
     logging.config.dictConfig(LOG_CONFIG)
     app=QtWidgets.QApplication(sys.argv)
 
-    '''
     splash_pic=QPixmap(':/logo.jpg')
     print('# <__init__>: splash_pic', splash_pic)
     splash=QtWidgets.QSplashScreen(splash_pic, Qt.WindowStaysOnTopHint)
     splash.show()
-    splash.showMessage('Loading ...')
+    splash.showMessage('YOLO')
 
     QTimer.singleShot(2000, splash.close)
 
     app.processEvents()
-    '''
     '''
     svgrenderer=QtSvg.QSvgRenderer('./recaman/recaman_box_n_33_fillline.svg.svg')
     qimage=QImage(522,305, QImage.Format_ARGB32)
