@@ -15,7 +15,7 @@ from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy,\
 
 from lib.widgets import TableModel, MyHeaderView, AdjustableTextEdit,\
         MetaTabScroll, TreeWidgetDelegate, MyTreeWidget, PreferenceDialog,\
-        NoteTextEdit
+        NoteTextEdit, ExportDialog
 
 import _MainFrameLoadData
 import _MainFrameSlots
@@ -102,8 +102,10 @@ LOG_CONFIG={
 # add doi lookup button
 # add option to set autosave and auto backup
 # add some actions to Edit menu
-# disable the add file button when no doc is selected, but not when adding new mannualy
-# ISSUE: cant align the f*cking slider labels
+# [y] disable the add file button when no doc is selected, but not when adding new mannualy
+# sqlite operations is restricted to a single thread.
+# add open doc folder action to right menu
+# auto open last datebase on launch
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -187,7 +189,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def initUI(self):
-        self.setWindowTitle('Reference manager %s' %__version__)
+        self.setWindowTitle('MEI-TING TRUNK %s' %__version__)
         self.setGeometry(100,100,1200,900)    #(x_left,y_top,w,h)
         #self.setWindowIcon(QIcon('img.png'))
 
@@ -198,8 +200,6 @@ class MainWindow(QtWidgets.QMainWindow):
         create_database_action=QtWidgets.QAction('Create New Database',self)
         open_database_action=QtWidgets.QAction('Open Database',self)
         close_database_action=QtWidgets.QAction('Close Database',self)
-        import_action=QtWidgets.QAction('Import',self)
-        export_action=QtWidgets.QAction('Export',self)
         create_backup_action=QtWidgets.QAction('Create Backup',self)
         quit_action=QtWidgets.QAction('Quit',self)
 
@@ -212,8 +212,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_menu.addAction(open_database_action)
         self.file_menu.addAction(close_database_action)
         self.file_menu.addSeparator()
-        self.file_menu.addAction(import_action)
-        self.file_menu.addAction(export_action)
         self.file_menu.addAction(create_backup_action)
         self.file_menu.addSeparator()
         self.file_menu.addAction(quit_action)
@@ -224,20 +222,24 @@ class MainWindow(QtWidgets.QMainWindow):
         self.edit_menu.addAction(preference_action)
 
         self.tool_menu=self.menu_bar.addMenu('&Tool')
-        #organize_folder_action=QtWidgets.QAction('Organize Folders', self)
-        #self.tool_menu.addAction(organize_folder_action)
-        #if not self.is_loaded:
-            #organize_folder_action.isEnabled(False)
+        self.import_action=QtWidgets.QAction('Import', self)
+        self.export_action=QtWidgets.QAction('Export', self)
+        self.tool_menu.addAction(self.import_action)
+        self.tool_menu.addAction(self.export_action)
+        if not self.is_loaded:
+            self.import_action.setEnabled(False)
+            self.export_action.setEnabled(False)
 
         self.help_menu=self.menu_bar.addMenu('&Help')
         self.help_menu.addAction('Help')
-
 
         #-----------------Connect signals-----------------
         create_database_action.triggered.connect(self.createDatabaseTriggered)
         open_database_action.triggered.connect(self.openDatabaseTriggered)
         close_database_action.triggered.connect(self.closeDatabaseTriggered)
         preference_action.triggered.connect(self.preferenceTriggered)
+        self.import_action.triggered.connect(self.importTriggered)
+        self.export_action.triggered.connect(self.exportTriggered)
         self.help_menu.triggered.connect(self.helpMenuTriggered)
         quit_action.triggered.connect(self.close)
 
@@ -294,6 +296,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.is_loaded=True
             self.main_frame.auto_save_timer.start()
 
+            self.import_action.setEnabled(True)
+            self.export_action.setEnabled(True)
+
             print('# <openDatabaseTriggered>: Start auto save timer.')
             self.logger.info('Start auto save timer.')
 
@@ -310,13 +315,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.main_frame.clearData()
             self.is_loaded=False
 
+            self.import_action.setEnabled(False)
+            self.export_action.setEnabled(False)
+
             self.main_frame.auto_save_timer.stop()
             print('# <closeDatabaseTriggered>: Stop auto save timer.')
             self.logger.info('Stop auto save timer.')
-
-
-
-
 
 
 
@@ -329,7 +333,14 @@ class MainWindow(QtWidgets.QMainWindow):
     def preferenceTriggered(self):
         diag=PreferenceDialog(self.settings,parent=self)
         diag.exec_()
-    
+
+    def importTriggered(self):
+        return
+
+    def exportTriggered(self):
+        diag=ExportDialog(self.settings,parent=self)
+        diag.exec_()
+        return
 
 
 
@@ -461,6 +472,12 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         self.status_bar.setFont(self.settings.value('display/fonts/statusbar',QFont))
         v_layout0.addWidget(self.status_bar)
         self.status_bar.showMessage('etest')
+
+        self.progressbar=QtWidgets.QProgressBar(self)
+        self.progressbar.setSizePolicy(getXExpandYMinSizePolicy())
+        self.progressbar.setMaximum(1)
+        self.progressbar.setVisible(False)
+        self.status_bar.addPermanentWidget(self.progressbar)
 
         h_split.setHandleWidth(4)
         w=h_split.size().width()
@@ -807,9 +824,9 @@ if __name__=='__main__':
     print('# <__init__>: splash_pic', splash_pic)
     splash=QtWidgets.QSplashScreen(splash_pic, Qt.WindowStaysOnTopHint)
     splash.show()
-    splash.showMessage('YOLO')
+    #splash.showMessage('YOLO')
 
-    QTimer.singleShot(2000, splash.close)
+    QTimer.singleShot(1984, splash.close)
 
     app.processEvents()
     '''

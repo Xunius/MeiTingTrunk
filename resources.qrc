@@ -1,8 +1,8 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
-    <file alias="bf.jpg">resources/bf.jpg</file>
-    <file alias="has_file.png">resources/has_file2.png</file>
-    <file alias="read.jpg">resources/read.jpg</file>
+    <file alias="bf.png">resources/bf.png</file>
+    <file alias="file_icon.png">resources/file_icon2.png</file>
+    <file alias="clap.png">resources/clap.png</file>
     <file alias="logo.jpg">resources/logo.jpg</file>
 </qresource>
 </RCC>

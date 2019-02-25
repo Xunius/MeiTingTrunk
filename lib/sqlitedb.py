@@ -616,12 +616,13 @@ def getFolderTree(df,folderid,verbose=True):
     #------------Back track tree structure------------
     cid=folderid
     while True:
-        pid=getParentId(df,cid)
-        if pid==-1 or pid==0:
+        pid=str(getParentId(df,cid))
+        if pid=='-1':
             break
         else:
             pfolder=getFolderName(df,pid)
-            folder=u'%s/%s' %(pfolder,folder)
+            #folder=u'%s/%s' %(pfolder,folder)
+            folder=os.path.join(pfolder,folder)
         cid=pid
 
     return folderid,folder

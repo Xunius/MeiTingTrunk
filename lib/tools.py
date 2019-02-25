@@ -6,6 +6,7 @@ Update time: 2018-09-29 21:20:32.
 
 import os
 import re
+import time
 import platform
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QThread, QObject, QMutex, pyqtSignal, pyqtSlot
@@ -59,12 +60,16 @@ def getVLine(parent=None):
 
 class WorkerThread(QThread):
 
+    jobdone_signal=pyqtSignal()
     def __init__(self,func,jobqueue,outqueue,parent=None):
         QThread.__init__(self,parent)
 
         self.func=func
         self.jobqueue=jobqueue
         self.outqueue=outqueue
+
+    def __del__(self):
+        self.wait()
 
     def run(self):
         while True:
@@ -74,6 +79,8 @@ class WorkerThread(QThread):
             rec=self.func(*args)
             self.jobqueue.task_done()
             self.outqueue.put(rec)
+            self.jobdone_signal.emit()
+            time.sleep(0.1)
 
 
 class Worker(QObject):
