@@ -943,6 +943,7 @@ class MainFrameSlots:
 
         menu=QtWidgets.QMenu()
         open_action=menu.addAction('Open File Externally')
+        open_folder_action=menu.addAction('Open Containing Folder')
         del_from_folder_action=menu.addAction('Delete From Current Folder')
         del_action=menu.addAction('Delete From Library')
         mark_needsreview_action=menu.addAction('Mark document as Needs Review')
@@ -969,8 +970,10 @@ class MainFrameSlots:
 
             if any(has_files):
                 open_action.setEnabled(True)
+                open_folder_action.setEnabled(True)
             else:
                 open_action.setDisabled(True)
+                open_folder_action.setDisabled(True)
 
             foldername,folderid=self._current_folder
             if self._current_folder_item in self.sys_folders:
@@ -991,6 +994,14 @@ class MainFrameSlots:
                     self.logger.info('Open docs: %s' %open_docs)
 
                     self.openDoc(open_docs)
+
+                elif action==open_folder_action:
+                    open_docs=[docids[ii] for ii in range(len(docids)) if has_files[ii]]
+
+                    print('# <docTableMenu>: Open docs in file mananger: %s' %open_docs)
+                    self.logger.info('Open docs in file mananger: %s' %open_docs)
+
+                    self.openDocFolder(open_docs)
 
                 elif action==del_from_folder_action:
                     self.delFromFolder(docids, foldername, folderid)
@@ -1024,6 +1035,29 @@ class MainFrameSlots:
             # what if file is not found?
             prop=subprocess.call(('xdg-open', file_pathii))
         return
+
+    def openDocFolder(self,docids):
+
+        print('# <openDocFolder>: docids=%s' %docids)
+        self.logger.info('docids=%s' %docids)
+
+        #------------Get default file mananger------------
+        prop=subprocess.Popen(['xdg-mime','query','default','inode/directory'],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        file_man=prop.communicate()[0].decode('ascii').strip().replace('.desktop','')
+
+        #----------------Open file manager----------------
+        for docii in docids:
+            file_pathii=self.meta_dict[docii]['files_l'][0] # take the 1st file
+
+            print('# <openDocFolder>: docid=%s. file_path=%s' %(docii, file_pathii))
+            self.logger.info('docid=%s. file_path=%s' %(docii, file_pathii))
+
+            # what if file is not found?
+            prop=subprocess.call((file_man, file_pathii))
+
+        return
+
 
 
     def delFromFolder(self,docids,foldername,folderid):

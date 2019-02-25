@@ -104,7 +104,7 @@ LOG_CONFIG={
 # add some actions to Edit menu
 # [y] disable the add file button when no doc is selected, but not when adding new mannualy
 # sqlite operations is restricted to a single thread.
-# add open doc folder action to right menu
+# add open doc folder action to right menu: 'xdg-mime query default inode/directory | sed 's/.desktop//g' -> e.g. nemo
 # auto open last datebase on launch
 
 
