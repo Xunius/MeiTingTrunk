@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 from queue import Queue
 from datetime import datetime
@@ -19,6 +20,34 @@ from .tools import getHLine, getXExpandYMinSizePolicy, getXMinYExpandSizePolicy,
 
 
 LOGGER=logging.getLogger('default_logger')
+
+
+def renameFile(fname,meta_dict):
+    '''Rename file on export.
+
+    Temp func, need to enable formatting later
+    '''
+    dirjj,filenamejj=os.path.split(fname)
+    basename,ext=os.path.splitext(filenamejj)
+
+    author=meta_dict['lastName_l'][0]
+    if author is None or author=='':
+        author='Unknown'
+
+    year=meta_dict.get('year','unknown')
+    title=meta_dict.get('title',basename)
+
+    #---------Handle multiple files for a doc---------
+    if len(meta_dict['files_l'])==1:
+        fname2='%s_%s_%s%s' %(author,year,title,ext)
+    else:
+        fname2='%s_%s_%s_%d%s' %(author,year,title,\
+                meta_dict['files_l'].index(fname), ext)
+
+    fname2=re.sub(r'[<>:"|?*]','_',fname2)
+    print('# <renameFile>: Old file name=',fname,'New file name=',fname2)
+
+    return fname2
 
 
 class TreeWidgetDelegate(QtWidgets.QItemDelegate):
@@ -1864,6 +1893,24 @@ class ExportDialog(QtWidgets.QDialog):
         scroll,va=self.createFrame('Copy Document Files')
         self.copyfile_settings={}
 
+        #---------------Rename file section---------------
+        checkbox=QtWidgets.QCheckBox('Rename Files on Export')
+        checked=self.settings.value('export/file/rename_files',type=int)
+        checkbox.setChecked(checked)
+
+        le=QtWidgets.QLineEdit(self)
+        le.setReadOnly(True)
+        le.setDisabled(1-checked)
+        checkbox.stateChanged.connect(lambda on: le.setEnabled(on))
+
+        le.setText('Renaming Format: Author_Year_Title.pdf')
+
+        va.addWidget(checkbox)
+        va.addWidget(le)
+
+        #---------------Fold choice section---------------
+        va.addWidget(getHLine())
+
         label=QtWidgets.QLabel('''
         Choose folders to export documents. <br/>
         This will copy documents (e.g. PDFs) from the
@@ -2020,7 +2067,7 @@ class ExportDialog(QtWidgets.QDialog):
                 for idii in docids:
                     if meta_dict[idii]['has_file']:
                         for fjj in meta_dict[idii]['files_l']:
-                            dirjj,filenamejj=os.path.split(fjj)
+                            filenamejj=renameFile(fjj,meta_dict[idii])
                             newfjj=os.path.join(folderii,filenamejj)
                             job_list.append((len(job_list), fjj, newfjj))
 

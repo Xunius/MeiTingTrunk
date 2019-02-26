@@ -8,6 +8,7 @@ import os
 import re
 import time
 import platform
+from fuzzywuzzy import fuzz
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QThread, QObject, QMutex, pyqtSignal, pyqtSlot
 try:
@@ -177,3 +178,41 @@ def removeInvalidPathChar(path):
         path=re.sub(r'[<>:"|?*]','_',path)
 
     return path
+
+
+def fuzzyMatch(dict1,dict2):
+
+    authors1=dict1.get('authors_l','')
+    authors2=dict2.get('authors_l','')
+    authors1=', '.join(authors1)
+    authors2=', '.join(authors2)
+
+    title1=dict1.get('title','')
+    title2=dict2.get('title','')
+
+    journal1=dict1.get('journal','')
+    journal2=dict2.get('journal','')
+    year1=dict1.get('year','')
+    year2=dict2.get('year','')
+
+    jy1='%s %s' %(journal1, year1)
+    jy2='%s %s' %(journal2, year2)
+
+    print('# <fuzzyMatch>: authors1=',authors1,'authors2=',authors2,
+            'title1=',title1,'title2=',title2,'jy1=',jy1,'jy2=',jy2)
+
+    ratio_authors=fuzz.token_sort_ratio(authors1, authors2)
+    ratio_title=fuzz.partial_ratio(title1, title2)
+    ratio_other=fuzz.token_set_ratio(jy1, jy2)
+
+    len_authors=0.5*(len(authors1)+len(authors2))
+    len_title=0.5*(len(title1)+len(title2))
+    len_other=0.5*(len(jy1)+len(jy2))
+
+    score=(len_authors*ratio_authors + len_title*ratio_title + len_other*ratio_other)/\
+            (len_authors+len_title+len_other)
+
+    return score
+
+
+

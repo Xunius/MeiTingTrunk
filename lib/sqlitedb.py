@@ -906,7 +906,8 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder):
             absii=os.path.expanduser(fii)
             #absii=tools.removeInvalidPathChar(absii)
             folder,filename=os.path.split(absii)
-            filename=re.sub(r'[<>:"|?*]','_',filename)
+            # can't do filename change here, will cause missing file.
+            #filename=re.sub(r'[<>:"|?*]','_',filename)
             newabsii=os.path.join(lib_folder,'Collections')
             newabsii=os.path.join(newabsii,filename)
 

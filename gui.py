@@ -106,6 +106,7 @@ LOG_CONFIG={
 # sqlite operations is restricted to a single thread.
 # [y] add open doc folder action to right menu: 'xdg-mime query default inode/directory | sed 's/.desktop//g' -> e.g. nemo
 # [y] auto open last datebase on launch
+# rename file when exporting
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -157,6 +158,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     QBrush(QColor(200,200,255)))
 
             settings.setValue('export/bib/omit_fields', OMIT_KEYS)
+            settings.setValue('export/file/rename_files', 1)
+            settings.setValue('export/file/rename_file_replace_space', 1)
             settings.setValue('file/recent_open', [])
             settings.setValue('file/recent_open_num', 2)
             settings.setValue('file/auto_open_last', 1)
