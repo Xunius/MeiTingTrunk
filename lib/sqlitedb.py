@@ -650,6 +650,42 @@ def getFolderDocList(db,folderid,verbose=True):
     return docids
 
 
+def renameFile(fname,meta_dict,replace_space=False):
+    '''Rename file on export.
+
+    Temp func, need to enable formatting later
+    '''
+    dirjj,filenamejj=os.path.split(fname)
+    basename,ext=os.path.splitext(filenamejj)
+
+    author=meta_dict['lastName_l']
+    if len(author)>0:
+        author=author[0]
+        if author is None or author=='':
+            author='Unknown'
+    else:
+        author='Unknown'
+
+    year=meta_dict['year']
+    print('year=',year)
+    if year is None:
+        year='unknown'
+    title=meta_dict.get('title',basename)
+
+    #---------Handle multiple files for a doc---------
+    if len(meta_dict['files_l'])==1:
+        fname2='%s_%s_%s%s' %(author,year,title,ext)
+    else:
+        fname2='%s_%s_%s_%d%s' %(author,year,title,\
+                meta_dict['files_l'].index(fname), ext)
+
+    if replace_space:
+        fname2=fname2.replace(' ','-')
+
+    fname2=re.sub(r'[<>:"|?*]','_',fname2)
+    print('# <renameFile>: Old file name=',fname,'New file name=',fname2)
+
+    return fname2
 
 
 
@@ -676,7 +712,7 @@ def saveFoldersToDatabase(db,folder_dict,lib_folder):
     return 0
 
 
-def createNewDatabase(file_path,lib_folder):
+def createNewDatabase(file_path,lib_folder,rename_files):
 
     dbfout=os.path.abspath(file_path)
 
@@ -803,12 +839,12 @@ def createNewDatabase(file_path,lib_folder):
     doc['files_l']=['./sample_pdf.pdf',]
 
 
-    metaDictToDatabase(dbout,1,bib_entries[0],lib_folder)
+    metaDictToDatabase(dbout,1,bib_entries[0],lib_folder,rename_files)
 
     return dbout
 
 
-def metaDictToDatabase(db,docid,meta_dict,lib_folder):
+def metaDictToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
     query='''SELECT DISTINCT id
     FROM Documents
@@ -820,12 +856,12 @@ def metaDictToDatabase(db,docid,meta_dict,lib_folder):
         print('# <metaDictToDatabase>: docid %s in database. Updating...' %docid)
         LOGGER.info('docid %s in database. Updating...' %docid)
 
-        rec=updateToDatabase(db,docid,meta_dict,lib_folder)
+        rec=updateToDatabase(db,docid,meta_dict,lib_folder,rename_files)
     else:
         print('# <metaDictToDatabase>: docid %s not in database. Inserting...' %docid)
         LOGGER.info('docid %s not in database. Inserting...' %docid)
 
-        rec=addToDatabase(db,docid,meta_dict,lib_folder)
+        rec=addToDatabase(db,docid,meta_dict,lib_folder,rename_files)
 
     print('# <metaDictToDatabase>: rec=%s' %rec)
 
@@ -894,7 +930,7 @@ def delFromTable(db, table, docid):
     return 0
 
 
-def insertToDocumentFiles(db, docid, meta_dict, lib_folder):
+def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
 
     cout=db.cursor()
     files=meta_dict['files_l']
@@ -908,13 +944,20 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder):
             folder,filename=os.path.split(absii)
             # can't do filename change here, will cause missing file.
             #filename=re.sub(r'[<>:"|?*]','_',filename)
+            if rename_files:
+                filename=renameFile(fii,meta_dict)
             newabsii=os.path.join(lib_folder,'Collections')
             newabsii=os.path.join(newabsii,filename)
 
             cout.execute(query,(docid,newabsii))
 
             #--------------------Copy file--------------------
-            shutil.copy(absii, newabsii)
+            print('# <insertToDocumentFiles>: Copy',absii,'to',newabsii)
+            try:
+                shutil.copy(absii, newabsii)
+            except:
+                print('# <insertToDocumentFiles>: Failed to copy file %s' %absii)
+                LOGGER.info('Failed to copy file %s' %absii)
 
             print('# <insertToDocumentFiles>: Add file: %s.' %newabsii)
             LOGGER.info('Add file: %s.' %newabsii)
@@ -927,7 +970,7 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder):
     return 0
 
 
-def addToDatabase(db,docid,meta_dict,lib_folder):
+def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
     print('# <addToDatabase>: Add doc to database. docid=%s' %docid)
     LOGGER.info('Add doc to database. docid=%s' %docid)
@@ -954,7 +997,7 @@ def addToDatabase(db,docid,meta_dict,lib_folder):
         LOGGER.info('rec of insertToDocumentAuthors=%s' %rec)
 
     #-------------------Update files-------------------
-    rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder)
+    rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files)
 
     print('# <addToDatabase>: rec of insertToDocumentFiles=%s' %rec)
     LOGGER.info('rec of insertToDocumentFiles=%s' %rec)
@@ -1010,7 +1053,7 @@ def addToDatabase(db,docid,meta_dict,lib_folder):
 
 
 
-def updateToDatabase(db,docid,meta_dict,lib_folder):
+def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
     cout=db.cursor()
 
@@ -1083,7 +1126,7 @@ def updateToDatabase(db,docid,meta_dict,lib_folder):
 
         delFromTable(db, 'DocumentFiles', docid)
 
-        rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder)
+        rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files)
 
         print('# <updateToDatabase>: rec of insertToDocumentFiles=%s' %rec)
         LOGGER.info('rec of insertToDocumentFiles=%s' %rec)

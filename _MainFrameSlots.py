@@ -73,7 +73,7 @@ class MainFrameSlots:
                 show_message,max_threads,get_results,self)
         #thread_run_dialog.exec_()
         if get_results:
-            print('# <checkFolderName>: results',thread_run_dialog.results)
+            #print('# <threadedFuncCall2>: results',thread_run_dialog.results)
             return thread_run_dialog.results
         else:
             return
@@ -250,15 +250,16 @@ class MainFrameSlots:
 
     def saveToDatabase(self,docid):
 
-        #print('# <saveToDatabase>: Saving folders to database.')
-        #self.logger.info('Saving folders to database')
+        print('# <saveToDatabase>: Saving folders to database.')
+        self.logger.info('Saving folders to database')
 
         #----------------Save folders first----------------
-        #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
-                #self.settings.value('saving/storage_folder'))
+        sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
+                self.settings.value('saving/storage_folder'))
 
         sqlitedb.metaDictToDatabase(self.db,docid,self.meta_dict[docid],
-                self.settings.value('saving/storage_folder'))
+                self.settings.value('saving/storage_folder'),
+                self.settings.value('saving/rename_files'))
 
         if docid in self.changed_doc_ids:
             self.changed_doc_ids.remove(docid)

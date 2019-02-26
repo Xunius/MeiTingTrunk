@@ -106,7 +106,8 @@ LOG_CONFIG={
 # sqlite operations is restricted to a single thread.
 # [y] add open doc folder action to right menu: 'xdg-mime query default inode/directory | sed 's/.desktop//g' -> e.g. nemo
 # [y] auto open last datebase on launch
-# rename file when exporting
+# rename file when exporting. Need to deal with switching to renaming after some files have been copied without renaming, or changing renaming pattern.
+
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -158,8 +159,6 @@ class MainWindow(QtWidgets.QMainWindow):
                     QBrush(QColor(200,200,255)))
 
             settings.setValue('export/bib/omit_fields', OMIT_KEYS)
-            settings.setValue('export/file/rename_files', 1)
-            settings.setValue('export/file/rename_file_replace_space', 1)
             settings.setValue('file/recent_open', [])
             settings.setValue('file/recent_open_num', 2)
             settings.setValue('file/auto_open_last', 1)
@@ -168,6 +167,8 @@ class MainWindow(QtWidgets.QMainWindow):
             settings.setValue('saving/storage_folder', storage_folder)
 
             settings.setValue('saving/auto_save_min', 1),
+            settings.setValue('saving/rename_files', 1)
+            settings.setValue('saving/rename_file_replace_space', 1)
 
             settings.sync()
 
@@ -182,10 +183,16 @@ class MainWindow(QtWidgets.QMainWindow):
         storage_folder=os.path.expanduser(storage_folder)
         if not os.path.exists(storage_folder):
             os.makedirs(storage_folder)
-            os.makedirs(os.path.join(storage_folder,'Collections'))
 
             print('# <loadSettings>: Create folder %s' %storage_folder)
             self.logger.info('Create folder %s' %storage_folder)
+
+        collection_folder=os.path.join(storage_folder,'Collections')
+        if not os.path.exists(collection_folder):
+            os.makedirs(collection_folder)
+
+            print('# <loadSettings>: Create folder %s' %collection_folder)
+            self.logger.info('Create folder %s' %collection_folder)
 
 
         return settings
@@ -210,21 +217,27 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.file_menu=self.menu_bar.addMenu('&File')
 
-        #create_database_action=QtWidgets.QAction('Create New Database',self)
-        #open_database_action=QtWidgets.QAction('Open Database',self)
-        #close_database_action=QtWidgets.QAction('Close Database',self)
-        #create_backup_action=QtWidgets.QAction('Create Backup',self)
-
         create_database_action=self.file_menu.addAction('Create New Database')
         open_database_action=self.file_menu.addAction('Open Database')
         self.recent_open_menu=self.file_menu.addMenu('Open Recent')
+        save_database_action=self.file_menu.addAction('Save Database')
         close_database_action=self.file_menu.addAction('Close Database')
         self.file_menu.addSeparator()
         create_backup_action=self.file_menu.addAction('Create Backup')
         quit_action=self.file_menu.addAction('Quit')
 
+        create_database_action.setIcon(QIcon.fromTheme('document-new'))
+        open_database_action.setIcon(QIcon.fromTheme('document-open'))
+        self.recent_open_menu.setIcon(QIcon.fromTheme('document-open-recent'))
+        save_database_action.setIcon(QIcon.fromTheme('document-save'))
+        close_database_action.setIcon(QIcon.fromTheme('call-stop'))
+        create_backup_action.setIcon(QIcon.fromTheme('document-send'))
+        quit_action.setIcon(QIcon.fromTheme('window-close'))
+
+
         create_database_action.setShortcut('Ctrl+n')
         open_database_action.setShortcut('Ctrl+o')
+        save_database_action.setShortcut('Ctrl+s')
         close_database_action.setShortcut('Ctrl+w')
         quit_action.setShortcut('Ctrl+q')
 
@@ -240,16 +253,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 recentii=self.recent_open_menu.addAction(rii)
                 recentii.triggered.connect(lambda x,t=rii: self._openDatabase(t))
 
-        #self.file_menu.addAction(create_database_action)
-        #self.file_menu.addAction(open_database_action)
-        #self.file_menu.addAction(close_database_action)
-        #self.file_menu.addAction(create_backup_action)
-        #self.file_menu.addSeparator()
-        #self.file_menu.addAction(quit_action)
-
-
         self.edit_menu=self.menu_bar.addMenu('&Edit')
         preference_action=QtWidgets.QAction('Preferences',self)
+        preference_action.setIcon(QIcon.fromTheme('preferences-system'))
         self.edit_menu.addAction(preference_action)
 
         self.tool_menu=self.menu_bar.addMenu('&Tool')
@@ -267,6 +273,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #-----------------Connect signals-----------------
         create_database_action.triggered.connect(self.createDatabaseTriggered)
         open_database_action.triggered.connect(self.openDatabaseTriggered)
+        save_database_action.triggered.connect(self.saveDatabaseTriggered)
         close_database_action.triggered.connect(self.closeDatabaseTriggered)
         preference_action.triggered.connect(self.preferenceTriggered)
         self.import_action.triggered.connect(self.importTriggered)
@@ -362,6 +369,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.settings.setValue('file/recent_open',recent)
 
+        return
+
+    def saveDatabaseTriggered(self):
+        self.main_frame.saveToDatabase()
         return
 
     def closeDatabaseTriggered(self):

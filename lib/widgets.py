@@ -22,32 +22,6 @@ from .tools import getHLine, getXExpandYMinSizePolicy, getXMinYExpandSizePolicy,
 LOGGER=logging.getLogger('default_logger')
 
 
-def renameFile(fname,meta_dict):
-    '''Rename file on export.
-
-    Temp func, need to enable formatting later
-    '''
-    dirjj,filenamejj=os.path.split(fname)
-    basename,ext=os.path.splitext(filenamejj)
-
-    author=meta_dict['lastName_l'][0]
-    if author is None or author=='':
-        author='Unknown'
-
-    year=meta_dict.get('year','unknown')
-    title=meta_dict.get('title',basename)
-
-    #---------Handle multiple files for a doc---------
-    if len(meta_dict['files_l'])==1:
-        fname2='%s_%s_%s%s' %(author,year,title,ext)
-    else:
-        fname2='%s_%s_%s_%d%s' %(author,year,title,\
-                meta_dict['files_l'].index(fname), ext)
-
-    fname2=re.sub(r'[<>:"|?*]','_',fname2)
-    print('# <renameFile>: Old file name=',fname,'New file name=',fname2)
-
-    return fname2
 
 
 class TreeWidgetDelegate(QtWidgets.QItemDelegate):
@@ -1422,6 +1396,24 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         button.clicked.connect(self.chooseSaveFolder)
         ha.addWidget(button)
+        va.addWidget(getHLine())
+
+        #---------------Rename file section---------------
+        checkbox=QtWidgets.QCheckBox('Rename Files')
+        checked=self.settings.value('saving/rename_files',type=int)
+        print('# <loadSavingsOptions>: Got rename files=',checked)
+        checkbox.setChecked(checked)
+
+        le=QtWidgets.QLineEdit(self)
+        le.setReadOnly(True)
+        le.setDisabled(1-checked)
+        checkbox.stateChanged.connect(lambda on: self.changeRenameFiles(on))
+        checkbox.stateChanged.connect(lambda on: le.setEnabled(on))
+
+        le.setText('Renaming Format: Author_Year_Title.pdf')
+
+        va.addWidget(checkbox)
+        va.addWidget(le)
 
         #----------------Auto save section----------------
         va.addWidget(getHLine(self))
@@ -1438,6 +1430,8 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         va.addWidget(slider)
 
+        va.addStretch()
+
 
         return scroll
 
@@ -1452,6 +1446,14 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
         return
+
+    def changeRenameFiles(self,on):
+        on=1 if on>0 else 0 # for some reason <on> keeps giving me 2
+        self.new_values['saving/rename_files']=on
+        print('# <changeRenameFiles>: Change rename files to %s' %on)
+        LOGGER.info('Change rename files to %s' %on)
+        return
+
 
     def changeSavingInterval(self,value):
         print('# <changeSavingInterval>: Change auto saving interval to %s' %value)
@@ -1893,20 +1895,6 @@ class ExportDialog(QtWidgets.QDialog):
         scroll,va=self.createFrame('Copy Document Files')
         self.copyfile_settings={}
 
-        #---------------Rename file section---------------
-        checkbox=QtWidgets.QCheckBox('Rename Files on Export')
-        checked=self.settings.value('export/file/rename_files',type=int)
-        checkbox.setChecked(checked)
-
-        le=QtWidgets.QLineEdit(self)
-        le.setReadOnly(True)
-        le.setDisabled(1-checked)
-        checkbox.stateChanged.connect(lambda on: le.setEnabled(on))
-
-        le.setText('Renaming Format: Author_Year_Title.pdf')
-
-        va.addWidget(checkbox)
-        va.addWidget(le)
 
         #---------------Fold choice section---------------
         va.addWidget(getHLine())
@@ -2067,7 +2055,7 @@ class ExportDialog(QtWidgets.QDialog):
                 for idii in docids:
                     if meta_dict[idii]['has_file']:
                         for fjj in meta_dict[idii]['files_l']:
-                            filenamejj=renameFile(fjj,meta_dict[idii])
+                            filenamejj=sqlitedb.renameFile(fjj,meta_dict[idii])
                             newfjj=os.path.join(folderii,filenamejj)
                             job_list.append((len(job_list), fjj, newfjj))
 
