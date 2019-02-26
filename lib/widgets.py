@@ -1180,7 +1180,8 @@ class PreferenceDialog(QtWidgets.QDialog):
             #background-color: rgb(230,234,235);
             #''')
 
-        self.cate_list.addItems(['Citation Style', 'Display', 'Export', 'Savings'])
+        self.cate_list.addItems(['Citation Style', 'Display', 'Export',
+            'Savings', 'Miscellaneous'])
 
         self.content_vlayout=QtWidgets.QVBoxLayout()
         h_layout.addLayout(self.content_vlayout)
@@ -1254,6 +1255,8 @@ class PreferenceDialog(QtWidgets.QDialog):
             self.content_frame=self.loadCitationStyleOptions()
         elif item_text=='Savings':
             self.content_frame=self.loadSavingsOptions()
+        elif item_text=='Miscellaneous':
+            self.content_frame=self.loadMiscellaneousOptions()
 
         self.content_vlayout.insertWidget(0,self.content_frame)
 
@@ -1426,7 +1429,6 @@ class PreferenceDialog(QtWidgets.QDialog):
         LOGGER.info('Change auto saving interval to %s' %value)
 
         self.new_values['saving/auto_save_min']=value
-
         return
 
 
@@ -1486,6 +1488,58 @@ class PreferenceDialog(QtWidgets.QDialog):
         return scroll
 
 
+    def loadMiscellaneousOptions(self):
+
+        scroll, va=self.createFrame('Miscellaneous')
+
+        #-------Open last database on launch section-------
+        checkbox=QtWidgets.QCheckBox('Automatically Open Last Database on Start-up?')
+        checkbox.stateChanged.connect(self.changeAutoOpenLast)
+        auto_open_last=self.settings.value('file/auto_open_last',type=int)
+        if auto_open_last==1:
+            checkbox.setChecked(True)
+        else:
+            checkbox.setChecked(False)
+
+        va.addWidget(checkbox)
+
+        #--------------Recent number section--------------
+        va.addWidget(getHLine(self))
+        label4=QtWidgets.QLabel('Record Number of Recently Opened Database')
+        label4.setStyleSheet(self.label_color)
+        label4.setFont(self.title_label_font)
+        va.addWidget(label4)
+        va.addWidget(getHLine(self))
+
+        slider2=LabeledSlider(0,10,1,parent=self)
+        slider2.sl.setValue(self.settings.value('file/recent_open_num',type=int))
+        slider2.sl.valueChanged.connect(self.changeRecentNumber)
+        slider2.setMaximumWidth(400)
+
+        va.addWidget(slider2)
+
+        va.addStretch()
+
+        return scroll
+
+    def changeAutoOpenLast(self,on):
+
+        if on:
+            self.new_values['file/auto_open_last']=1
+        else:
+            self.new_values['file/auto_open_last']=0
+
+        print('# <changeAutoOpenLast>: Change auto open last to %s' %on)
+        LOGGER.info('Change auto open last to %s' %on)
+        return
+
+
+    def changeRecentNumber(self,value):
+        print('# <changeRecentNumber>: Change recent database number to %s' %value)
+        LOGGER.info('Change recent database number to %s' %value)
+
+        self.new_values['file/recent_open_num']=value
+        return
 
 
 def createFolderTree(folder_dict,parent):

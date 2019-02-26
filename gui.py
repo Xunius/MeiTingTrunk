@@ -104,8 +104,8 @@ LOG_CONFIG={
 # add some actions to Edit menu
 # [y] disable the add file button when no doc is selected, but not when adding new mannualy
 # sqlite operations is restricted to a single thread.
-# add open doc folder action to right menu: 'xdg-mime query default inode/directory | sed 's/.desktop//g' -> e.g. nemo
-# auto open last datebase on launch
+# [y] add open doc folder action to right menu: 'xdg-mime query default inode/directory | sed 's/.desktop//g' -> e.g. nemo
+# [y] auto open last datebase on launch
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -121,6 +121,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.main_frame=MainFrame(self.settings)
         self.setCentralWidget(self.main_frame)
+
+        recent=self.settings.value('file/recent_open',[],str)
+        if isinstance(recent,str) and recent=='':
+            recent=[]
+        if self.settings.value('file/auto_open_last',type=int) and len(recent)>0:
+            # add a delay, otherwise splash won't show
+            QTimer.singleShot(100, lambda: self._openDatabase(recent[0]))
 
     def initSettings(self):
         folder_name=os.path.dirname(os.path.abspath(__file__))
@@ -150,6 +157,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     QBrush(QColor(200,200,255)))
 
             settings.setValue('export/bib/omit_fields', OMIT_KEYS)
+            settings.setValue('file/recent_open', [])
+            settings.setValue('file/recent_open_num', 2)
+            settings.setValue('file/auto_open_last', 1)
 
             storage_folder=os.path.join(str(pathlib.Path.home()), 'Documents/MMT')
             settings.setValue('saving/storage_folder', storage_folder)
@@ -197,24 +207,42 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.file_menu=self.menu_bar.addMenu('&File')
 
-        create_database_action=QtWidgets.QAction('Create New Database',self)
-        open_database_action=QtWidgets.QAction('Open Database',self)
-        close_database_action=QtWidgets.QAction('Close Database',self)
-        create_backup_action=QtWidgets.QAction('Create Backup',self)
-        quit_action=QtWidgets.QAction('Quit',self)
+        #create_database_action=QtWidgets.QAction('Create New Database',self)
+        #open_database_action=QtWidgets.QAction('Open Database',self)
+        #close_database_action=QtWidgets.QAction('Close Database',self)
+        #create_backup_action=QtWidgets.QAction('Create Backup',self)
+
+        create_database_action=self.file_menu.addAction('Create New Database')
+        open_database_action=self.file_menu.addAction('Open Database')
+        self.recent_open_menu=self.file_menu.addMenu('Open Recent')
+        close_database_action=self.file_menu.addAction('Close Database')
+        self.file_menu.addSeparator()
+        create_backup_action=self.file_menu.addAction('Create Backup')
+        quit_action=self.file_menu.addAction('Quit')
 
         create_database_action.setShortcut('Ctrl+n')
         open_database_action.setShortcut('Ctrl+o')
         close_database_action.setShortcut('Ctrl+w')
         quit_action.setShortcut('Ctrl+q')
 
-        self.file_menu.addAction(create_database_action)
-        self.file_menu.addAction(open_database_action)
-        self.file_menu.addAction(close_database_action)
-        self.file_menu.addSeparator()
-        self.file_menu.addAction(create_backup_action)
-        self.file_menu.addSeparator()
-        self.file_menu.addAction(quit_action)
+        #---------------Populate open recent---------------
+        recent=self.settings.value('file/recent_open',[],str)
+        if isinstance(recent,str) and recent=='':
+            recent=[]
+        recent_num=self.settings.value('file/recent_open_num',type=int)
+        print('# <initUI>: recent=',recent,type(recent))
+
+        if recent and recent_num>0:
+            for rii in recent:
+                recentii=self.recent_open_menu.addAction(rii)
+                recentii.triggered.connect(lambda x,t=rii: self._openDatabase(t))
+
+        #self.file_menu.addAction(create_database_action)
+        #self.file_menu.addAction(open_database_action)
+        #self.file_menu.addAction(close_database_action)
+        #self.file_menu.addAction(create_backup_action)
+        #self.file_menu.addSeparator()
+        #self.file_menu.addAction(quit_action)
 
 
         self.edit_menu=self.menu_bar.addMenu('&Edit')
@@ -278,29 +306,58 @@ class MainWindow(QtWidgets.QMainWindow):
      '',"sqlite files (*.sqlite);; All files (*)")[0]
 
         if fname:
+            self._openDatabase(fname)
+            return
 
-            # close current if loaded
-            if self.is_loaded:
-                self.closeDatabaseTriggered()
+    def _openDatabase(self,fname):
 
-            self.main_frame.status_bar.showMessage('Opening database...')
-            db = sqlite3.connect(fname)
+        if not os.path.exists(fname):
+            msg=QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            msg.setWindowTitle('Can not find file')
+            msg.setText("Can not find target database file.")
+            msg.setInformativeText("The requested database file\n    %s\nmay have be deleted, renamed or removed."\
+                    %fname)
+            msg.exec_()
+            return
 
-            print('# <openDatabaseTriggered>: Connected to database: %s' %fname)
-            self.logger.info('Connected to database: %s' %fname)
+        # close current if loaded
+        if self.is_loaded:
+            self.closeDatabaseTriggered()
 
-            self.db=db
-            meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
-            self.main_frame.loadLibTree(db,meta_dict,folder_data,folder_dict)
-            self.main_frame.status_bar.clearMessage()
-            self.is_loaded=True
-            self.main_frame.auto_save_timer.start()
+        self.main_frame.status_bar.showMessage('Opening database...')
+        db = sqlite3.connect(fname)
 
-            self.import_action.setEnabled(True)
-            self.export_action.setEnabled(True)
+        print('# <openDatabaseTriggered>: Connected to database: %s' %fname)
+        self.logger.info('Connected to database: %s' %fname)
 
-            print('# <openDatabaseTriggered>: Start auto save timer.')
-            self.logger.info('Start auto save timer.')
+        self.db=db
+        meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
+        self.main_frame.loadLibTree(db,meta_dict,folder_data,folder_dict)
+        self.main_frame.status_bar.clearMessage()
+        self.is_loaded=True
+        self.main_frame.auto_save_timer.start()
+
+        self.import_action.setEnabled(True)
+        self.export_action.setEnabled(True)
+
+        print('# <openDatabaseTriggered>: Start auto save timer.')
+        self.logger.info('Start auto save timer.')
+
+        recent=self.settings.value('file/recent_open',[],str)
+        if isinstance(recent,str) and recent=='':
+            recent=[]
+        print('# <_openDatabase>: recent=',recent)
+        if fname not in recent:
+            recent.append(fname)
+            recentii=self.recent_open_menu.addAction(fname)
+            recentii.triggered.connect(lambda x,t=fname: self._openDatabase(t))
+
+        current_len=self.settings.value('file/recent_open_num',type=int)
+        if len(recent)>current_len:
+            recent.pop(0)
+
+        self.settings.setValue('file/recent_open',recent)
 
         return
 
