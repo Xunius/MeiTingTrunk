@@ -67,10 +67,10 @@ class MainFrameSlots:
 
 
     def threadedFuncCall2(self,func,joblist,show_message='',max_threads=4,
-            get_results=False):
+            get_results=False,close_on_finish=True):
 
         thread_run_dialog=widgets.ThreadRunDialog(func,joblist,
-                show_message,max_threads,get_results,self)
+                show_message,max_threads,get_results,close_on_finish,self)
         #thread_run_dialog.exec_()
         if get_results:
             #print('# <threadedFuncCall2>: results',thread_run_dialog.results)
@@ -324,7 +324,8 @@ class MainFrameSlots:
 
                 joblist=list(zip(range(len(fname)), fname))
                 t_dialog=self.threadedFuncCall2(_addPDF, joblist,
-                    'Adding PDF Files...',max_threads=1,get_results=True)
+                    'Adding PDF Files...',max_threads=1,get_results=True,
+                    close_on_finish=True)
 
                 fail_list=[]
                 for recii,jobidii,meta_dictii in t_dialog:
@@ -537,24 +538,44 @@ class MainFrameSlots:
         return
 
 
-    @pyqtSlot(QtWidgets.QAction)
-    def checkDuplicateClicked(self,action):
-        action_text=action.text()
-        print('# <checkDuplicateClicked>: action_text=',action_text)
+    @pyqtSlot()
+    def checkDuplicateClicked(self):
 
-        if action_text=='Check Duplidate Within Folder':
-            print('# <checkDuplicateClicked>: cd folder')
+        print('# <checkDuplicateClicked>: Check duplicate button triggered')
+        self.logger.info('Check duplicate button triggered')
 
-            docids=self._current_docids
-            dialog=widgets.CheckDuplicateDialog(self.settings, self.meta_dict, docids)
-            dialog.exec_()
+        docids=self._current_docids
+        #dialog=widgets.CheckDuplicateDialog(self.settings, self.meta_dict, docids)
+        self.doc_table.setVisible(False)
 
 
-        elif action_text=='Check Duplidate Within Library':
-            print('# <checkDuplicateClicked>: cd lib')
+        current_folder=self._current_folder[0]
+        self.clear_filter_label.setText('Checking duplicates in folder "%s".'\
+                %current_folder)
+
+        self.clear_filter_frame.setVisible(True)
+        self.duplicate_result_frame.checkDuplicates(self.meta_dict,
+                self._current_folder,
+                docids,
+                None)
+        self.duplicate_result_frame.addResultToTree()
+        self.duplicate_result_frame.setVisible(True)
 
         return
 
+    @pyqtSlot(QtWidgets.QTreeWidgetItem,QtWidgets.QTreeWidgetItem)
+    def duplicateResultCurrentChange(self,current,previous):
+
+        if current:
+            docid=int(current.data(6,0))
+
+            print('# <duplicateResultCurrentChange>: current=%s' %docid)
+            self.logger.info('current=%s' %docid)
+
+            self.loadMetaTab(docid)
+            self.loadBibTab(docid)
+            self.loadNoteTab(docid)
+        return
 
 
 
@@ -1028,10 +1049,10 @@ class MainFrameSlots:
                     self.openDocFolder(open_docs)
 
                 elif action==del_from_folder_action:
-                    self.delFromFolder(docids, foldername, folderid)
+                    self.delFromFolder(docids, foldername, folderid, True)
 
                 elif action==del_action:
-                    self.delDoc(docids)
+                    self.delDoc(docids,True)
 
                 elif action==mark_needsreview_action:
                     self.markDocNeedsReview(docids)
@@ -1084,7 +1105,7 @@ class MainFrameSlots:
 
 
 
-    def delFromFolder(self,docids,foldername,folderid):
+    def delFromFolder(self,docids,foldername,folderid,reload_table):
 
         print('# <delFromFolder>: docids=%s. foldername=%s. folderid=%s'\
                 %(docids, foldername, folderid))
@@ -1102,12 +1123,13 @@ class MainFrameSlots:
                 self.libtree._trashed_folder_ids)
         self.libtree._trashed_doc_ids.extend(orphan_docs)
 
-        self.loadDocTable(folder=(foldername,folderid),sel_row=None)
+        if reload_table:
+            self.loadDocTable(folder=(foldername,folderid),sel_row=None)
 
         return
 
 
-    def delDoc(self,docids):
+    def delDoc(self,docids,reload_table):
 
         print('# <delDoc>: docids=%s' %docids)
         self.logger.info('docids=%s' %docids)
@@ -1143,7 +1165,8 @@ class MainFrameSlots:
                 self.logger.info('docid %s in _trashed_doc_ids?: %s'\
                         %(idii, idii in self.libtree._trashed_doc_ids))
 
-            self.loadDocTable(folder=self._current_folder,sel_row=None)
+            if reload_table:
+                self.loadDocTable(folder=self._current_folder,sel_row=None)
 
 
         return
@@ -1418,8 +1441,14 @@ class MainFrameSlots:
 
     def clearFilterButtonClicked(self):
 
+        if self.duplicate_result_frame.isVisible():
+            self.duplicate_result_frame.setVisible(False)
+
         if self.clear_filter_frame.isVisible():
             self.clear_filter_frame.setVisible(False)
+
+        if not self.doc_table.isVisible():
+            self.doc_table.setVisible(True)
             current_folder=self._current_folder
             if current_folder:
                 folder,folderid=current_folder
@@ -1430,6 +1459,7 @@ class MainFrameSlots:
                 else:
                     self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
                 self.doc_table.selectRow(0)
+
 
         return
 

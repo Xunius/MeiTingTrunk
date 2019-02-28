@@ -15,7 +15,7 @@ from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy,\
 
 from lib.widgets import TableModel, MyHeaderView, AdjustableTextEdit,\
         MetaTabScroll, TreeWidgetDelegate, MyTreeWidget, PreferenceDialog,\
-        NoteTextEdit, ExportDialog
+        NoteTextEdit, ExportDialog, CheckDuplicateFrame
 
 import _MainFrameLoadData
 import _MainFrameSlots
@@ -510,6 +510,10 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         v_la=QtWidgets.QVBoxLayout()
         v_la.addWidget(self.clear_filter_frame)
 
+        #---------Add duplicate check result frame---------
+        self.duplicate_result_frame=self.createDuplicateResultFrame()
+        v_la.addWidget(self.duplicate_result_frame)
+
         #------------------Add doc table------------------
         self.doc_table=self.createDocTable()
         v_la.addWidget(self.doc_table)
@@ -614,22 +618,9 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
         button=QtWidgets.QToolButton(self)
         button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-
-        menu=QtWidgets.QMenu()
-        self.check_duplicate_folder_action=menu.addAction(
-                'Check Duplidate Within Folder')
-        self.check_duplicate_all_action=menu.addAction(
-                'Check Duplidate Within Library')
-
-        button.setDefaultAction(self.check_duplicate_folder_action)
-
         button.setText('Check Duplicates')
         button.setIcon(QIcon.fromTheme('scanner'))
-        button.setMenu(menu)
-        button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
-
-        menu.triggered.connect(self.checkDuplicateClicked)
-
+        button.clicked.connect(self.checkDuplicateClicked)
 
         return button
 
@@ -704,6 +695,14 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
 
         return scroll
 
+
+    def createDuplicateResultFrame(self):
+        frame=CheckDuplicateFrame(self.settings,self)
+        frame.tree.currentItemChanged.connect(self.duplicateResultCurrentChange)
+        frame.del_doc_from_folder_signal.connect(self.delFromFolder)
+        frame.del_doc_from_lib_signal.connect(self.delDoc)
+        frame.setVisible(False)
+        return frame
 
     def createClearFilterFrame(self):
 
