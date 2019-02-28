@@ -340,12 +340,17 @@ class MainFrameSlots:
 
                 if len(fail_files)>0:
 
+                    for fii in fail_files:
+                        metaii=sqlitedb.DocMeta()
+                        metaii['files_l']=[fii,]
+                        self.updateTabelData(None,metaii)
+
                     msg=QtWidgets.QMessageBox()
                     msg.resize(500,400)
                     msg.setIcon(QtWidgets.QMessageBox.Information)
                     msg.setWindowTitle('Error')
-                    msg.setText('Oopsie. Failed to import PDF file(s).')
-                    msg.setInformativeText('Failed to import these files:\n\n %s'\
+                    msg.setText('Oopsie.')
+                    msg.setInformativeText('Failed to retrieve metadata from these files:\n\n %s'\
                             %('\n'.join(fail_files)))
                     msg.exec_()
 
