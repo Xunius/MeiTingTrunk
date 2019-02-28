@@ -8,6 +8,7 @@ import os
 import re
 import time
 import platform
+from functools import reduce
 from fuzzywuzzy import fuzz
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QThread, QObject, QMutex, pyqtSignal, pyqtSlot
@@ -224,3 +225,36 @@ def fuzzyMatch(dict1,dict2):
 
 
 
+def dfsCC(edges):
+    '''Get connected components in undirected graph
+    '''
+
+    def explore(v,cc):
+        visited.append(v)
+        if cc not in ccs:
+            ccs[cc]=[v,]
+        else:
+            ccs[cc].append(v)
+
+        for wii in adj_list[v]:
+            if wii not in visited:
+                explore(wii,cc)
+
+    vertices=list(set(reduce(tuple.__add__,edges)))
+    rev_edges=[(v2,v1) for v1,v2 in edges]
+
+    # get adjacency list
+    adj_list={}
+    for vii in vertices:
+        adj_list[vii]=[eii[1] for eii in edges+rev_edges if eii[0]==vii]
+
+    visited=[]
+    ccs={}
+    cc=0
+
+    for v in vertices:
+        if v not in visited:
+            explore(v,cc)
+            cc+=1
+
+    return list(ccs.values())

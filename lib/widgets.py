@@ -16,8 +16,9 @@ from PyQt5.QtWidgets import QStyle, QStyleOptionSlider, QDialogButtonBox
 import resources
 from lib import sqlitedb
 from .tools import getHLine, getXExpandYMinSizePolicy, getXMinYExpandSizePolicy,\
-    parseAuthors, getXExpandYExpandSizePolicy, getMinSizePolicy, fuzzyMatch
-import networkx as nx
+    parseAuthors, getXExpandYExpandSizePolicy, getMinSizePolicy, fuzzyMatch,\
+    dfsCC
+#import networkx as nx
 
 
 LOGGER=logging.getLogger('default_logger')
@@ -2593,13 +2594,13 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
     def addResultToTree(self):
 
-        hi_color=self.settings.value('display/folder/highlight_color_br',
-                QBrush)
+        #hi_color=self.settings.value('display/folder/highlight_color_br',
+                #QBrush)
 
         if self.docid2 is None:
             #-------------------Build graph-------------------
 
-            g=nx.Graph()
+            #g=nx.Graph()
             edges=[kk for kk,vv in self.scores_dict.items() if vv>=self.min_score]
 
             if len(edges)==0:
@@ -2607,11 +2608,12 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
                 return
 
             self.noDupLabel.setVisible(False)
-            g.add_edges_from(edges)
-            print('# <addResultToTree>: edges',edges,'g.edges',list(g.edges))
+            #g.add_edges_from(edges)
+            #print('# <addResultToTree>: edges',edges,'g.edges',list(g.edges))
 
-            comps=[list(cii) for cii in sorted(nx.connected_components(g), key=len,\
-                    reverse=True)]
+            #comps=[list(cii) for cii in sorted(nx.connected_components(g), key=len,\
+                    #reverse=True)]
+            comps=dfsCC(edges)
             print('# <addResultToTree>: comps=',comps)
 
             #--------------------Add items--------------------

@@ -82,7 +82,7 @@ LOG_CONFIG={
 # [y] use resource file to load icons/images
 # in note tab, add time stamps at left margin?
 # [y] change meta dict key naming convention to distinguish string and list types:
-#   e.g. authors -> authors_l, year -> year_s
+#   e.g. authors -> authors_l, tag -> tag_l
 # possible issue with local time with added time
 # [y] add logger
 # get all bib entries for multiple selected docs?
@@ -108,6 +108,7 @@ LOG_CONFIG={
 # [y] auto open last datebase on launch
 # rename file when exporting. Need to deal with switching to renaming after some files have been copied without renaming, or changing renaming pattern.
 # perform duplicate check on adding
+# write a connected component function to replace networkx
 
 
 
