@@ -9,7 +9,7 @@ from collections import OrderedDict
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QObject, QThread, QAbstractTableModel, Qt, QVariant,\
         pyqtSignal, QPoint,\
-        pyqtSlot, QMimeData, QByteArray, QEvent, QRect
+        pyqtSlot, QMimeData, QByteArray, QEvent, QRect, QSize
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont, QFontMetrics,\
         QCursor, QRegExpValidator, QPainter
 from PyQt5.QtWidgets import QStyle, QStyleOptionSlider, QDialogButtonBox
@@ -2478,8 +2478,10 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
         frame=QtWidgets.QWidget()
         self.setWidgetResizable(True)
         self.setWidget(frame)
-
         va=QtWidgets.QVBoxLayout(self)
+
+        #----------------Create clear frame----------------
+        va.addWidget(self.createClearDuplicateFrame())
 
         #----------------Create treewidget----------------
         self.tree=QtWidgets.QTreeWidget(self)
@@ -2511,6 +2513,36 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
         va.addWidget(self.tree)
 
         frame.setLayout(va)
+
+    def createClearDuplicateFrame(self):
+
+        frame=QtWidgets.QFrame()
+        frame.setStyleSheet('background: rgb(235,225,190)')
+        ha=QtWidgets.QHBoxLayout()
+
+        # del button
+        self.del_duplicate_button=QtWidgets.QToolButton(self)
+        self.del_duplicate_button.setText('Delete Selected')
+        self.del_duplicate_button.clicked.connect(self.delDocs)
+
+        # clear button
+        self.clear_duplicate_button=QtWidgets.QToolButton(self)
+        self.clear_duplicate_button.setText('Exit')
+
+        self.clear_duplicate_label=QtWidgets.QLabel('Clear current filtering')
+        ha.addWidget(self.clear_duplicate_label)
+        tip_label=QtWidgets.QLabel()
+        tip_icon=QIcon.fromTheme('help-about').pixmap(QSize(16,16))
+        tip_label.setPixmap(tip_icon)
+        tip_label.setToolTip('''Change "Mininimum Similary Score" in "Preferences" to change the filtering of matching results.''')
+        ha.addWidget(tip_label)
+        ha.addWidget(self.del_duplicate_button)
+        ha.addWidget(self.clear_duplicate_button)
+
+        frame.setLayout(ha)
+
+        return frame
+
 
 
     def checkDuplicates(self,meta_dict,current_folder,docids1,docid2=None):
@@ -2634,17 +2666,24 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
         print('# <docTreeMenu>: current_folder=',self.current_folder)
         foldername,folderid=self.current_folder
         if folderid=='-1':
-            del_action=menu.addAction('Delete From Library')
+            menu.addAction('Delete From Library')
         else:
-            del_action=menu.addAction('Delete From Current Folder')
+            menu.addAction('Delete From Current Folder')
 
-        #sel_rows=self.tree.selectionModel().selectedRows()
+        action=menu.exec_(QCursor.pos())
+
+        if action:
+            self.delDocs()
+
+        return
+
+
+    @pyqtSlot()
+    def delDocs(self):
+
+        print('# <docTreeMenu>: current_folder=',self.current_folder)
+        foldername,folderid=self.current_folder
         sel_rows=self.tree.selectedItems()
-        #sel_rows=[ii.row() for ii in sel_rows]
-
-        print('# <docTreeMenu>: Seleted rows=%s' %sel_rows)
-        #LOGGER.info('Seleted rows=%s' %sel_rows)
-
         if len(sel_rows)>0:
 
             docids=[int(ii.data(6,0)) for ii in sel_rows]
@@ -2652,18 +2691,13 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
             print('# <docTreeMenu>: Selected docids=%s.' %docids)
             LOGGER.info('Selected docids=%s.' %docids)
 
-            action=menu.exec_(QCursor.pos())
+            if folderid=='-1':
+                self.del_doc_from_lib_signal.emit(docids,False)
+            else:
+                self.del_doc_from_folder_signal.emit(docids, foldername,
+                        folderid, False)
 
-            if action:
-                if folderid=='-1':
-                    self.del_doc_from_lib_signal.emit(docids,False)
-                else:
-                    self.del_doc_from_folder_signal.emit(docids, foldername,
-                            folderid, False)
-
-                for itemii in sel_rows:
-                    self.tree.invisibleRootItem().removeChild(itemii)
-
-
+            for itemii in sel_rows:
+                self.tree.invisibleRootItem().removeChild(itemii)
 
         return

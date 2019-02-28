@@ -701,6 +701,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         frame.tree.currentItemChanged.connect(self.duplicateResultCurrentChange)
         frame.del_doc_from_folder_signal.connect(self.delFromFolder)
         frame.del_doc_from_lib_signal.connect(self.delDoc)
+        frame.clear_duplicate_button.clicked.connect(
+                self.clearDuplicateButtonClicked)
         frame.setVisible(False)
         return frame
 
@@ -725,6 +727,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         frame.setVisible(False)
 
         return frame
+
 
     def createConfirmReviewFrame(self):
 

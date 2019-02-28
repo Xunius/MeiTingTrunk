@@ -545,15 +545,12 @@ class MainFrameSlots:
         self.logger.info('Check duplicate button triggered')
 
         docids=self._current_docids
-        #dialog=widgets.CheckDuplicateDialog(self.settings, self.meta_dict, docids)
         self.doc_table.setVisible(False)
 
-
         current_folder=self._current_folder[0]
-        self.clear_filter_label.setText('Checking duplicates in folder "%s".'\
-                %current_folder)
+        self.duplicate_result_frame.clear_duplicate_label.setText(
+                'Checking duplicates in folder "%s".' %current_folder)
 
-        self.clear_filter_frame.setVisible(True)
         self.duplicate_result_frame.checkDuplicates(self.meta_dict,
                 self._current_folder,
                 docids,
@@ -1441,9 +1438,6 @@ class MainFrameSlots:
 
     def clearFilterButtonClicked(self):
 
-        if self.duplicate_result_frame.isVisible():
-            self.duplicate_result_frame.setVisible(False)
-
         if self.clear_filter_frame.isVisible():
             self.clear_filter_frame.setVisible(False)
 
@@ -1463,6 +1457,25 @@ class MainFrameSlots:
 
 
         return
+
+    def clearDuplicateButtonClicked(self):
+
+        if self.duplicate_result_frame.isVisible():
+            self.duplicate_result_frame.setVisible(False)
+
+        if not self.doc_table.isVisible():
+            self.doc_table.setVisible(True)
+
+            current_folder=self._current_folder
+            if current_folder:
+                folder,folderid=current_folder
+
+                # TODO: keep a record of previous sortidx?
+                if folder=='All' and folderid=='-1':
+                    self.loadDocTable(None,sortidx=4,sel_row=0)
+                else:
+                    self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
+                self.doc_table.selectRow(0)
 
 
 
