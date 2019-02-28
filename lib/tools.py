@@ -182,28 +182,29 @@ def removeInvalidPathChar(path):
 
 def fuzzyMatch(dict1,dict2):
 
-    authors1=dict1.get('authors_l','')
-    authors2=dict2.get('authors_l','')
+    authors1=dict1['authors_l'] or ''
+    authors2=dict2['authors_l'] or ''
     authors1=', '.join(authors1)
     authors2=', '.join(authors2)
 
-    title1=dict1.get('title','')
-    title2=dict2.get('title','')
+    title1=dict1['title'] or ''
+    title2=dict2['title'] or ''
 
-    journal1=dict1.get('journal','')
-    journal2=dict2.get('journal','')
-    year1=dict1.get('year','')
-    year2=dict2.get('year','')
+    journal1=dict1['publication'] or ''
+    journal2=dict2['publication'] or ''
+    print('# <fuzzyMatch>: year1=',dict1['year'])
+    print('# <fuzzyMatch>: year2=',dict2['year'])
+    year1=dict1['year'] or ''
+    year2=dict2['year'] or ''
 
     jy1='%s %s' %(journal1, year1)
     jy2='%s %s' %(journal2, year2)
 
-    print('# <fuzzyMatch>: authors1=',authors1,'authors2=',authors2,
-            'title1=',title1,'title2=',title2,'jy1=',jy1,'jy2=',jy2)
 
     ratio_authors=fuzz.token_sort_ratio(authors1, authors2)
-    ratio_title=fuzz.partial_ratio(title1, title2)
-    ratio_other=fuzz.token_set_ratio(jy1, jy2)
+    ratio_title=fuzz.ratio(title1, title2)
+    #ratio_other=fuzz.token_set_ratio(jy1, jy2)
+    ratio_other=fuzz.ratio(jy1, jy2)
 
     len_authors=0.5*(len(authors1)+len(authors2))
     len_title=0.5*(len(title1)+len(title2))
@@ -212,7 +213,14 @@ def fuzzyMatch(dict1,dict2):
     score=(len_authors*ratio_authors + len_title*ratio_title + len_other*ratio_other)/\
             (len_authors+len_title+len_other)
 
-    return score
+    print('\n# <fuzzyMatch>: authors1=',authors1,'\nauthors2=',authors2,'\nscore=',
+            ratio_authors)
+    print('\n# <fuzzyMatch>: title1=',title1,'\ntitle2=',title2,'\nscore=',
+            ratio_title)
+    print('\n# <fuzzyMatch>: jy1=',jy1,'\njy2=',jy2,'\nscore=',
+            ratio_other)
+
+    return round(score)
 
 
 

@@ -251,21 +251,6 @@ def getMetaData(db, docid):
     WHERE (DocumentNotes.docid=?)
     '''
 
-
-    '''
-    def fetchField(db,query,values,ncol=1):
-        aa=db.execute(query,values).fetchall()
-        if len(aa)==0:
-            return None
-        if ncol==1:
-            aa=[ii[0] for ii in aa]
-        if len(aa)==1:
-            return aa[0]
-        else:
-            return aa
-    '''
-
-
     #------------------Get file meta data------------------
     fields=['id','citationkey','title','issue','pages',\
             'publication','volume','year','doi','abstract',\

@@ -107,6 +107,7 @@ LOG_CONFIG={
 # [y] add open doc folder action to right menu: 'xdg-mime query default inode/directory | sed 's/.desktop//g' -> e.g. nemo
 # [y] auto open last datebase on launch
 # rename file when exporting. Need to deal with switching to renaming after some files have been copied without renaming, or changing renaming pattern.
+# perform duplicate check on adding
 
 
 
@@ -169,6 +170,8 @@ class MainWindow(QtWidgets.QMainWindow):
             settings.setValue('saving/auto_save_min', 1),
             settings.setValue('saving/rename_files', 1)
             settings.setValue('saving/rename_file_replace_space', 1)
+
+            settings.setValue('duplicate_min_score', 60)
 
             settings.sync()
 
@@ -608,10 +611,25 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         return button
 
     def createDuplicateCheckButton(self):
+
         button=QtWidgets.QToolButton(self)
         button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+
+        menu=QtWidgets.QMenu()
+        self.check_duplicate_folder_action=menu.addAction(
+                'Check Duplidate Within Folder')
+        self.check_duplicate_all_action=menu.addAction(
+                'Check Duplidate Within Library')
+
+        button.setDefaultAction(self.check_duplicate_folder_action)
+
         button.setText('Check Duplicates')
         button.setIcon(QIcon.fromTheme('scanner'))
+        button.setMenu(menu)
+        button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
+
+        menu.triggered.connect(self.checkDuplicateClicked)
+
 
         return button
 
@@ -736,11 +754,11 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
         tv=QtWidgets.QTableView(self)
 
         hh=MyHeaderView(self)
-        hh.setSectionsClickable(True)
-        hh.setHighlightSections(True)
-        hh.sectionResized.connect(hh.myresize)
-        hh.setStretchLastSection(False)
-        hh.setSectionsMovable(True)
+        #hh.setSectionsClickable(True)
+        #hh.setHighlightSections(True)
+        #hh.sectionResized.connect(hh.myresize)
+        #hh.setStretchLastSection(False)
+        #hh.setSectionsMovable(True)
 
         tv.setHorizontalHeader(hh)
         tv.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)

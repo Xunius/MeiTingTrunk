@@ -299,6 +299,7 @@ class MainFrameSlots:
         return rec,jobid,None
 
 
+    @pyqtSlot(QtWidgets.QAction)
     def addActionTriggered(self,action):
 
         action_text=action.text()
@@ -396,6 +397,7 @@ class MainFrameSlots:
         return
 
 
+    @pyqtSlot(QtWidgets.QAction)
     def addFolderButtonClicked(self,action):
 
         print('# <addFolderButtonClicked>: action.text()=%s' %action.text())
@@ -535,6 +537,25 @@ class MainFrameSlots:
         return
 
 
+    @pyqtSlot(QtWidgets.QAction)
+    def checkDuplicateClicked(self,action):
+        action_text=action.text()
+        print('# <checkDuplicateClicked>: action_text=',action_text)
+
+        if action_text=='Check Duplidate Within Folder':
+            print('# <checkDuplicateClicked>: cd folder')
+
+            docids=self._current_docids
+            dialog=widgets.CheckDuplicateDialog(self.settings, self.meta_dict, docids)
+            dialog.exec_()
+
+
+        elif action_text=='Check Duplidate Within Library':
+            print('# <checkDuplicateClicked>: cd lib')
+
+        return
+
+
 
 
 
@@ -564,6 +585,7 @@ class MainFrameSlots:
             self.create_subfolder_action.setDisabled(True)
             self.create_folder_action.setEnabled(True)
             self.add_folder_button.setEnabled(True)
+            self.duplicate_check_button.setEnabled(True)
         elif item==self.needsreview_folder:
             self.add_button.setDisabled(True)
             self.add_folder_button.setDisabled(True)
@@ -580,6 +602,7 @@ class MainFrameSlots:
                 self.add_button.setEnabled(True)
                 self.add_folder_button.setEnabled(True)
                 self.create_subfolder_action.setEnabled(True)
+                self.duplicate_check_button.setEnabled(True)
 
         # Refresh filter list
         self.filterTypeCombboxChange(item)

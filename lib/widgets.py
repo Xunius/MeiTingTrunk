@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import QStyle, QStyleOptionSlider, QDialogButtonBox
 import resources
 from lib import sqlitedb
 from .tools import getHLine, getXExpandYMinSizePolicy, getXMinYExpandSizePolicy,\
-    parseAuthors, getXExpandYExpandSizePolicy, getMinSizePolicy
+    parseAuthors, getXExpandYExpandSizePolicy, getMinSizePolicy, fuzzyMatch
 
 
 LOGGER=logging.getLogger('default_logger')
@@ -413,6 +413,12 @@ class MyHeaderView(QtWidgets.QHeaderView):
         self.colSizes={'docid':0, 'favourite': 20, 'read': 20, 'has_file': 20,
             'author': 200, 'title': 500, 'journal':100,'year':50,'added':50,
             'confirmed':0}
+
+        self.setSectionsClickable(True)
+        self.setHighlightSections(True)
+        self.sectionResized.connect(self.myresize)
+        self.setStretchLastSection(False)
+        self.setSectionsMovable(True)
 
     def initresizeSections(self):
         model=self.model()
@@ -1278,7 +1284,7 @@ class PreferenceDialog(QtWidgets.QDialog):
         label.setStyleSheet(self.label_color)
         label.setFont(self.title_label_font)
         va.addWidget(label)
-        va.addWidget(getHLine(self))
+        #va.addWidget(getHLine(self))
 
         return scroll, va
 
@@ -1466,15 +1472,10 @@ class PreferenceDialog(QtWidgets.QDialog):
 
     def loadExportOptions(self):
 
-        scroll, va=self.createFrame('Export Settings')
-
-        label=QtWidgets.QLabel('bibtex Export')
-        label.setFont(self.sub_title_label_font)
-        va.addWidget(label)
+        scroll, va=self.createFrame('bibtex Export')
 
         self.groupbox=self.createOmitKeyGroup()
         va.addWidget(self.groupbox)
-
 
         return scroll
 
@@ -1521,7 +1522,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
     def loadMiscellaneousOptions(self):
 
-        scroll, va=self.createFrame('Miscellaneous')
+        scroll, va=self.createFrame('Auto Open')
 
         #-------Open last database on launch section-------
         checkbox=QtWidgets.QCheckBox('Automatically Open Last Database on Start-up?')
@@ -1533,14 +1534,13 @@ class PreferenceDialog(QtWidgets.QDialog):
             checkbox.setChecked(False)
 
         va.addWidget(checkbox)
+        va.addWidget(getHLine(self))
 
         #--------------Recent number section--------------
-        va.addWidget(getHLine(self))
-        label4=QtWidgets.QLabel('Record Number of Recently Opened Database')
-        label4.setStyleSheet(self.label_color)
-        label4.setFont(self.title_label_font)
-        va.addWidget(label4)
-        va.addWidget(getHLine(self))
+        label1=QtWidgets.QLabel('Number of Recently Opened Database')
+        label1.setStyleSheet(self.label_color)
+        label1.setFont(self.title_label_font)
+        va.addWidget(label1)
 
         slider2=LabeledSlider(0,10,1,parent=self)
         slider2.sl.setValue(self.settings.value('file/recent_open_num',type=int))
@@ -1548,7 +1548,26 @@ class PreferenceDialog(QtWidgets.QDialog):
         slider2.setMaximumWidth(400)
 
         va.addWidget(slider2)
+        va.addWidget(getHLine())
 
+        #------------Duplicate check min score------------
+        label2=QtWidgets.QLabel('Duplicate Check')
+        label2.setStyleSheet(self.label_color)
+        label2.setFont(self.title_label_font)
+        va.addWidget(label2)
+
+        label3=QtWidgets.QLabel('Minimum Similarity Score to Define Duplicate (1-100)')
+        self.spinbox=QtWidgets.QSpinBox()
+        self.spinbox.setMinimum(1)
+        self.spinbox.setMaximum(100)
+        self.spinbox.setValue(self.settings.value('duplicate_min_score',type=int))
+        self.spinbox.valueChanged.connect(self.changeDuplicateMinScore)
+
+        ha=QtWidgets.QHBoxLayout()
+        ha.addWidget(label3)
+        ha.addWidget(self.spinbox)
+
+        va.addLayout(ha)
         va.addStretch()
 
         return scroll
@@ -1570,6 +1589,13 @@ class PreferenceDialog(QtWidgets.QDialog):
         LOGGER.info('Change recent database number to %s' %value)
 
         self.new_values['file/recent_open_num']=value
+        return
+
+    def changeDuplicateMinScore(self,value):
+        print('# <changeDuplicateMinScore>: Change min duplicate score to %s' %value)
+        LOGGER.info('Change min duplicate score to %s' %value)
+
+        self.new_values['duplicate_min_score']=value
         return
 
 
@@ -2280,5 +2306,155 @@ class ThreadRunDialog(QtWidgets.QDialog):
             print('# <accept>: self.results',self.results)
         super(ThreadRunDialog,self).accept()
         return
+
+
+
+class CheckDuplicateDialog(QtWidgets.QDialog):
+
+    def __init__(self,settings,meta_dict,docids1,docid2=None,parent=None):
+        super(CheckDuplicateDialog,self).__init__(parent=parent)
+
+        self.settings=settings
+        self.docids1=docids1
+        self.docids1.sort()
+        self.docid2=docid2
+        self.meta_dict=meta_dict
+
+        self.min_score=self.settings.value('duplicate_min_score',type=int)
+
+        self.resize(900,600)
+        self.setWindowTitle('Duplicate Check')
+        self.setWindowModality(Qt.ApplicationModal)
+
+        va=QtWidgets.QVBoxLayout(self)
+
+        self.tree=QtWidgets.QTreeWidget(self)
+        self.tree.setColumnCount(6)
+
+        self.tree.setHeaderLabels(['Group', 'Authors', 'Title', 'Publication',
+            'Year', 'Similarity'])
+        self.tree.setColumnWidth(0, 55)
+        self.tree.setColumnWidth(1, 250)
+        self.tree.setColumnWidth(2, 300)
+        self.tree.setColumnWidth(3, 150)
+        self.tree.setColumnWidth(4, 50)
+        self.tree.setColumnWidth(5, 30)
+        self.tree.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.tree.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.tree.header().setStretchLastSection(False)
+        self.tree.header().setSectionResizeMode(
+                QtWidgets.QHeaderView.Interactive)
+        self.tree.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
+
+        self.buttons=QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Close)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+
+        self.noDupLabel=QtWidgets.QLabel('No duplicates found.')
+
+        va.addWidget(self.noDupLabel)
+        va.addWidget(self.tree)
+        va.addWidget(self.buttons)
+
+        self.scores_dict=self.checkDuplicates()
+        self.addResultToTree()
+
+    def checkDuplicates(self):
+
+        n=len(self.docids1)
+
+        scores=[]
+        scores_dict={}
+        if self.docid2 is None:
+            #----------------Check among docds----------------
+            for ii in range(n):
+                docii=self.docids1[ii]
+                scoresii=[]
+                for jj in range(n):
+                    if ii>=jj:
+                        scoreij=0
+                    else:
+                        docjj=self.docids1[jj]
+                        scoreij=fuzzyMatch(self.meta_dict[docii], self.meta_dict[docjj])
+                        scores_dict[(docii,docjj)]=scoreij
+                    scoresii.append(scoreij)
+                scores.append(scoresii)
+
+            print('# <checkDuplicates>: scores=')
+            for ii in range(n):
+                print(scores[ii])
+
+        else:
+            #-----------------1 to all compare-----------------
+            for ii in range(n):
+                docii=self.docids1[ii]
+                scoreii=fuzzyMatch(self.meta_dict[docii],
+                        self.meta_dict[self.docid2])
+                scores_dict[docii]=scoreii
+                scores.append(scoreii)
+
+            print('# <checkDuplicates>: scores=', scores)
+
+        return scores_dict
+
+    def addResultToTree(self):
+
+        if self.docid2 is None:
+            #-------------------Build graph-------------------
+            import networkx as nx
+
+            g=nx.Graph()
+            edges=[kk for kk,vv in self.scores_dict.items() if vv>=self.min_score]
+
+            if len(edges)==0:
+                self.tree.setVisible(False)
+                self.noDupLabel.setVisible(True)
+                return
+
+            self.tree.setVisible(True)
+            self.noDupLabel.setVisible(False)
+            g.add_edges_from(edges)
+            print('# <addResultToTree>: edges',edges,'g.edges',list(g.edges))
+
+            #comps=list(nx.connected_components(g))
+            comps=[list(cii) for cii in sorted(nx.connected_components(g), key=len,\
+                    reverse=True)]
+            print('# <addResultToTree>: comps=',comps)
+
+            #--------------------Add items--------------------
+            for ii,cii in enumerate(comps):
+                cii.sort()
+                #itemii=QtWidgets.QTreeWidgetItem([str(ii+1),])
+                docjj=cii[0]
+                metajj=self.meta_dict[docjj]
+                itemii=QtWidgets.QTreeWidgetItem([str(ii+1),
+                    ', '.join(metajj['authors_l']),
+                    metajj['title'],
+                    metajj['publication'],
+                    str(metajj['year']),
+                    ''])
+                self.tree.addTopLevelItem(itemii)
+
+                # sort by scores
+                docs=cii[1:]
+                scores=[self.scores_dict[(cii[0],dii)] for dii in docs]
+                docs=[x for _,x in sorted(zip(scores,docs), reverse=True)]
+
+                for docjj in docs:
+                    metajj=self.meta_dict[docjj]
+                    itemjj=QtWidgets.QTreeWidgetItem(['',
+                        ', '.join(metajj['authors_l']),
+                        metajj['title'],
+                        metajj['publication'],
+                        str(metajj['year']),
+                        str(self.scores_dict[(cii[0],docjj)])
+                        ])
+                    itemii.addChild(itemjj)
+
+            self.tree.expandAll()
+        else:
+            pass
+
+        return 
 
 
