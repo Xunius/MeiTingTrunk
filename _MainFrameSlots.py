@@ -201,8 +201,8 @@ class MainFrameSlots:
 
         if docid:
             self.meta_dict[docid]=meta_dict
-
-            self.loadMetaTab(docid)
+            self.loadDocTable(docids=self._current_docids,
+                    sel_row=self.doc_table.currentIndex().row())
         return
 
 

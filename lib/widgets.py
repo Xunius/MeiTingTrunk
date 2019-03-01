@@ -1077,6 +1077,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             return
 
 
+        '''
         def conv(text):
             if isinstance(text,(str)):
                 return text
@@ -1103,8 +1104,10 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             if fii in ['authors_l','abstract','tags_l','keywords_l']:
                 if self.fold_dict[fii]:
                     self.fields_dict[fii].foldText()
+        '''
 
-        self.meta_edited.emit(fields)
+        #self.meta_edited.emit(fields)
+        self.update_by_doi_signal.emit(new_dict)
 
         return
 
