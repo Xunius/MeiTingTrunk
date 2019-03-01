@@ -819,6 +819,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,\
             #self._current_doc,self.t_meta._meta_dict))
         self.t_meta.meta_edited.connect(lambda field_list: self.updateTabelData(\
             self._current_doc,self.t_meta._meta_dict,field_list))
+        #self.t_meta.update_by_doi_signal.connect(self.updateByDOI)
 
         tabs.addTab(self.t_meta,'Meta Data')
         tabs.addTab(self.t_notes,'Notes')

@@ -193,6 +193,18 @@ class MainFrameSlots:
 
         return
 
+    @pyqtSlot(sqlitedb.DocMeta)
+    def updateByDOI(self,meta_dict):
+        docid=self._current_doc
+        print('# <updateByDOI>: Update doc %s' %docid)
+        self.logger.info('Update doc %s' %docid)
+
+        if docid:
+            self.meta_dict[docid]=meta_dict
+
+            self.loadMetaTab(docid)
+        return
+
 
 
     def updateNotes(self,docid,note_text):
@@ -392,6 +404,7 @@ class MainFrameSlots:
                             QtWidgets.QAbstractItemView.ExtendedSelection)
 
         elif action_text=='Add Entry Manually':
+            '''
             dialog=widgets.MetaDataEntryDialog(self.settings,self)
             dl_ret,dl_dict=dialog.exec_()
 
@@ -399,6 +412,9 @@ class MainFrameSlots:
                 print('# <addActionTriggered>: Add Entry Manually. Return value=%s' %dl_ret)
                 self.logger.info('Add Entry Manually. Return value=%s' %dl_ret)
                 self.updateTabelData(None, dl_dict)
+            '''
+            dummy=sqlitedb.DocMeta()
+            self.updateTabelData(None, dummy)
 
         return
 

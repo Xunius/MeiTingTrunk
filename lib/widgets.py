@@ -18,6 +18,7 @@ from lib import sqlitedb
 from .tools import getHLine, getXExpandYMinSizePolicy, getXMinYExpandSizePolicy,\
     parseAuthors, getXExpandYExpandSizePolicy, getMinSizePolicy, fuzzyMatch,\
     dfsCC
+from lib import _crossref
 #import networkx as nx
 
 
@@ -513,6 +514,7 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
         super(AdjustableTextEdit,self).__init__(parent)
 
         self.field=field # field name, e.g. title, year, tags_l ...
+        self.fm=QFontMetrics(self.font())
         self.tooltip_label=QtWidgets.QLabel()
         self.tooltip_label.setWindowFlags(Qt.SplashScreen)
         self.tooltip_label.setMargin(3)
@@ -714,17 +716,12 @@ class FileLineEdit(QtWidgets.QLineEdit):
 class MetaTabScroll(QtWidgets.QScrollArea):
 
     meta_edited=pyqtSignal(list) # send field names
+    update_by_doi_signal=pyqtSignal(sqlitedb.DocMeta)
     def __init__(self,settings,parent=None):
         super(MetaTabScroll,self).__init__(parent)
 
         self.settings=settings
         self.parent=parent
-
-        #self.font_dict={
-            #'meta_title': self.settings.value('display/fonts/meta_title',QFont),
-            #'meta_authors': self.settings.value('display/fonts/meta_authors',QFont),
-            #'meta_keywords': self.settings.value('display/fonts/meta_keywords',QFont)
-            #}
 
         self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
         self.label_font=QFont('Serif',12,QFont.Bold)
@@ -777,6 +774,24 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         for fii in ['arxivId','doi','issn','pmid']:
             self.createOneLineField(fii,fii,'meta_keywords',grid_layout)
+
+        #--------------Add doi search button--------------
+        self.doi_search_button=QtWidgets.QPushButton()
+        self.doi_search_button.setFixedSize(30,30)
+        self.doi_search_button.setIcon(QIcon.fromTheme('edit-find'))
+        self.doi_search_button.setStyleSheet('''
+        QPushButton {
+            border: 1px solid rgb(190,190,190);
+            border-radius: 15px;
+            color: white;
+            }
+        QPushButton:pressed {
+            border-style: inset;
+            } 
+        ''')
+        self.doi_search_button.clicked.connect(self.doiSearchButtonClicked)
+
+        grid_layout.addWidget(self.doi_search_button,2,2)
 
         self.v_layout.addLayout(grid_layout)
 
@@ -851,8 +866,12 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         te.setFont(self.settings.value('display/fonts/%s' %font_name, QFont))
 
         rnow=grid_layout.rowCount()
-        grid_layout.addWidget(qlabel,rnow,0)
-        grid_layout.addWidget(te,rnow,1)
+        grid_layout.addWidget(qlabel,rnow,0,1,1)
+        if key=='doi':
+            # leave room for button
+            grid_layout.addWidget(te,rnow,1,1,1)
+        else:
+            grid_layout.addWidget(te,rnow,1,1,2)
         self.fields_dict[key]=te
 
         return
@@ -1003,6 +1022,91 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         return
 
+    def doiSearchButtonClicked(self):
+        doi_pattern=re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
+                re.DOTALL|re.UNICODE)
+
+        doi=self.fields_dict['doi'].toPlainText()
+        print('# <doiSearchButtonClicked>: doi=',doi)
+        if len(doi)>0:
+            match=doi_pattern.match(doi)
+            print('# <doiSearchButtonClicked>: match=',match)
+            if match:
+                rec,doi_dict=_crossref.fetchMetaByDOI(doi)
+                if rec==1:
+                    msg=QtWidgets.QMessageBox()
+                    msg.resize(500,500)
+                    msg.setIcon(QtWidgets.QMessageBox.Information)
+                    msg.setWindowTitle('Error')
+                    msg.setText('Oopsie.')
+                    msg.setInformativeText('Failed to retrieve metadata from doi')
+                    msg.exec_()
+                    return
+
+                meta_dict=_crossref.crossRefToMetaDict(doi_dict)
+                print('# <doiSearchButtonClicked>: meta_dict',meta_dict)
+
+                #self.update_by_doi_signal.emit(meta_dict)
+                self.exchangeMetaDict(meta_dict)
+
+        return
+
+    def exchangeMetaDict(self,new_dict):
+        docid=self.parent._current_doc
+        if docid is None:
+            return
+
+        old_dict=self.parent.meta_dict[docid]
+        fields=[]
+
+        for kk,vv in old_dict.items():
+            if kk in ['id', 'read', 'favourite', 'added', 'files_l',
+                    'folders_l', 'tags_l', 'pend_delete', 'notes',
+                    'abstract' ]:
+                new_dict[kk]=vv
+            else:
+                if vv!=new_dict[kk]:
+                    fields.append(kk)
+
+        if 'firstNames_l' in fields or 'lastName_l' in fields:
+            fields.append('authors_l') # updateTabelData monitors this
+
+        print('# <exchangeMetaDict>: changed fields=',fields)
+
+        if len(fields)==0:
+            return
+
+
+        def conv(text):
+            if isinstance(text,(str)):
+                return text
+            else:
+                return str(text)
+
+        for fii in fields:
+            tii=new_dict[fii]
+            if fii not in self.fields_dict:
+                continue
+            if tii is None:
+                self.fields_dict[fii].clear()
+                continue
+            elif fii=='files_l':
+                # show only file name
+                self.delFileField()
+                for fjj in tii:
+                    self.createFileField(fjj)
+            else:
+                if isinstance(tii,(list,tuple)):
+                    tii=u'; '.join(tii)
+                self.fields_dict[fii].setText(conv(tii))
+
+            if fii in ['authors_l','abstract','tags_l','keywords_l']:
+                if self.fold_dict[fii]:
+                    self.fields_dict[fii].foldText()
+
+        self.meta_edited.emit(fields)
+
+        return
 
 
     @property
