@@ -47,7 +47,6 @@ def prepareDocs(meta_dict,docids):
     return data
 
 
-
 class MainFrameLoadData:
 
     @property

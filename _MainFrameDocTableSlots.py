@@ -1,0 +1,490 @@
+import subprocess
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer, pyqtSlot
+from PyQt5 import QtWidgets
+from PyQt5.QtGui import QFont, QBrush, QColor, QCursor
+from lib import sqlitedb
+from lib import bibparse
+from lib.tools import parseAuthors
+import logging
+
+
+class MainFrameDocTableSlots:
+
+    #######################################################################
+    #                           Doc table slots                           #
+    #######################################################################
+
+    def docTableClicked(self):
+
+        print('# <docTableClicked>: Doc clicked. Set to extendedselection.')
+        self.logger.info('Doc clicked. Set to extendedselection.')
+
+        self.doc_table.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+
+        return
+
+
+    def modelDataChanged(self,index1,index2):
+        assert index1==index2, 'only one doc row is changed'
+        # NOTE that the row is in general different from
+        # self.doc_table.currentIndex().row(), the former may not change on
+        # clicking the checkboxes
+        row=index1.row()
+
+        docid=self._tabledata[row][0]
+        fav=self._tabledata[row][1].isChecked()
+        read=self._tabledata[row][2].isChecked()
+
+        self.meta_dict[docid]['favourite']='true' if fav else 'false'
+        self.meta_dict[docid]['read']='true' if read else 'false'
+
+        print('# <modelDataChanged>: Changed row=%s. Changed docid=%s. meta_dict["favourite"]=%s. meta_dict["read"]=%s. confirmed=%s' \
+                %(row, docid, self.meta_dict[docid]['favourite'],\
+                self.meta_dict[docid]['read'], self.meta_dict[docid]['confirmed']))
+        self.logger.info('Changed row=%s. Changed docid=%s. meta_dict["favourite"]=%s. meta_dict["read"]=%s' \
+                %(row, docid, self.meta_dict[docid]['favourite'],\
+                self.meta_dict[docid]['read']))
+
+        return
+
+
+    def selDoc(self,current,previous):
+        '''Actions on selecting a document in doc table
+        '''
+        rowid=current.row()
+        docid=self._tabledata[rowid][0]
+
+        print('# <selDoc>: Select rowid=%s. docid=%s' %(rowid, docid))
+        self.logger.info('Select rowid=%s. docid=%s' %(rowid, docid))
+
+        self.loadMetaTab(docid)
+        self.loadBibTab(docid)
+        self.loadNoteTab(docid)
+
+        #-------------------Get folders-------------------
+        metaii=self.meta_dict[docid]
+        folders=metaii['folders_l']
+        folders=[str(fii[0]) for fii in folders]
+
+        print('# <selDoc>: Ids of folders of docid=%s: %s' %(docid, folders))
+        self.logger.info('Ids of folders of docid=%s: %s' %(docid, folders))
+
+        def iterItems(treewidget, root):
+            if root is not None:
+                stack = [root]
+                while stack:
+                    parent = stack.pop(0)
+                    for row in range(parent.childCount()):
+                        child = parent.child(row)
+                        yield child
+                        if child.childCount()>0:
+                            stack.append(child)
+
+        #------------Remove highlights for all------------
+        ori_color=QBrush(QColor(255,255,255))
+        hi_color=self.settings.value('display/folder/highlight_color_br',
+                QBrush)
+
+        root=self.libtree.invisibleRootItem()
+        # disconnect libtree item change signal
+        #self.libtree.itemChanged.disconnect()
+        for item in iterItems(self.libtree, root):
+            item.setBackground(0, ori_color)
+
+        #------------Search folders in libtree------------
+        for fii in folders:
+            mii=self.libtree.findItems(fii, Qt.MatchExactly | Qt.MatchRecursive,
+                    column=1)
+            if len(mii)>0:
+                for mjj in mii:
+                    mjj.setBackground(0, hi_color)
+
+        #------------Show confirm review frame------------
+        if self.meta_dict[docid]['confirmed'] in [None, 'false']:
+            self.confirm_review_frame.setVisible(True)
+        else:
+            self.confirm_review_frame.setVisible(False)
+        
+
+        # re-connect libtree item change signal
+        #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
+
+
+
+    def docTableMenu(self,pos):
+
+        menu=QtWidgets.QMenu()
+        open_action=menu.addAction('Open File Externally')
+        open_folder_action=menu.addAction('Open Containing Folder')
+        del_from_folder_action=menu.addAction('Delete From Current Folder')
+        del_action=menu.addAction('Delete From Library')
+        mark_needsreview_action=menu.addAction('Mark document as Needs Review')
+        menu.addSeparator()
+        #export_menu=menu.addMenu('Export Citation')
+        export_bib_action=menu.addAction('Export bib to File')
+        copy_clipboard_action=menu.addAction('Export Citation To Clipboard')
+
+        sel_rows=self.doc_table.selectionModel().selectedRows()
+        sel_rows=[ii.row() for ii in sel_rows]
+
+        print('# <docTableMenu>: Seleted rows=%s' %sel_rows)
+        self.logger.info('Seleted rows=%s' %sel_rows)
+
+        if len(sel_rows)>0:
+
+            docids=[self._tabledata[ii][0] for ii in sel_rows]
+            has_files=[self.meta_dict[docii]['has_file'] for docii in docids]
+
+            print('# <docTableMenu>: Selected docids=%s. has_files=%s'\
+                    %(docids, has_files))
+            self.logger.info('Selected docids=%s. has_files=%s'\
+                    %(docids, has_files))
+
+            if any(has_files):
+                open_action.setEnabled(True)
+                open_folder_action.setEnabled(True)
+            else:
+                open_action.setDisabled(True)
+                open_folder_action.setDisabled(True)
+
+            foldername,folderid=self._current_folder
+            if self._current_folder_item in self.sys_folders:
+                del_from_folder_action.setDisabled(True)
+            else:
+                del_from_folder_action.setEnabled(True)
+
+            action=menu.exec_(QCursor.pos())
+
+            if action:
+                print('# <docTableMenu>: action.text()=%s' %action.text())
+                self.logger.info('action.text()=%s' %action.text())
+
+                if action==open_action:
+                    open_docs=[docids[ii] for ii in range(len(docids)) if has_files[ii]]
+
+                    print('# <docTableMenu>: Open docs: %s' %open_docs)
+                    self.logger.info('Open docs: %s' %open_docs)
+
+                    self.openDoc(open_docs)
+
+                elif action==open_folder_action:
+                    open_docs=[docids[ii] for ii in range(len(docids)) if has_files[ii]]
+
+                    print('# <docTableMenu>: Open docs in file mananger: %s' %open_docs)
+                    self.logger.info('Open docs in file mananger: %s' %open_docs)
+
+                    self.openDocFolder(open_docs)
+
+                elif action==del_from_folder_action:
+                    self.delFromFolder(docids, foldername, folderid, True)
+
+                elif action==del_action:
+                    self.delDoc(docids,True)
+
+                elif action==mark_needsreview_action:
+                    self.markDocNeedsReview(docids)
+
+                elif action==export_bib_action:
+                    self.exportToBib(docids)
+
+                elif action==copy_clipboard_action:
+                    self.copyToClipboard(docids,style=None)
+
+        return
+
+
+    def openDoc(self,docids):
+
+        print('# <openDoc>: docids=%s' %docids)
+        self.logger.info('docids=%s' %docids)
+
+        for docii in docids:
+            file_pathii=self.meta_dict[docii]['files_l'][0] # take the 1st file
+
+            print('# <openDoc>: docid=%s. file_path=%s' %(docii, file_pathii))
+            self.logger.info('docid=%s. file_path=%s' %(docii, file_pathii))
+
+            # what if file is not found?
+            prop=subprocess.call(('xdg-open', file_pathii))
+        return
+
+    def openDocFolder(self,docids):
+
+        print('# <openDocFolder>: docids=%s' %docids)
+        self.logger.info('docids=%s' %docids)
+
+        #------------Get default file mananger------------
+        prop=subprocess.Popen(['xdg-mime','query','default','inode/directory'],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        file_man=prop.communicate()[0].decode('ascii').strip().replace('.desktop','')
+
+        #----------------Open file manager----------------
+        for docii in docids:
+            file_pathii=self.meta_dict[docii]['files_l'][0] # take the 1st file
+
+            print('# <openDocFolder>: docid=%s. file_path=%s' %(docii, file_pathii))
+            self.logger.info('docid=%s. file_path=%s' %(docii, file_pathii))
+
+            # what if file is not found?
+            prop=subprocess.call((file_man, file_pathii))
+
+        return
+
+
+
+    def delFromFolder(self,docids,foldername,folderid,reload_table):
+
+        print('# <delFromFolder>: docids=%s. foldername=%s. folderid=%s'\
+                %(docids, foldername, folderid))
+        self.logger.info('docids=%s. foldername=%s. folderid=%s'\
+                %(docids, foldername, folderid))
+
+        # check orphan docs
+        for idii in docids:
+            self.folder_data[folderid].remove(idii)
+            print('####',self.meta_dict[idii]['folders_l'])
+            if (int(folderid),foldername) in self.meta_dict[idii]['folders_l']:
+                self.meta_dict[idii]['folders_l'].remove((int(folderid),foldername))
+
+        orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,docids,
+                self.libtree._trashed_folder_ids)
+        self.libtree._trashed_doc_ids.extend(orphan_docs)
+
+        if reload_table:
+            self.loadDocTable(folder=(foldername,folderid),sel_row=None)
+
+        return
+
+
+    def delDoc(self,docids,reload_table):
+
+        print('# <delDoc>: docids=%s' %docids)
+        self.logger.info('docids=%s' %docids)
+
+        choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
+                'Confirm deleting a document permanently?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+
+        if choice==QtWidgets.QMessageBox.Yes:
+
+            for idii in docids:
+                for kk,vv in self.folder_data.items():
+                    if idii in vv:
+                        vv.remove(idii)
+
+                        print('# <delDoc>: docid %s in folder_data[%s]?: %s'\
+                                %(idii, kk, idii in self.folder_data[kk]))
+                        self.logger.info('docid %s in folder_data[%s]?: %s'\
+                                %(idii, kk, idii in self.folder_data[kk]))
+
+                del self.meta_dict[idii]
+
+                print('# <delDoc>: docid %s in meta_dict?: %s'\
+                        %(idii, idii in self.meta_dict))
+                self.logger.info('docid %s in meta_dict?: %s'\
+                        %(idii, idii in self.meta_dict))
+
+                if idii in self.libtree._trashed_doc_ids:
+                    self.libtree._trashed_doc_ids.remove(idii)
+
+                print('# <delDoc>: docid %s in _trashed_doc_ids?: %s'\
+                        %(idii, idii in self.libtree._trashed_doc_ids))
+                self.logger.info('docid %s in _trashed_doc_ids?: %s'\
+                        %(idii, idii in self.libtree._trashed_doc_ids))
+
+            if reload_table:
+                self.loadDocTable(folder=self._current_folder,sel_row=None)
+
+
+        return
+
+    
+    def markDocNeedsReview(self,docids):
+        print('# <markDocNeedsReview>: docids=%s' %docids)
+        self.logger.info('docids=%s' %docids)
+
+        for idii in docids:
+            self.meta_dict[idii]['confirmed']='false'
+            if idii not in self.folder_data['-2']:
+                self.folder_data['-2'].append(idii)
+
+        row=self.doc_table.currentIndex().row()
+        self.loadDocTable(folder=self._current_folder,sortidx=4,
+                sel_row=row)
+
+        return
+
+
+    def exportToBib(self,docids):
+
+        print('# <exportToBib>: docids=%s' %docids)
+        self.logger.info('docids=%s' %docids)
+
+        if len(docids)==1:
+            default_path='%s.bib' %(self.meta_dict[docids[0]]['citationkey'])
+        else:
+            default_path='./bibtex.bib'
+
+        print('# <exportToBib>: Default export path=%s' %default_path)
+        self.logger.info('Default export path=%s' %default_path)
+
+        fname = QtWidgets.QFileDialog.getSaveFileName(self,
+                'Save Citaitons to bib File',
+                default_path,
+                "bib Files (*.bib);; All files (*)")[0]
+
+        print('# <exportToBib>: Chosen bib file=%s' %fname)
+        self.logger.info('Chosen bib file=%s' %fname)
+
+        if fname:
+            text=''
+            omit_keys=self.settings.value('export/bib/omit_fields', [], str)
+            if isinstance(omit_keys,str) and omit_keys=='':
+                omit_keys=[]
+
+            for idii in docids:
+
+                print('# <exportToBib>: Parsing bib for docid=%s' %idii)
+                self.logger.info('Parsing bib for docid=%s' %idii)
+                metaii=self.meta_dict[idii]
+
+                #textii=export2bib.parseMeta(metaii,'',metaii['folders_l'],True,False,
+                        #True)
+                textii=bibparse.metaDictToBib(metaii,bibparse.INV_ALT_KEYS,
+                        omit_keys)
+                text=text+textii+'\n'
+
+            with open(fname,'w') as fout:
+                fout.write(text)
+
+            print('# <exportToBib>: File saved to %s' %fname)
+            self.logger.info('File saved to %s' %fname)
+
+        return
+
+
+    def copyToClipboard(self,docids,style=None):
+
+        cb=QtWidgets.QApplication.clipboard()
+        meta={}
+        meta_list=[]
+
+        for idii in docids:
+            docii=self.meta_dict[idii]
+
+            print('# <copyToClipboard>: docii["authors_l"]=%s' %docii['authors_l'])
+            self.logger.info('docii["authors_l"]=%s' %docii['authors_l'])
+
+            authorsii=parseAuthors(docii['authors_l'])[2]
+            if len(authorsii)==0:
+                authorsii='UNKNOWN'
+            elif len(authorsii)==1:
+                authorsii=authorsii[0]
+            elif len(authorsii)>=2:
+                authorsii=' and '.join(authorsii)
+
+
+            meta['authors']=authorsii
+            meta['year']=docii['year']
+            meta['title']=docii['title']
+            meta['journal']=docii['publication']
+            meta['issue']=docii['issue']
+            meta['pages']=docii['pages']
+
+            print('# <copyToClipboard>: metaii=%s', meta)
+
+            meta_list.append(meta)
+
+
+        text=''
+        for docii in meta_list:
+            if style is None:
+
+                textii='%s, %s: %s. %s, <html><b>%s</b></html>, %s' %(docii['authors'],
+                        docii['year'],
+                        docii['title'],
+                        docii['journal'],
+                        docii['issue'],
+                        docii['pages']
+                        )
+
+                text=text+textii+'\n\n'
+
+        cb.setText(text)
+
+        return
+
+
+
+    def docDoubleClicked(self,idx):
+        row_idx=idx.row()
+
+        print('# <docDoubleClicked>: Clicked row=%s' %row_idx)
+        self.logger.info('Clicked row=%s' %row_idx)
+
+        docid=self._tabledata[row_idx][0]
+        files=self.meta_dict[docid]['files_l']
+        nfiles=len(files)
+
+        if nfiles==0:
+            return
+        elif nfiles==1:
+            self.openDoc([docid,])
+        else:
+
+            print('# <docDoubleClicked>: Selected multiple files.')
+            self.logger.info('Selected multiple files.')
+
+            dialog=QtWidgets.QDialog()
+            dialog.resize(500,500)
+            dialog.setWindowTitle('Open Files Externally')
+            dialog.setWindowModality(Qt.ApplicationModal)
+            layout=QtWidgets.QVBoxLayout()
+            dialog.setLayout(layout)
+
+            label=QtWidgets.QLabel('Select file(s) to open')
+            label_font=QFont('Serif',12,QFont.Bold)
+            label.setFont(label_font)
+            layout.addWidget(label)
+
+            listwidget=QtWidgets.QListWidget()
+            listwidget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+            for fii in files:
+                listwidget.addItem(fii)
+
+            listwidget.setCurrentRow(0)
+            layout.addWidget(listwidget)
+
+            buttons=QtWidgets.QDialogButtonBox(
+                QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
+                Qt.Horizontal, dialog)
+
+            buttons.accepted.connect(dialog.accept)
+            buttons.rejected.connect(dialog.reject)
+            layout.addWidget(buttons)
+
+            rec=dialog.exec_()
+
+            print('# <docDoubleClicked>: return from dialog: %s' %rec)
+            self.logger.info('return from dialog: %s' %rec)
+
+            if rec:
+                sel_files=listwidget.selectionModel().selectedRows()
+                #print('sel_files',sel_files)
+                sel_files=[listwidget.item(ii.row()) for ii in sel_files]
+                #print('sel_files',sel_files)
+                sel_files=[ii.data(0) for ii in sel_files]
+
+                print('# <docDoubleClicked>: Selected files=%s' %sel_files)
+                self.logger.info('Selected files=%s' %sel_files)
+
+                if len(sel_files)>0:
+                    for fii in sel_files:
+                        subprocess.call(('xdg-open',fii))
+
+
+
+
+
+
+

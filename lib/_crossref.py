@@ -35,6 +35,7 @@ def fetchMetaByDOI(doi):
 
 
 
+
 def crossRefToMetaDict(in_dict):
 
     result=sqlitedb.DocMeta()
@@ -74,7 +75,10 @@ def crossRefToMetaDict(in_dict):
         result['publication']=in_dict['journal-title']
     else:
         if 'container-title' in in_dict:
-            result['publication']=in_dict['container-title']
+            vii=in_dict['container-title']
+            if isinstance(vii, list):
+                vii=''.join(vii) # title is a list
+            result['publication']=vii
 
     if 'page' in in_dict:
         result['pages']=in_dict['page']
@@ -82,8 +86,28 @@ def crossRefToMetaDict(in_dict):
     if 'url' in in_dict:
         result['urls_l']=[in_dict['url'],]
 
-    result['confirmed']='true'
+    # get time
+    if 'year' not in in_dict:
+        if 'issued' in in_dict:
+            issued=in_dict['issued']
+        elif 'published-print' in in_dict:
+            issued=in_dict['published-print']
+
+        if 'date-parts' in issued:
+            try:
+                date=issued['date-parts'][0]
+                if len(date)==2:
+                    year,month=date
+                    result['year']=str(year)
+                    result['month']=str(month)
+                elif len(date)==3:
+                    year,month,day=date
+                    result['year']=str(year)
+                    result['month']=str(month)
+                    result['day']=str(day)
+            except:
+                pass
+
+    #result['confirmed']='true'
 
     return result
-
-

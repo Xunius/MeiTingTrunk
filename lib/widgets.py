@@ -1045,6 +1045,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
                 meta_dict=_crossref.crossRefToMetaDict(doi_dict)
                 print('# <doiSearchButtonClicked>: meta_dict',meta_dict)
+                print('# <doiSearchButtonClicked>: ciationkey=',meta_dict['citationkey'])
 
                 #self.update_by_doi_signal.emit(meta_dict)
                 self.exchangeMetaDict(meta_dict)
