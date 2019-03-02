@@ -81,8 +81,8 @@ LOG_CONFIG={
 # [y] auto open last datebase on launch
 # rename file when exporting. Need to deal with switching to renaming after some files have been copied without renaming, or changing renaming pattern.
 # perform duplicate check on adding
-# write a connected component function to replace networkx
-# text fold button has bug
+# [y] write a connected component function to replace networkx
+# [y] text fold button has bug
 
 
 if __name__=='__main__':

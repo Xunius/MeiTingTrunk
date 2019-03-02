@@ -652,7 +652,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
     def toggleFold(self):
         self.unfoldText() if self.is_fold else self.foldText()
-        self.fold_change_signal.emit(self.label,self.is_fold)
+        self.fold_change_signal.emit(self.field,self.is_fold)
         return
 
     def foldText(self):
