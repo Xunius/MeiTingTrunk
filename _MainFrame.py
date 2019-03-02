@@ -148,7 +148,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         #self.status_bar.setFixedHeight(12)
         self.status_bar.setFont(self.settings.value('display/fonts/statusbar',QFont))
         v_layout0.addWidget(self.status_bar)
-        self.status_bar.showMessage('etest')
+        self.status_bar.showMessage('Welcome')
 
         self.progressbar=QtWidgets.QProgressBar(self)
         self.progressbar.setSizePolicy(getXExpandYMinSizePolicy())
