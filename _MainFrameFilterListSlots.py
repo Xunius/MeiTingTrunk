@@ -49,6 +49,9 @@ class MainFrameFilterListSlots:
         # clear current filtering first
         self.clearFilterButtonClicked()
 
+        # remove duplicate frame
+        self.clearDuplicateButtonClicked()
+
         sel=self.filter_type_combbox.currentText()
         current_folder=self._current_folder
 

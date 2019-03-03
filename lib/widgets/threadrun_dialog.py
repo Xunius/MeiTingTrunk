@@ -61,7 +61,6 @@ class Master(QObject):
             progressbar_style='classic',
             statusbar=None,
             show_message='',
-            get_results=True,
             parent=None):
         super(Master,self).__init__()
 
@@ -72,12 +71,22 @@ class Master(QObject):
         self.progressbar_style=progressbar_style
         self.statusbar=statusbar
         self.show_message=show_message
-        self.get_results=get_results
         self.parent=parent
 
         self.all_done_signal.connect(self.onAllJobsDone)
 
     def run(self):
+
+        if self.progressbar:
+            if self.progressbar_style=='classic':
+                self.progressbar.setMaximum(len(self.joblist))
+            elif self.progressbar_style=='busy':
+                self.progressbar.setMaximum(0)
+            else:
+                raise Exception("Not defined")
+            self.progressbar.setVisible(True)
+        if self.statusbar and self.show_message:
+            self.statusbar.showMessage(self.show_message)
 
         self.threads=[]
         self.results=[]
@@ -91,16 +100,6 @@ class Master(QObject):
         for ii,jobii in enumerate(self.joblist):
             self.jobqueue.put(jobii)
 
-        if self.progressbar:
-            if self.progressbar_style=='classic':
-                self.progressbar.setMaximum(len(self.joblist))
-            elif self.progressbar_style=='busy':
-                self.progressbar.setMaximum(0)
-            else:
-                raise Exception("Not defined")
-            self.progressbar.setVisible(True)
-        if self.statusbar and self.show_message:
-            self.statusbar.showMessage(self.show_message)
 
         # start worker threads
         for ii in range(n_threads):
@@ -138,14 +137,14 @@ class Master(QObject):
 
     @pyqtSlot()
     def onAllJobsDone(self):
-        for tii,wii in self.threads:
-            tii.quit()
-            tii.wait()
 
         if self.progressbar:
             self.progressbar.setVisible(False)
         if self.statusbar:
             self.statusbar.clearMessage()
+        for tii,wii in self.threads:
+            tii.quit()
+            tii.wait()
         return
 
     @pyqtSlot()
@@ -197,7 +196,7 @@ class ThreadRunDialog(QtWidgets.QDialog):
         self.buttons.rejected.connect(self.abortJobs)
 
         self.master=Master(func,joblist,self.max_threads,self.progressbar,
-                'busy', None, '', self.get_results)
+                'busy', None, '')
 
         #self.master.donejobs_count_signal.connect(self.updatePB)
         self.ok_button=self.buttons.button(QDialogButtonBox.Ok)

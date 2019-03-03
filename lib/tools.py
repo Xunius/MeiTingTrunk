@@ -181,7 +181,7 @@ def removeInvalidPathChar(path):
     return path
 
 
-def fuzzyMatch(dict1,dict2):
+def fuzzyMatch(jobid,id1,id2,dict1,dict2):
 
     authors1=dict1['authors_l'] or ''
     authors2=dict2['authors_l'] or ''
@@ -221,7 +221,8 @@ def fuzzyMatch(dict1,dict2):
     print('\n# <fuzzyMatch>: jy1=',jy1,'\njy2=',jy2,'\nscore=',
             ratio_other)
 
-    return round(score)
+    #return round(score)
+    return 0,jobid, ((id1,id2), round(score))
 
 
 

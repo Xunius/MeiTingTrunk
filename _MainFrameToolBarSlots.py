@@ -328,8 +328,8 @@ class MainFrameToolBarSlots:
                 self._current_folder,
                 docids,
                 None)
-        self.duplicate_result_frame.addResultToTree()
-        self.duplicate_result_frame.setVisible(True)
+        #self.duplicate_result_frame.addResultToTree()
+        #self.duplicate_result_frame.setVisible(True)
 
         return
 

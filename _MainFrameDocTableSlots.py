@@ -119,6 +119,8 @@ class MainFrameDocTableSlots:
         del_from_folder_action=menu.addAction('Delete From Current Folder')
         del_action=menu.addAction('Delete From Library')
         mark_needsreview_action=menu.addAction('Mark document as Needs Review')
+        check_duplicate_folder_action=menu.addAction('Check Duplicates Within Folder')
+        check_duplicate_lib_action=menu.addAction('Check Duplicates Within Library')
         menu.addSeparator()
         #export_menu=menu.addMenu('Export Citation')
         export_bib_action=menu.addAction('Export bib to File')
@@ -183,6 +185,12 @@ class MainFrameDocTableSlots:
 
                 elif action==mark_needsreview_action:
                     self.markDocNeedsReview(docids)
+
+                elif action==check_duplicate_folder_action:
+                    self.checkDocDuplicate(docids,'folder')
+
+                elif action==check_duplicate_lib_action:
+                    self.checkDocDuplicate(docids,'lib')
 
                 elif action==export_bib_action:
                     self.exportToBib(docids)
@@ -481,6 +489,29 @@ class MainFrameDocTableSlots:
                 if len(sel_files)>0:
                     for fii in sel_files:
                         subprocess.call(('xdg-open',fii))
+
+    def checkDocDuplicate(self,docids2,domain):
+
+        print('# <checkDocDuplicate>: docids=%s, domain=%s' %(docids2, domain))
+        self.logger.info('docids=%s, domain=%s' %(docids2, domain))
+
+        self.doc_table.setVisible(False)
+
+        if domain=='folder':
+            current_folder=self._current_folder
+            docids1=self._current_docids
+            print('# <checkDocDuplicate>: docids1=',docids1)
+        elif domain=='lib':
+            current_folder=('All', '-1')
+            docids1=list(self.meta_dict.keys())
+
+        self.duplicate_result_frame.clear_duplicate_label.setText(
+                'Checking duplicates in folder "%s".' %current_folder[0])
+
+        self.duplicate_result_frame.checkDuplicates(self.meta_dict,
+                current_folder, docids1, docids2)
+
+
 
 
 
