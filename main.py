@@ -58,7 +58,7 @@ LOG_CONFIG={
 #   e.g. authors -> authors_l, tag -> tag_l
 # possible issue with local time with added time
 # [y] add logger
-# get all bib entries for multiple selected docs?
+# [y] get all bib entries for multiple selected docs?
 # [y] right click menus
 # [y] option menu
 # RIS
@@ -83,6 +83,7 @@ LOG_CONFIG={
 # perform duplicate check on adding
 # [y] write a connected component function to replace networkx
 # [y] text fold button has bug
+# export dialog
 
 
 if __name__=='__main__':

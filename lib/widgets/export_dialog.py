@@ -9,72 +9,11 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QDialogButtonBox
 import resources
 from .. import sqlitedb
-from ..tools import getHLine
+from ..tools import getHLine, createFolderTree, iterTreeWidgetItems
 
 LOGGER=logging.getLogger('default_logger')
 
 
-
-def createFolderTree(folder_dict,parent):
-
-    def addFolder(parent,folderid,folder_dict):
-
-        foldername,parentid=folder_dict[folderid]
-        fitem=QtWidgets.QTreeWidgetItem([foldername,str(folderid)])
-        style=QtWidgets.QApplication.style()
-        diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
-        fitem.setIcon(0,diropen_icon)
-        sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
-        if parentid=='-1':
-            fitem.setFlags(fitem.flags() | Qt.ItemIsTristate |\
-                    Qt.ItemIsUserCheckable)
-            fitem.setCheckState(0, Qt.Unchecked)
-            parent.addTopLevelItem(fitem)
-        else:
-            fitem.setFlags(fitem.flags() | Qt.ItemIsUserCheckable)
-            fitem.setCheckState(0, Qt.Unchecked)
-            parent.addChild(fitem)
-        if len(sub_ids)>0:
-            for sii in sub_ids:
-                addFolder(fitem,sii,folder_dict)
-
-        return
-
-    folder_tree=QtWidgets.QTreeWidget(parent)
-    folder_tree.setColumnCount(2)
-    folder_tree.setHeaderHidden(True)
-    folder_tree.setColumnHidden(1,True)
-    folder_tree.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-    folder_tree.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
-    folder_tree.header().setStretchLastSection(False)
-    folder_tree.header().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents)
-    folder_tree.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
-
-    #-------------Get all level 1 folders-------------
-    folders1=[(vv[0],kk) for kk,vv in folder_dict.items() if\
-            vv[1] in ['-1',]]
-    folders1.sort()
-
-    #------------Add folders to tree------------
-    for fnameii,idii in folders1:
-        addFolder(folder_tree,idii,folder_dict)
-
-    return folder_tree
-
-
-def iterTreeWidgetItems(treewidget, root=None):
-    if root is None:
-        root=treewidget.invisibleRootItem()
-
-    stack = [root]
-    while stack:
-        parent = stack.pop(0)
-        for row in range(parent.childCount()):
-            child = parent.child(row)
-            yield child
-            if child.childCount()>0:
-                stack.append(child)
 
 
 class ExportDialog(QtWidgets.QDialog):
