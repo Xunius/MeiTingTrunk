@@ -250,9 +250,11 @@ class PreferenceDialog(QtWidgets.QDialog):
 
     def loadSavingsOptions(self):
 
-        scroll, va=self.createFrame('Choose Storage Folder')
+        scroll, va=self.createFrame('Rename Files')
 
         #-------------Choose storage folder section-------------
+        # NOTE: too much trouble dealing the folder path changes. Not now
+        """
         label2=QtWidgets.QLabel('''
         Select folder to save document files. <br/>
         &nbsp;&nbsp; Document (e.g. PDFs) will be copied to the
@@ -277,6 +279,7 @@ class PreferenceDialog(QtWidgets.QDialog):
         button.clicked.connect(self.chooseSaveFolder)
         ha.addWidget(button)
         va.addWidget(getHLine())
+        """
 
         #---------------Rename file section---------------
         checkbox=QtWidgets.QCheckBox('Rename Files')
@@ -292,7 +295,17 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         le.setText('Renaming Format: Author_Year_Title.pdf')
 
+        label2=QtWidgets.QLabel('''
+        Documents (e.g. PDFs) will be copied to the 
+        <span style="font:bold;">
+        "/User/Documents/MMT/Collections" </span> 
+        folder, and renamed by the following format.
+        ''')
+        label2.setTextFormat(Qt.RichText)
+        label2.setWordWrap(True)
+
         va.addWidget(checkbox)
+        va.addWidget(label2)
         va.addWidget(le)
 
         #----------------Auto save section----------------
