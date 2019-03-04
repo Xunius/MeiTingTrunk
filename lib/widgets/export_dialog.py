@@ -9,7 +9,9 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QDialogButtonBox
 import resources
 from .. import sqlitedb
-from ..tools import getHLine, createFolderTree, iterTreeWidgetItems
+from .. import bibparse
+from ..tools import getHLine, createFolderTree, iterTreeWidgetItems, autoRename
+from .threadrun_dialog import Master, ThreadRunDialog
 
 LOGGER=logging.getLogger('default_logger')
 
@@ -28,7 +30,7 @@ class ExportDialog(QtWidgets.QDialog):
         self.title_label_font=QFont('Serif',12,QFont.Bold)
         self.sub_title_label_font=QFont('Serif',10,QFont.Bold)
 
-        self.resize(800,600)
+        self.resize(900,600)
         self.setWindowTitle('Bulk Export')
         self.setWindowModality(Qt.ApplicationModal)
 
@@ -62,11 +64,21 @@ class ExportDialog(QtWidgets.QDialog):
         self.content_vlayout=QtWidgets.QVBoxLayout()
         h_layout.addLayout(self.content_vlayout)
 
-        self.buttons=QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
-            Qt.Horizontal, self)
+        if self.parent.is_loaded:
+            # What if database if empty
 
-        self.buttons.accepted.connect(self.accept)
+            folder_dict=self.parent.main_frame.folder_dict
+            self.folder_tree=createFolderTree(folder_dict,self)
+        else:
+            self.folder_tree=None
+
+        self.buttons=QDialogButtonBox(QDialogButtonBox.Close,
+            Qt.Horizontal, self)
+        self.export_button=self.buttons.addButton('Export',
+                QDialogButtonBox.ApplyRole)
+
+        #self.buttons.accepted.connect(self.doExport)
+        self.export_button.clicked.connect(self.doExport)
         self.buttons.rejected.connect(self.reject)
 
         self.content_vlayout.addWidget(self.buttons)
@@ -110,10 +122,17 @@ class ExportDialog(QtWidgets.QDialog):
         label.setStyleSheet(self.label_color)
         label.setFont(self.title_label_font)
         va.addWidget(label)
-        va.addWidget(getHLine(self))
+        #va.addWidget(getHLine(self))
+
 
         return scroll, va
 
+
+    def clearFolderTreeState(self):
+        for item in iterTreeWidgetItems(self.folder_tree):
+            item.setCheckState(0,False)
+
+        return
 
     def createOmitKeyGroup(self):
 
@@ -162,12 +181,9 @@ class ExportDialog(QtWidgets.QDialog):
     def loadCopyFileOptions(self):
 
         scroll,va=self.createFrame('Copy Document Files')
-        self.copyfile_settings={}
+        self.current_task='copy_file'
 
-
-        #---------------Fold choice section---------------
-        va.addWidget(getHLine())
-
+        #---------------Folder choice section---------------
         label=QtWidgets.QLabel('''
         Choose folders to export documents. <br/>
         This will copy documents (e.g. PDFs) from the
@@ -178,20 +194,12 @@ class ExportDialog(QtWidgets.QDialog):
         label.setWordWrap(True)
         va.addWidget(label)
 
-        # create folder list
-        if self.parent.is_loaded:
-            # What if database if empty
-
-            folder_dict=self.parent.main_frame.folder_dict
-            self.folder_tree=createFolderTree(folder_dict,self)
+        if self.folder_tree:
+            self.clearFolderTreeState()
             va.addWidget(self.folder_tree)
-
-        va.addWidget(getHLine())
-
-        do_button=QtWidgets.QPushButton('Export')
-        do_button.clicked.connect(self.doExportFiles)
-
-        va.addWidget(do_button,0, Qt.AlignLeft)
+        else:
+            va.addWidget(QtWidgets.QLabel('Library empty'))
+            self.export_button.setEnabled(False)
 
         return scroll
 
@@ -202,45 +210,49 @@ class ExportDialog(QtWidgets.QDialog):
         scroll,va=self.createFrame('Export to bibtex')
         self.bib_settings={}
 
+        self.current_task='bib_export'
+
+        #--------------Folder choice section--------------
+        label=QtWidgets.QLabel('Choose folder(s) to export.')
+        va.addWidget(label)
+
+        if self.folder_tree:
+            self.folder_tree.setMinimumHeight(300)
+            self.clearFolderTreeState()
+            va.addWidget(self.folder_tree)
+        else:
+            va.addWidget(QtWidgets.QLabel('Library empty'))
+            self.export_button.setEnabled(False)
+
         #--------------Export manner section--------------
-        groupbox=QtWidgets.QGroupBox('Export documents')
-        va2=QtWidgets.QVBoxLayout()
-        groupbox.setLayout(va2)
+        self.radio_groupbox=QtWidgets.QGroupBox('Saving manner')
+        ha2=QtWidgets.QHBoxLayout()
+        self.radio_groupbox.setLayout(ha2)
 
         choices=['All in one', 'Per folder', 'Per document']
         for ii in choices:
             radioii=QtWidgets.QRadioButton(ii)
             if ii=='Per folder':
                 radioii.setChecked(True)
-            radioii.toggled.connect(lambda on: self.bibExportMannerChanged(on,groupbox))
-            va2.addWidget(radioii)
+            ha2.addWidget(radioii)
 
-        va.addWidget(groupbox)
+        va.addWidget(self.radio_groupbox)
 
         #----------------Omit keys section----------------
-        self.groupbox=self.createOmitKeyGroup()
-        va.addWidget(self.groupbox)
-
-        va.addWidget(getHLine())
-
-        do_button=QtWidgets.QPushButton('Export')
-        do_button.clicked.connect(self.doBibExport)
-
-        va.addWidget(do_button,0, Qt.AlignLeft)
+        self.omitkey_groupbox=self.createOmitKeyGroup()
+        va.addWidget(self.omitkey_groupbox)
 
         return scroll
 
 
-    def bibExportMannerChanged(self,on,groupbox):
+    def getExportManner(self):
 
-        for box in groupbox.findChildren(QtWidgets.QRadioButton):
+        for box in self.radio_groupbox.findChildren(QtWidgets.QRadioButton):
             if box.isChecked():
                 choice=box.text()
                 break
 
-        self.bib_settings['manner']=choice
-        print('# <bibExportMannerChanged>: choice',choice,on,self.bib_settings)
-        return
+        return choice
 
 
     def omitKeyChanged(self,on):
@@ -259,8 +271,8 @@ class ExportDialog(QtWidgets.QDialog):
             if box.isChecked():
                 omit_keys.append(box.text())
 
-        self.bib_settings['omit_keys']=omit_keys
-        print('# <omitKeyChanged>: omit keys=',self.bib_settings['omit_keys'])
+        #self.bib_settings['omit_keys']=omit_keys
+        #print('# <omitKeyChanged>: omit keys=',self.bib_settings['omit_keys'])
 
         return
 
@@ -268,7 +280,7 @@ class ExportDialog(QtWidgets.QDialog):
 
         omit_keys=[]
 
-        for box in self.groupbox.findChildren(QtWidgets.QCheckBox):
+        for box in self.omitkey_groupbox.findChildren(QtWidgets.QCheckBox):
             if box.isChecked():
                 omit_keys.append(box.text())
 
@@ -279,14 +291,17 @@ class ExportDialog(QtWidgets.QDialog):
     def loadExportRISOptions(self):
 
         scroll,va=self.createFrame('Export to RIS')
+        self.current_task='ris_export'
 
         return scroll
 
     def loadExportZoteroOptions(self):
 
         scroll,va=self.createFrame('Export to Zotero')
+        self.current_task='zotero_export'
 
         return scroll
+
 
     def doExportFiles(self):
         folder_dict=self.parent.main_frame.folder_dict
@@ -304,29 +319,38 @@ class ExportDialog(QtWidgets.QDialog):
             msg.exec_()
             return
 
-        job_list=[] # (jobid, source_path, target_path)
+        folders=[]
         for item in iterTreeWidgetItems(self.folder_tree):
             if item.checkState(0):
-                folderid=item.data(1,0)
-                docids=folder_data[folderid]
-                print('# <doExportFiles>: choose folder', item.data(0,0),
-                        item.data(1,0))
-                tree=sqlitedb.getFolderTree(folder_dict,folderid)[1]
-                print('# <doExportFiles>: tree',tree)
-                print('# <doExportFiles>: docids in folder', docids)
+                folders.append(item)
+        if len(folders)==0:
+            self.popUpChooseFolder()
+            return
 
-                folderii=os.path.join(storage_folder,tree)
-                if not os.path.exists(folderii):
-                    os.makedirs(folderii)
-                    print('# <doExportFiles>: Create folder %s' %folderii)
-                    LOGGER.info('Create folder %s' %folderii)
+        job_list=[] # (jobid, source_path, target_path)
+        for item in folders:
+            folderid=item.data(1,0)
 
-                for idii in docids:
-                    if meta_dict[idii]['has_file']:
-                        for fjj in meta_dict[idii]['files_l']:
-                            filenamejj=sqlitedb.renameFile(fjj,meta_dict[idii])
-                            newfjj=os.path.join(folderii,filenamejj)
-                            job_list.append((len(job_list), fjj, newfjj))
+            docids=folder_data[folderid]
+            print('# <doExportFiles>: choose folder', item.data(0,0),
+                    item.data(1,0))
+            tree=sqlitedb.getFolderTree(folder_dict,folderid)[1]
+            print('# <doExportFiles>: tree',tree)
+            print('# <doExportFiles>: docids in folder', docids)
+
+            folderii=os.path.join(storage_folder,tree)
+            if not os.path.exists(folderii):
+                os.makedirs(folderii)
+                print('# <doExportFiles>: Create folder %s' %folderii)
+                LOGGER.info('Create folder %s' %folderii)
+
+            for idii in docids:
+                if meta_dict[idii]['has_file']:
+                    for fjj in meta_dict[idii]['files_l']:
+                        filenamejj=sqlitedb.renameFile(fjj,meta_dict[idii])
+                        newfjj=os.path.join(folderii,filenamejj)
+                        job_list.append((len(job_list), fjj, newfjj))
+
 
         import time
         def copyFunc(jobid,s,t):
@@ -337,7 +361,7 @@ class ExportDialog(QtWidgets.QDialog):
             except:
                 rec=1
                 result=None
-            
+
             time.sleep(0.5)
             return rec,jobid,result
 
@@ -350,5 +374,216 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def doBibExport(self):
+
+        #---------------Get selected folders---------------
+        folders=[]
+        for item in iterTreeWidgetItems(self.folder_tree):
+            if item.checkState(0):
+                folderid=item.data(1,0)
+                foldername=item.data(0,0)
+                folders.append((foldername, folderid))
+        if len(folders)==0:
+            self.popUpChooseFolder()
+            return
+
+        #------------Popup for saving location------------
+        manner=self.getExportManner()
+        if manner=='All in one':
+            default_path='bibtex_export.bib'
+            fname = QtWidgets.QFileDialog.getSaveFileName(self,
+                    'Save Citaitons to bib File',
+                    default_path,
+                    "bib Files (*.bib);; All files (*)")[0]
+            isfile=True
+        elif manner=='Per folder':
+            if len(folders)==1:
+                default_path='bibtex_export_%s.bib' %folders[0][0]
+                fname = QtWidgets.QFileDialog.getSaveFileName(self,
+                        'Save Citaitons to bib File',
+                        default_path,
+                        "bib Files (*.bib);; All files (*)")[0]
+                isfile=True
+            else:
+                fname=QtWidgets.QFileDialog.getExistingDirectory(self,
+                    'Choose a folder to save bibtex files')
+                isfile=False
+        else:
+            fname=QtWidgets.QFileDialog.getExistingDirectory(self,
+                'Choose a folder to save bibtex files')
+            isfile=False
+
+        if not fname:
+            return
+
+        print('# <doBibExport>: Chosen bib file=%s' %fname)
+        LOGGER.info('Chosen bib file=%s' %fname)
+
+        #-----------------Prepare job list-----------------
+        folder_data=self.parent.main_frame.folder_data
+        meta_dict=self.parent.main_frame.meta_dict
+        omit_keys=self.getOmitKeys()
+        print('# <doBibExport>: manner=',manner)
+        print('# <doBibExport>: folders=',folders)
+        print('# <doBibExport>: omit keys=',omit_keys)
+
+        # TODO: sort by ciation keys
+
+
+        if manner=='Per folder':
+
+            self.exportBibFolders(folders,fname,meta_dict,omit_keys)
+
+        elif manner in ['All in one', 'Per document']:
+
+            docs=[]
+            for folderii in folders:
+                docs.extend(folder_data[folderii[1]])
+
+            # get bib name
+            print('# <doBibExport>: ',manner, ' job call. docs=',docs)
+            if manner=='All in one':
+                self.exportToBib(docs,meta_dict,'combine',fname,omit_keys)
+            else:
+                self.exportToBib(docs,meta_dict,'separate',fname,omit_keys)
+
+        return
+
+
+
+    def exportToBib(self,docids,meta_dict,manner,fname,omit_keys):
+
+        print('# <exportToBib>: docids=%s' %docids)
+        LOGGER.info('docids=%s' %docids)
+
+        def saveBib():
+            results=master1.results
+            faillist=[]
+
+            if manner=='combine':
+                text=''
+                for recii,jobii,textii in results:
+                    if recii==0:
+                        text=text+textii+'\n'
+                    elif recii==1:
+                        faillist.append(jobii)
+
+                print('# <saveBib>: combine save to file',fname)
+                with open(fname,'w') as fout:
+                    fout.write(text)
+
+            elif manner=='separate':
+                for recii,jobii,textii in results:
+                    if recii==0:
+                        metaii=job_list[jobii][1]
+                        citationkey=metaii['citationkey']
+                        if citationkey=='':
+                            fnameii='bibtex_docid_%s.bib' %(metaii['id'])
+                        else:
+                            fnameii='bibtex_%s.bib' %citationkey
+
+                        print('# <saveBib>: seperate save to file',fnameii)
+
+                        fnameii=os.path.join(fname,fnameii)
+                        fnameii=autoRename(fnameii)
+                        with open(fnameii,'w') as fout:
+                            fout.write(textii)
+                    elif recii==1:
+                        faillist.append(jobii)
+
+            # show failed jobs
+            if len(faillist)>0:
+                fail_entries=[]
+                for jobii in faillist:
+                    metaii=job_list[jobii][1]
+                    entryii='* %s_%s_%s' %(', '.join(metaii['authors_l']),
+                            metaii['year'],
+                            metaii['title'])
+                    fail_entries.append(entryii)
+
+                msg=QtWidgets.QMessageBox()
+                msg.resize(700,600)
+                msg.setIcon(QtWidgets.QMessageBox.Information)
+                msg.setWindowTitle('Error')
+                msg.setText('Oopsie.')
+                msg.setInformativeText('Failed to export these entries:\n\n %s'\
+                        %('\n'.join(fail_entries)))
+                msg.exec_()
+
+            return
+
+        #omit_keys=self.bib_settings.value('export/bib/omit_fields', [], str)
+        #if isinstance(omit_keys,str) and omit_keys=='':
+            #omit_keys=[]
+
+        job_list=[]
+        for ii,docii in enumerate(docids):
+            job_list.append((ii,meta_dict[docii],omit_keys))
+
+        '''
+        master1=Master(bibparse.metaDictToBib, job_list,
+                1, self.parent.main_frame.progressbar,
+                'classic', self.parent.main_frame.status_bar,
+                'Exporting to bibtex...')
+        master1.all_done_signal.connect(saveBib)
+        master1.run()
+        '''
+
+        thread_run_dialog=ThreadRunDialog(bibparse.metaDictToBib,job_list,
+                show_message='sss',max_threads=1,get_results=True,
+                close_on_finish=True,
+                progressbar_style='classic',parent=self)
+        master1=thread_run_dialog.master
+        #master1.all_done_signal.connect(saveBib)
+        #thread_run_dialog.exec_()
+
+        saveBib()
+
+        return
+
+
+
+    def _exportToBib(self,jobid,docids,meta_dict,omit_keys,fname):
+
+        text=''
+        for idii in docids:
+            print('# <exportToBib>: Parsing bib for docid=%s' %idii)
+            self.logger.info('Parsing bib for docid=%s' %idii)
+            metaii=meta_dict[idii]
+
+            #textii=export2bib.parseMeta(metaii,'',metaii['folders_l'],True,False,
+                    #True)
+            textii=bibparse.metaDictToBib(metaii,bibparse.INV_ALT_KEYS,
+                    omit_keys)
+            text=text+textii+'\n'
+
+        with open(fname,'w') as fout:
+            fout.write(text)
+
+        print('# <exportToBib>: File saved to %s' %fname)
+        self.logger.info('File saved to %s' %fname)
+
+        return
+
+
+    def doExport(self):
+
+        print('# <doExport>: task=',self.current_task)
+
+        if self.current_task=='copy_file':
+            self.doExportFiles()
+        elif self.current_task=='bib_export':
+            self.doBibExport()
+        elif self.current_task=='ris_export':
+            pass
+        elif self.current_task=='zotero_export':
+            pass
+        return
+
+    def popUpChooseFolder(self):
+        msg=QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setWindowTitle('Input Needed')
+        msg.setText("Choose at least one folder to process.")
+        msg.exec_()
         return
 

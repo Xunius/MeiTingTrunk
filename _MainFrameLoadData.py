@@ -301,8 +301,7 @@ class MainFrameLoadData:
         omit_keys=self.settings.value('export/bib/omit_fields', [], str)
         if isinstance(omit_keys,str) and omit_keys=='':
             omit_keys=[]
-        text=bibparse.metaDictToBib(metaii,bibparse.INV_ALT_KEYS,
-                omit_keys)
+        text=bibparse.metaDictToBib(0,metaii,omit_keys)[2]
 
         self.bib_textedit.setText(text)
 

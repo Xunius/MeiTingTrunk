@@ -174,19 +174,23 @@ def toOrdinaryDict(metadict,alt_dict,omit_keys):
     return result
 
 
-def metaDictToBib(metadict,alt_dict,omit_keys):
+def metaDictToBib(jobid,metadict,omit_keys):
 
-    ord_dict=toOrdinaryDict(metadict,alt_dict,omit_keys)
+    try:
+        alt_dict=INV_ALT_KEYS
+        ord_dict=toOrdinaryDict(metadict,alt_dict,omit_keys)
 
-    db=BibDatabase()
-    db.entries=[ord_dict,]
-    writer=BibTexWriter()
-    writer.indent='    '
-    writer.comma_first=False
+        db=BibDatabase()
+        db.entries=[ord_dict,]
+        writer=BibTexWriter()
+        writer.indent='    '
+        writer.comma_first=False
 
-    dbtext=writer.write(db)
+        dbtext=writer.write(db)
 
-    return dbtext
+        return 0,jobid,dbtext
+    except:
+        return 1,jobid,''
 
 
 

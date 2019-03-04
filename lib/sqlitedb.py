@@ -16,6 +16,7 @@ try:
     from . import bibparse
 except:
     import bibparse
+from .tools import autoRename
 
 DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',
@@ -671,61 +672,6 @@ def renameFile(fname,meta_dict,replace_space=False):
     print('# <renameFile>: Old file name=',fname,'New file name=',fname2)
 
     return fname2
-
-
-
-def autoRename(abpath):
-    '''Auto rename a file to avoid overwriting an existing file
-
-    <abpath>: str, absolute path to a folder or a file to rename.
-    
-    Return <newname>: str, new file path.
-    If no conflict found, return <abpath>;
-    If conflict with existing file, return renamed file path,
-    by appending "_(n)".
-    E.g. 
-        n1='~/codes/tools/send2ever.py'
-        n2='~/codes/tools/send2ever_(4).py'
-    will be renamed to
-        n1='~/codes/tools/send2ever_(1).py'
-        n2='~/codes/tools/send2ever_(5).py'
-    '''
-
-    def rename_sub(match):
-        base=match.group(1)
-        delim=match.group(2)
-        num=int(match.group(3))
-        return '%s%s(%d)' %(base,delim,num+1)
-
-    if not os.path.exists(abpath):
-        return abpath
-
-    folder,filename=os.path.split(abpath)
-    basename,ext=os.path.splitext(filename)
-    # match filename
-    rename_re=re.compile('''
-            ^(.+?)       # File name
-            ([- _])      # delimiter between file name and number
-            \\((\\d+)\\) # number in ()
-            (.*)         # ext
-            $''',\
-            re.X)
-
-    newname='%s_(1)%s' %(basename,ext)
-    while True:
-        newpath=os.path.join(folder,newname)
-
-        if not os.path.exists(newpath):
-            break
-        else:
-            if rename_re.match(newname):
-                newname=rename_re.sub(rename_sub,newname)
-                newname='%s%s' %(newname,ext)
-            else:
-                raise Exception("Exception")
-                
-    newname=os.path.join(folder,newname)
-    return newname
 
 
 def saveFoldersToDatabase(db,folder_dict,lib_folder):

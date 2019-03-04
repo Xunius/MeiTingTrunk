@@ -80,6 +80,7 @@ class Master(QObject):
         if self.progressbar:
             if self.progressbar_style=='classic':
                 self.progressbar.setMaximum(len(self.joblist))
+                self.progressbar.setValue(0)
             elif self.progressbar_style=='busy':
                 self.progressbar.setMaximum(0)
             else:
@@ -163,7 +164,8 @@ class Master(QObject):
 class ThreadRunDialog(QtWidgets.QDialog):
 
     def __init__(self,func,joblist,show_message='',max_threads=3,
-            get_results=False,close_on_finish=True,parent=None):
+            get_results=False,close_on_finish=True,progressbar_style='classic',
+            parent=None):
         super(ThreadRunDialog,self).__init__(parent=parent)
 
         self.func=func
@@ -172,6 +174,7 @@ class ThreadRunDialog(QtWidgets.QDialog):
         self.max_threads=max_threads
         self.get_results=get_results
         self.close_on_finish=close_on_finish
+        self.progressbar_style=progressbar_style
         self.parent=parent
 
         self.setWindowModality(Qt.ApplicationModal)
@@ -196,7 +199,7 @@ class ThreadRunDialog(QtWidgets.QDialog):
         self.buttons.rejected.connect(self.abortJobs)
 
         self.master=Master(func,joblist,self.max_threads,self.progressbar,
-                'busy', None, '')
+                self.progressbar_style, None, '')
 
         #self.master.donejobs_count_signal.connect(self.updatePB)
         self.ok_button=self.buttons.button(QDialogButtonBox.Ok)

@@ -5,6 +5,7 @@ from PyQt5.QtGui import QFont, QBrush, QColor, QCursor
 from lib import sqlitedb
 from lib import bibparse
 from lib.tools import parseAuthors
+from lib.widgets import Master
 import logging
 
 
@@ -193,7 +194,7 @@ class MainFrameDocTableSlots:
                     self.checkDocDuplicate(docids,'lib')
 
                 elif action==export_bib_action:
-                    self.exportToBib(docids)
+                    self.exportToBib(docids,self.meta_dict)
 
                 elif action==copy_clipboard_action:
                     self.copyToClipboard(docids,style=None)
@@ -323,13 +324,13 @@ class MainFrameDocTableSlots:
         return
 
 
-    def exportToBib(self,docids):
+    def exportToBib(self,docids,meta_dict):
 
         print('# <exportToBib>: docids=%s' %docids)
         self.logger.info('docids=%s' %docids)
 
         if len(docids)==1:
-            default_path='%s.bib' %(self.meta_dict[docids[0]]['citationkey'])
+            default_path='%s.bib' %(meta_dict[docids[0]]['citationkey'])
         else:
             default_path='./bibtex.bib'
 
@@ -344,29 +345,76 @@ class MainFrameDocTableSlots:
         print('# <exportToBib>: Chosen bib file=%s' %fname)
         self.logger.info('Chosen bib file=%s' %fname)
 
-        if fname:
+        def saveBib():
+            results=self.master1.results
+            faillist=[]
             text=''
-            omit_keys=self.settings.value('export/bib/omit_fields', [], str)
-            if isinstance(omit_keys,str) and omit_keys=='':
-                omit_keys=[]
-
-            for idii in docids:
-
-                print('# <exportToBib>: Parsing bib for docid=%s' %idii)
-                self.logger.info('Parsing bib for docid=%s' %idii)
-                metaii=self.meta_dict[idii]
-
-                #textii=export2bib.parseMeta(metaii,'',metaii['folders_l'],True,False,
-                        #True)
-                textii=bibparse.metaDictToBib(metaii,bibparse.INV_ALT_KEYS,
-                        omit_keys)
-                text=text+textii+'\n'
+            for recii,jobii,textii in results:
+                if recii==0:
+                    text=text+textii+'\n'
+                elif recii==1:
+                    faillist.append(jobii)
 
             with open(fname,'w') as fout:
                 fout.write(text)
 
-            print('# <exportToBib>: File saved to %s' %fname)
-            self.logger.info('File saved to %s' %fname)
+            # show failed jobs
+            if len(faillist)>0:
+                fail_entries=[]
+                for jobii in faillist:
+                    metaii=job_list[jobii][1]
+                    entryii='* %s_%s_%s' %(', '.join(metaii['authors_l']),
+                            metaii['year'],
+                            metaii['title'])
+                    fail_entries.append(entryii)
+
+                msg=QtWidgets.QMessageBox()
+                msg.resize(700,600)
+                msg.setIcon(QtWidgets.QMessageBox.Information)
+                msg.setWindowTitle('Error')
+                msg.setText('Oopsie.')
+                msg.setInformativeText('Failed to export these entries:\n\n %s'\
+                        %('\n'.join(fail_entries)))
+                msg.exec_()
+
+            return
+
+        if fname:
+            omit_keys=self.settings.value('export/bib/omit_fields', [], str)
+            if isinstance(omit_keys,str) and omit_keys=='':
+                omit_keys=[]
+
+            job_list=[]
+            for ii,docii in enumerate(docids):
+                job_list.append((ii,meta_dict[docii],omit_keys))
+            self.master1=Master(bibparse.metaDictToBib, job_list,
+                    1, self.progressbar,
+                    'classic', self.status_bar, 'Exporting to bibtex...')
+            self.master1.all_done_signal.connect(saveBib)
+            self.master1.run()
+
+        return
+
+    def _exportToBib(self,jobid,docids,meta_dict,omit_keys,fname):
+        # TODO: sort by ciation keys
+
+        text=''
+        for idii in docids:
+            print('# <exportToBib>: Parsing bib for docid=%s' %idii)
+            self.logger.info('Parsing bib for docid=%s' %idii)
+            metaii=meta_dict[idii]
+
+            #textii=export2bib.parseMeta(metaii,'',metaii['folders_l'],True,False,
+                    #True)
+            textii=bibparse.metaDictToBib(metaii,bibparse.INV_ALT_KEYS,
+                    omit_keys)
+            text=text+textii+'\n'
+
+        with open(fname,'w') as fout:
+            fout.write(text)
+
+        print('# <exportToBib>: File saved to %s' %fname)
+        self.logger.info('File saved to %s' %fname)
 
         return
 

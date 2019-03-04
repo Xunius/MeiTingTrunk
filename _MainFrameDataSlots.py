@@ -15,10 +15,11 @@ class MainFrameDataSlots:
 
 
     def threadedFuncCall2(self,func,joblist,show_message='',max_threads=4,
-            get_results=False,close_on_finish=True):
+            get_results=False,close_on_finish=True,progressbar_style='classic'):
 
         thread_run_dialog=widgets.ThreadRunDialog(func,joblist,
-                show_message,max_threads,get_results,close_on_finish,self)
+                show_message,max_threads,get_results,close_on_finish,
+                progressbar_style,self)
         #thread_run_dialog.exec_()
         if get_results:
             #print('# <threadedFuncCall2>: results',thread_run_dialog.results)

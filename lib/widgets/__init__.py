@@ -4,4 +4,4 @@ from .meta_tab import MetaTabScroll, NoteTextEdit
 from .preference_dialog import PreferenceDialog
 from .export_dialog import ExportDialog
 from .duplicate_frame import CheckDuplicateFrame
-from .threadrun_dialog import ThreadRunDialog
+from .threadrun_dialog import ThreadRunDialog, Master
