@@ -345,11 +345,12 @@ class MainFrameDocTableSlots:
         print('# <exportToBib>: Chosen bib file=%s' %fname)
         self.logger.info('Chosen bib file=%s' %fname)
 
-        def saveBib():
-            results=self.master1.results
+        def saveBib(results):
+            #results=self.master1.results
             faillist=[]
+
             text=''
-            for recii,jobii,textii in results:
+            for recii,jobii,textii,docii in results:
                 if recii==0:
                     text=text+textii+'\n'
                 elif recii==1:
@@ -389,34 +390,13 @@ class MainFrameDocTableSlots:
                 job_list.append((ii,meta_dict[docii],omit_keys))
             self.master1=Master(bibparse.metaDictToBib, job_list,
                     1, self.progressbar,
-                    'classic', self.status_bar, 'Exporting to bibtex...')
-            self.master1.all_done_signal.connect(saveBib)
+                    'classic', self.status_bar, 'Exporting to bibtex...',
+                    post_process_func=saveBib)
+            #self.master1.all_done_signal.connect(saveBib)
             self.master1.run()
 
         return
 
-    def _exportToBib(self,jobid,docids,meta_dict,omit_keys,fname):
-        # TODO: sort by ciation keys
-
-        text=''
-        for idii in docids:
-            print('# <exportToBib>: Parsing bib for docid=%s' %idii)
-            self.logger.info('Parsing bib for docid=%s' %idii)
-            metaii=meta_dict[idii]
-
-            #textii=export2bib.parseMeta(metaii,'',metaii['folders_l'],True,False,
-                    #True)
-            textii=bibparse.metaDictToBib(metaii,bibparse.INV_ALT_KEYS,
-                    omit_keys)
-            text=text+textii+'\n'
-
-        with open(fname,'w') as fout:
-            fout.write(text)
-
-        print('# <exportToBib>: File saved to %s' %fname)
-        self.logger.info('File saved to %s' %fname)
-
-        return
 
 
     def copyToClipboard(self,docids,style=None):

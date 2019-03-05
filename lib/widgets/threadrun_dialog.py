@@ -61,8 +61,12 @@ class Master(QObject):
             progressbar_style='classic',
             statusbar=None,
             show_message='',
+            post_process_func=None,
+            post_process_func_args=(),
+            post_process_progress=1,
+            close_on_finish=True,
             parent=None):
-        super(Master,self).__init__()
+        super(self.__class__,self).__init__()
 
         self.func=func
         self.joblist=joblist
@@ -71,6 +75,10 @@ class Master(QObject):
         self.progressbar_style=progressbar_style
         self.statusbar=statusbar
         self.show_message=show_message
+        self.post_process_func=post_process_func
+        self.post_process_func_args=post_process_func_args
+        self.post_process_progress=post_process_progress
+        self.close_on_finish=close_on_finish
         self.parent=parent
 
         self.all_done_signal.connect(self.onAllJobsDone)
@@ -79,7 +87,11 @@ class Master(QObject):
 
         if self.progressbar:
             if self.progressbar_style=='classic':
-                self.progressbar.setMaximum(len(self.joblist))
+                if self.post_process_func is None:
+                    self.progressbar.setMaximum(len(self.joblist))
+                else:
+                    self.progressbar.setMaximum(len(self.joblist)+\
+                            self.post_process_progress)
                 self.progressbar.setValue(0)
             elif self.progressbar_style=='busy':
                 self.progressbar.setMaximum(0)
@@ -100,7 +112,6 @@ class Master(QObject):
         # populate job queue
         for ii,jobii in enumerate(self.joblist):
             self.jobqueue.put(jobii)
-
 
         # start worker threads
         for ii in range(n_threads):
@@ -139,13 +150,26 @@ class Master(QObject):
     @pyqtSlot()
     def onAllJobsDone(self):
 
-        if self.progressbar:
-            self.progressbar.setVisible(False)
-        if self.statusbar:
-            self.statusbar.clearMessage()
         for tii,wii in self.threads:
             tii.quit()
             tii.wait()
+
+        if self.post_process_func is not None:
+            print('# <onAllJobsDone>: Call post process')
+            self.results=self.post_process_func(self.results,
+                    *self.post_process_func_args)
+            if self.progressbar:
+                self.progressbar.setValue(self.progressbar.maximum())
+
+        if self.close_on_finish:
+            if self.statusbar:
+                self.statusbar.clearMessage()
+            if self.progressbar:
+                self.progressbar.setVisible(False)
+        else:
+            if self.statusbar:
+                self.statusbar.showMessage('Finished.')
+
         return
 
     @pyqtSlot()
@@ -160,13 +184,14 @@ class Master(QObject):
             self.statusbar.clearMessage()
 
 
-
 class ThreadRunDialog(QtWidgets.QDialog):
 
     def __init__(self,func,joblist,show_message='',max_threads=3,
             get_results=False,close_on_finish=True,progressbar_style='classic',
+            post_process_func=None, post_process_func_args=(),
+            post_process_progress=1,
             parent=None):
-        super(ThreadRunDialog,self).__init__(parent=parent)
+        super(self.__class__,self).__init__(parent=parent)
 
         self.func=func
         self.joblist=joblist
@@ -175,6 +200,9 @@ class ThreadRunDialog(QtWidgets.QDialog):
         self.get_results=get_results
         self.close_on_finish=close_on_finish
         self.progressbar_style=progressbar_style
+        self.post_process_func=post_process_func
+        self.post_process_func_args=post_process_func_args
+        self.post_process_progress=post_process_progress
         self.parent=parent
 
         self.setWindowModality(Qt.ApplicationModal)
@@ -183,7 +211,8 @@ class ThreadRunDialog(QtWidgets.QDialog):
 
         va=QtWidgets.QVBoxLayout(self)
 
-        va.addWidget(QtWidgets.QLabel(show_message))
+        self.label=QtWidgets.QLabel(show_message)
+        va.addWidget(self.label)
 
         self.progressbar=QtWidgets.QProgressBar(self)
         self.progressbar.setMaximum(len(joblist))
@@ -199,9 +228,13 @@ class ThreadRunDialog(QtWidgets.QDialog):
         self.buttons.rejected.connect(self.abortJobs)
 
         self.master=Master(func,joblist,self.max_threads,self.progressbar,
-                self.progressbar_style, None, '')
+                self.progressbar_style, None, '',
+                self.post_process_func,
+                self.post_process_func_args,
+                self.post_process_progress,
+                self.close_on_finish,
+                None)
 
-        #self.master.donejobs_count_signal.connect(self.updatePB)
         self.ok_button=self.buttons.button(QDialogButtonBox.Ok)
         self.ok_button.setEnabled(False)
         self.cancel_button=self.buttons.button(QDialogButtonBox.Cancel)
@@ -215,13 +248,9 @@ class ThreadRunDialog(QtWidgets.QDialog):
     def allJobsDone(self):
         self.cancel_button.setEnabled(False)
         self.ok_button.setEnabled(True)
+        self.label.setText('Finished')
         if self.close_on_finish:
             self.accept()
-        return
-
-    @pyqtSlot(int)
-    def updatePB(self,value):
-        self.progressbar.setValue(value)
         return
 
     @pyqtSlot()
@@ -238,7 +267,7 @@ class ThreadRunDialog(QtWidgets.QDialog):
         if self.get_results:
             self.results=self.master.results
             print('# <accept>: self.results',self.results)
-        super(ThreadRunDialog,self).accept()
+        super(self.__class__,self).accept()
         return
 
 

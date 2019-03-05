@@ -11,7 +11,7 @@ import resources
 from .. import sqlitedb
 from .. import bibparse
 from ..tools import getHLine, createFolderTree, iterTreeWidgetItems, autoRename
-from .threadrun_dialog import ThreadRunDialog
+from .threadrun_dialog import Master, ThreadRunDialog
 
 LOGGER=logging.getLogger('default_logger')
 
@@ -415,125 +415,249 @@ class ExportDialog(QtWidgets.QDialog):
         print('# <doBibExport>: folders=',folders)
         print('# <doBibExport>: omit keys=',omit_keys)
 
-        #-----------------Create job list-----------------
-        job_list=[]
-        citationkeys=[]
-        docs=[]
+        # TODO: sort by ciation keys
 
-        if manner in ['All in one', 'Per document']:
 
+        if manner=='Per folder':
+
+            self.exportBibByFolders(folders,fname,folder_data,meta_dict,omit_keys)
+
+        elif manner in ['All in one', 'Per document']:
+
+            docs=[]
             for folderii in folders:
                 docs.extend(folder_data[folderii[1]])
 
-            docs=list(set(docs))
-            n=0
-            for docii in docs:
-                cii=meta_dict[docii]['citationkey']
-                if cii=='':
-                    cii=str(docii)
-                citationkeys.append(cii)
-                job_list.append((n, meta_dict[docii], omit_keys))
-                n+=1
-
-            #---------------Sort by citationkey---------------
+            print('# <doBibExport>: ',manner, ' job call. docs=',docs)
             if manner=='All in one':
-                job_list=[x for _,x in sorted(zip(citationkeys,job_list))]
-                citationkeys=sorted(citationkeys)
-
-        elif manner=='Per folder':
-
-            n=0
-            for foldernameii,fidii in folders:
-
-                jobsii=[]
-                #----------------Loop through docs----------------
-                docids=folder_data[fidii]
-                citationkeysii=[]
-                for docii in docids:
-                    if docii in docs:
-                        # remove duplicates
-                        continue
-
-                    cii=meta_dict[docii]['citationkey']
-                    if cii=='':
-                        cii=str(docii)
-                    citationkeysii.append(cii)
-                    jobsii.append((n, meta_dict[docii], omit_keys))
-                    n+=1
-                    docs.append(docii)
-
-                #---------------Sort by citationkey---------------
-                jobsii=[x for _,x in sorted(zip(citationkeysii,jobsii))]
-                citationkeysii=sorted(citationkeysii)
-                job_list.extend(jobsii)
-                citationkeys.extend(citationkeysii)
-
-        #------------------Run in thread------------------
-        thread_run_dialog=ThreadRunDialog(bibparse.metaDictToBib, job_list,
-                show_message='Processing...', max_threads=1, get_results=False,
-                close_on_finish=False,
-                progressbar_style='classic',
-                post_process_func=self.saveBib,
-                post_process_func_args=(folders, manner, fname, folder_data,
-                    meta_dict,citationkeys),
-                parent=self)
+                self.exportToBib(docs,meta_dict,'combine',fname,omit_keys)
+            else:
+                self.exportToBib(docs,meta_dict,'separate',fname,omit_keys)
 
         return
 
 
 
+    def exportToBib(self,docids,meta_dict,manner,fname,omit_keys):
 
-    def saveBib(self,results,folders,manner,fname,folder_data,meta_dict,citationkeys):
-        faillist=[]
+        print('# <exportToBib>: docids=%s' %docids)
+        LOGGER.info('docids=%s' %docids)
 
-        if manner=='All in one':
-            text=''
-            for recii,jobii,textii,docii in results:
-                if recii==0:
-                    text=text+textii+'\n'
-                elif recii==1:
-                    faillist.append(docii)
+        def saveBib():
+            results=master1.results
+            faillist=[]
 
-            print('# <saveBib>: combine save to file',fname)
-            with open(fname,'w') as fout:
-                fout.write(text)
+            if manner=='combine':
+                text=''
+                for recii,jobii,textii in results:
+                    if recii==0:
+                        text=text+textii+'\n'
+                    elif recii==1:
+                        faillist.append(jobii)
 
-        elif manner=='Per document':
-            for recii,jobii,textii,docii in results:
-                if recii==0:
-                    citationkey=citationkeys[jobii]
-                    fnameii='%s.bib' %citationkey
+                print('# <saveBib>: combine save to file',fname)
+                with open(fname,'w') as fout:
+                    fout.write(text)
 
-                    print('# <saveBib>: seperate save to file',fnameii)
+            elif manner=='separate':
+                for recii,jobii,textii in results:
+                    if recii==0:
+                        citationkey=citationkeys[jobii]
+                        fnameii='%s.bib' %citationkey
 
-                    fnameii=os.path.join(fname,fnameii)
-                    fnameii=autoRename(fnameii)
-                    with open(fnameii,'w') as fout:
-                        fout.write(textii)
-                elif recii==1:
-                    faillist.append(docii)
+                        print('# <saveBib>: seperate save to file',fnameii)
 
-        elif manner=='Per folder':
+                        fnameii=os.path.join(fname,fnameii)
+                        fnameii=autoRename(fnameii)
+                        with open(fnameii,'w') as fout:
+                            fout.write(textii)
+                    elif recii==1:
+                        faillist.append(jobii)
 
-            #-------------Prepare result counting-------------
-            folder_counts={}
-            folder_results={}
-            for foldernameii,fidii in folders:
-                folder_results[fidii]=[]
-                folder_counts[fidii]=0
+            # show failed jobs
+            if len(faillist)>0:
+                fail_entries=[]
+                for jobii in faillist:
+                    metaii=job_list[jobii][1]
+                    entryii='* %s_%s_%s' %(', '.join(metaii['authors_l']),
+                            metaii['year'],
+                            metaii['title'])
+                    fail_entries.append(entryii)
 
-            for recii,jobii,textii,docii in results:
+                msg=QtWidgets.QMessageBox()
+                msg.resize(700,600)
+                msg.setIcon(QtWidgets.QMessageBox.Information)
+                msg.setWindowTitle('Error')
+                msg.setText('Oopsie.')
+                msg.setInformativeText('Failed to export these entries:\n\n %s'\
+                        %('\n'.join(fail_entries)))
+                msg.exec_()
+
+            return
+
+        #---------------Sort by citationkey---------------
+        citationkeys=[]
+        for docii in docids:
+            cii=meta_dict[docii]['citationkey']
+            if cii=='':
+                cii=str(docii)
+            citationkeys.append(cii)
+
+        docids=[x for _,x in sorted(zip(citationkeys,docids))]
+        citationkeys=sorted(citationkeys)
+
+        job_list=[]
+        for ii,docii in enumerate(docids):
+            job_list.append((ii,meta_dict[docii],omit_keys))
+
+        thread_run_dialog=ThreadRunDialog(bibparse.metaDictToBib,job_list,
+                show_message='Processing...',max_threads=1,get_results=True,
+                close_on_finish=False,
+                progressbar_style='classic',parent=self)
+        master1=thread_run_dialog.master
+        saveBib()
+
+        return
+
+
+    def exportBibByFolders(self,folders,fname,folder_data,meta_dict,omit_keys):
+
+        job_list=[]
+        citationkeys=[]
+        folder_results={}
+        folder_counts={}
+        n=0
+        for foldernameii,fidii in folders:
+
+            folder_results[fidii]=[]
+            folder_counts[fidii]=0
+
+            jobsii=[]
+            #---------------Sort by citationkey---------------
+            docids=folder_data[fidii]
+            citationkeysii=[]
+            for docii in docids:
+                if docii in docs:
+                    # remove duplicates
+                    continue
+
+                cii=meta_dict[docii]['citationkey']
+                if cii=='':
+                    cii=str(docii)
+                citationkeysii.append(cii)
+                jobsii.append((n, meta_dict[docii], omit_keys))
+                n+=1
+                docs.append(docii)
+
+            jobsii=[x for _,x in sorted(zip(citationkeysii,jobsii))]
+            citationkeysii=sorted(citationkeysii)
+            job_list.extend(jobsii)
+            citationkeys.extend(citationkeysii)
+
+
+
+        manner='folder'
+        def saveBib():
+            results=master1.results
+            faillist=[]
+
+            if manner=='combine':
+                text=''
+                for recii,jobii,textii in results:
+                    if recii==0:
+                        text=text+textii+'\n'
+                    elif recii==1:
+                        faillist.append(jobii)
+
+                print('# <saveBib>: combine save to file',fname)
+                with open(fname,'w') as fout:
+                    fout.write(text)
+
+            elif manner=='separate':
+                for recii,jobii,textii in results:
+                    if recii==0:
+                        citationkey=citationkeys[jobii]
+                        fnameii='%s.bib' %citationkey
+
+                        print('# <saveBib>: seperate save to file',fnameii)
+
+                        fnameii=os.path.join(fname,fnameii)
+                        fnameii=autoRename(fnameii)
+                        with open(fnameii,'w') as fout:
+                            fout.write(textii)
+                    elif recii==1:
+                        faillist.append(jobii)
+
+            # show failed jobs
+            if len(faillist)>0:
+                fail_entries=[]
+                for jobii in faillist:
+                    metaii=job_list[jobii][1]
+                    entryii='* %s_%s_%s' %(', '.join(metaii['authors_l']),
+                            metaii['year'],
+                            metaii['title'])
+                    fail_entries.append(entryii)
+
+                msg=QtWidgets.QMessageBox()
+                msg.resize(700,600)
+                msg.setIcon(QtWidgets.QMessageBox.Information)
+                msg.setWindowTitle('Error')
+                msg.setText('Oopsie.')
+                msg.setInformativeText('Failed to export these entries:\n\n %s'\
+                        %('\n'.join(fail_entries)))
+                msg.exec_()
+
+            elif manner=='folder':
+                faillist=[]
+                for recii,jobii,textii in results:
+                    docii=job_list[jobii][1]['id']
+                    if recii==1:
+                        faillist.append(jobii)
+
+                    print('# <saveBib>: got result for jobii',jobii, docii,type(docii),
+                            type(list(folder_data.values())[0][0]))
+
+                    for fnamejj,fidjj in folders:
+                        print('# <saveBib>: check folder',fidjj,folder_data[fidjj])
+                        if docii in folder_data[fidjj]:
+                            folder_counts[fidjj]+=1
+                            if recii==0:
+                                folder_results[fidjj].append(textii)
+
+                            # save
+                            print('# <saveBib>: size',folder_counts[fidjj],len(folder_data[fidjj]))
+                            if folder_counts[fidjj]==len(folder_data[fidjj]):
+                                print('# <saveBib>: Folder',fnamejj,'got all data. Save.')
+                                fnamejj=os.path.join(fname,fnamejj)
+                                text='\n'.join(folder_results[fidjj])
+
+                                with open(fnamejj,'w') as fout:
+                                    fout.write(text)
+
+                if len(faillist)>0:
+                    print('# <saveBib>: Fail list',faillist)
+
+            return
+
+        def saveBib2(results):
+
+            faillist=[]
+            for recii,jobii,textii in results:
+                docii=job_list[jobii][1]['id']
                 if recii==1:
-                    faillist.append(docii)
+                    faillist.append(jobii)
+
+                print('# <saveBib>: got result for jobii',jobii, docii)
 
                 for fnamejj,fidjj in folders:
+                    print('# <saveBib>: check folder',fidjj,folder_data[fidjj])
                     if docii in folder_data[fidjj]:
                         folder_counts[fidjj]+=1
                         if recii==0:
                             folder_results[fidjj].append(textii)
 
-                        #print('# <saveBib>: size',folder_counts[fidjj],len(folder_data[fidjj]))
-                        # save if folder got all its doc processed, even if failed
+                        # save
+                        print('# <saveBib>: size',folder_counts[fidjj],len(folder_data[fidjj]))
                         if folder_counts[fidjj]==len(folder_data[fidjj]):
                             print('# <saveBib>: Folder',fnamejj,'got all data. Save.')
                             fnamejj=os.path.join(fname,'%s.bib' %fnamejj)
@@ -542,28 +666,45 @@ class ExportDialog(QtWidgets.QDialog):
                             with open(fnamejj,'w') as fout:
                                 fout.write(text)
 
-        #-----------------Show failed jobs-----------------
-        if len(faillist)>0:
-            fail_entries=[]
-            for docii in faillist:
-                metaii=meta_dict[docii]
-                entryii='* %s_%s_%s' %(', '.join(metaii['authors_l']),
-                        metaii['year'],
-                        metaii['title'])
-                fail_entries.append(entryii)
+            if len(faillist)>0:
+                print('# <saveBib>: Fail list',faillist)
 
-            # TODO: make this into a dialog with scrollarea
-            msg=QtWidgets.QMessageBox()
-            msg.resize(700,600)
-            msg.setIcon(QtWidgets.QMessageBox.Information)
-            msg.setWindowTitle('Error')
-            msg.setText('Oopsie.')
-            msg.setInformativeText('Failed to export these entries:\n\n %s'\
-                    %('\n'.join(fail_entries)))
-            msg.exec_()
+            return
+
+
+        thread_run_dialog=ThreadRunDialog(bibparse.metaDictToBib,job_list,
+                show_message='Processing...',max_threads=1,get_results=True,
+                close_on_finish=False,
+                progressbar_style='classic',
+                post_process_func=saveBib2,
+                parent=self)
+        master1=thread_run_dialog.master
+        #saveBib()
+
+
+    def saveBib(self,results,manner,fname,folders,meta_dict,omit_keys,fname):
+
+    def _exportToBib(self,jobid,docids,meta_dict,omit_keys,fname):
+
+        text=''
+        for idii in docids:
+            print('# <exportToBib>: Parsing bib for docid=%s' %idii)
+            self.logger.info('Parsing bib for docid=%s' %idii)
+            metaii=meta_dict[idii]
+
+            #textii=export2bib.parseMeta(metaii,'',metaii['folders_l'],True,False,
+                    #True)
+            textii=bibparse.metaDictToBib(metaii,bibparse.INV_ALT_KEYS,
+                    omit_keys)
+            text=text+textii+'\n'
+
+        with open(fname,'w') as fout:
+            fout.write(text)
+
+        print('# <exportToBib>: File saved to %s' %fname)
+        self.logger.info('File saved to %s' %fname)
 
         return
-
 
 
     def doExport(self):

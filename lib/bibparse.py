@@ -188,9 +188,9 @@ def metaDictToBib(jobid,metadict,omit_keys):
 
         dbtext=writer.write(db)
 
-        return 0,jobid,dbtext
+        return 0,jobid,dbtext,metadict['id']
     except:
-        return 1,jobid,''
+        return 1,jobid,'',metadict['id']
 
 
 
