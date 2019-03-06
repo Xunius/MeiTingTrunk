@@ -354,7 +354,7 @@ class MainFrameDocTableSlots:
                 if recii==0:
                     text=text+textii+'\n'
                 elif recii==1:
-                    faillist.append(jobii)
+                    faillist.append(docii)
 
             with open(fname,'w') as fout:
                 fout.write(text)
@@ -362,8 +362,8 @@ class MainFrameDocTableSlots:
             # show failed jobs
             if len(faillist)>0:
                 fail_entries=[]
-                for jobii in faillist:
-                    metaii=job_list[jobii][1]
+                for docii in faillist:
+                    metaii=self.meta_dict[docii]
                     entryii='* %s_%s_%s' %(', '.join(metaii['authors_l']),
                             metaii['year'],
                             metaii['title'])
@@ -383,6 +383,8 @@ class MainFrameDocTableSlots:
                 msg.setText('Oopsie')
                 msg.setInformativeText('Failed to export some entires.')
                 msg.setDetailedText('\n'.join(fail_entries))
+                msg.create_fail_summary.connect(lambda: self.createFailFolder(
+                    'bibtext export', faillist))
                 msg.exec_()
 
             return

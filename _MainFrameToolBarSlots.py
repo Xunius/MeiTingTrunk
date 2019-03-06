@@ -92,16 +92,16 @@ class MainFrameToolBarSlots:
                     'Adding PDF Files...',max_threads=1,get_results=True,
                     close_on_finish=True)
 
-                fail_list=[]
+                faillist=[]
                 for recii,jobidii,meta_dictii in t_dialog:
                     print('# <addActionTriggered>: rec of t_dialog:',
                             recii,jobidii,meta_dictii)
                     if recii==0:
                         self.updateTabelData(None,meta_dictii)
                     else:
-                        fail_list.append(jobidii)
+                        faillist.append(jobidii)
 
-                fail_files=[jii[1] for jii in joblist if jii[0] in fail_list]
+                fail_files=[jii[1] for jii in joblist if jii[0] in faillist]
 
                 if len(fail_files)>0:
 
@@ -110,16 +110,6 @@ class MainFrameToolBarSlots:
                         metaii['files_l']=[fii,]
                         self.updateTabelData(None,metaii)
 
-                    '''
-                    msg=QtWidgets.QMessageBox()
-                    msg.resize(500,400)
-                    msg.setIcon(QtWidgets.QMessageBox.Information)
-                    msg.setWindowTitle('Error')
-                    msg.setText('Oopsie.')
-                    msg.setInformativeText('Failed to retrieve metadata from these files:\n\n %s'\
-                            %('\n'.join(fail_files)))
-                    msg.exec_()
-                    '''
                     msg=FailDialog()
                     msg.setText('Oopsie.')
                     msg.setInformativeText('Failed to retrieve metadata from some files.')

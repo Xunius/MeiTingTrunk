@@ -84,7 +84,8 @@ LOG_CONFIG={
 # [y] write a connected component function to replace networkx
 # [y] text fold button has bug
 # export dialog
-# add a copy to clipboard to messagebox showing failed tasks
+# [N] add a copy to clipboard to messagebox showing failed tasks
+# connect the fail dialog's create folder button
 
 
 if __name__=='__main__':

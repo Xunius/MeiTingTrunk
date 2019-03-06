@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot, QObject, QEvent,\
 
 
 class FailDialog(QtWidgets.QDialog):
-    create_folder_sig=pyqtSignal()
+    create_fail_summary=pyqtSignal()
 
     def __init__(self,main_text='',info_text='',detailed_text='',parent=None):
         super(self.__class__,self).__init__(parent=parent)
@@ -45,10 +45,10 @@ class FailDialog(QtWidgets.QDialog):
         self.detail_button.setAutoDefault(False)
         self.detail_button.clicked.connect(self.detailButtonClicked)
 
-        self.create_folder_button=QtWidgets.QPushButton('Create Folder from Fail')
+        self.create_folder_button=QtWidgets.QPushButton('Show Failed Docs')
         self.create_folder_button.setDefault(False)
         self.create_folder_button.setAutoDefault(False)
-        self.create_folder_button.clicked.connect(self.createFolderButtonClicked)
+        self.create_folder_button.clicked.connect(self.createFailList)
 
         self.buttons.addButton(self.ok_button,QDialogButtonBox.AcceptRole)
         self.buttons.addButton(self.detail_button,QDialogButtonBox.ActionRole)
@@ -96,6 +96,6 @@ class FailDialog(QtWidgets.QDialog):
 
         return
 
-    def createFolderButtonClicked(self):
-        self.create_folder_sig.emit()
+    def createFailList(self):
+        self.create_fail_summary.emit()
         return

@@ -566,6 +566,9 @@ class ExportDialog(QtWidgets.QDialog):
             msg.setText('Oopsie.')
             msg.setInformativeText('Failed to export some entries.')
             msg.setDetailedText('\n'.join(fail_entries))
+            msg.create_fail_summary.connect(lambda:\
+                    self.parent.main_frame.createFailFolder('bibtex export',
+                        faillist))
             msg.exec_()
 
         return

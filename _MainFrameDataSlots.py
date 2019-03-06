@@ -28,62 +28,6 @@ class MainFrameDataSlots:
             return
 
 
-    def threadedFuncCall(self,func,joblist,res_func=None,show_message=''):
-        import time
-
-        def updatePB():
-            self.progressbar.setValue(self.progressbar.value()+1)
-            print('# <threadedFuncCall>: progress bar value',self.progressbar.value())
-            #time.sleep(0.1)
-            return
-
-        faillist=[]
-        jobqueue=Queue()
-        resqueue=Queue()
-
-        #pb=QtWidgets.QProgressBar(self)
-        #pb.setSizePolicy(getXExpandYMinSizePolicy())
-        #pb.setMaximum(len(joblist))
-        #self.status_bar.addPermanentWidget(pb)
-        self.status_bar.showMessage(show_message)
-        self.progressbar.setMaximum(len(joblist))
-        self.progressbar.setValue(0)
-        self.progressbar.show()
-
-        for ii,jobii in enumerate(joblist):
-            jobqueue.put((jobii,))
-
-        threads=[]
-        results=[]
-        for ii in range(min(3,len(joblist))):
-            tii=WorkerThread(func,jobqueue,resqueue,self)
-            #tii.daemon=True
-            tii.jobdone_signal.connect(updatePB)
-            threads.append(tii)
-            tii.start()
-
-        for tii in threads:
-            tii.wait()
-
-        #-------------------Get results-------------------
-        while resqueue.qsize():
-            try:
-                resii=resqueue.get()
-                if resii[0]==0:
-                    results.append(resii[1])
-                    if res_func is not None:
-                        res_func(resii[1])
-                else:
-                    faillist.append(resii[2])
-            except:
-                break
-
-
-
-        #self.progressbar.hide()
-        self.status_bar.clearMessage()
-
-        return results,faillist
 
 
 
@@ -241,6 +185,15 @@ class MainFrameDataSlots:
         self.settings.sync()
 
         return
+
+
+    def createFailFolder(self,show_text,docids):
+        self.clear_filter_label.setText('Failed tasks in %s operation' %show_text)
+        self.clear_filter_frame.setVisible(True)
+        self.loadDocTable(docids=docids)
+
+        return
+
 
 
 
