@@ -19,7 +19,7 @@ class MainFrameDataSlots:
 
         thread_run_dialog=widgets.ThreadRunDialog(func,joblist,
                 show_message,max_threads,get_results,close_on_finish,
-                progressbar_style,self)
+                progressbar_style,parent=self)
         #thread_run_dialog.exec_()
         if get_results:
             #print('# <threadedFuncCall2>: results',thread_run_dialog.results)

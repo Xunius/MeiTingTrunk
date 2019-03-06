@@ -5,3 +5,4 @@ from .preference_dialog import PreferenceDialog
 from .export_dialog import ExportDialog
 from .duplicate_frame import CheckDuplicateFrame
 from .threadrun_dialog import ThreadRunDialog, Master
+from .fail_dialog import FailDialog

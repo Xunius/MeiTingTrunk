@@ -5,7 +5,7 @@ from PyQt5.QtGui import QFont, QBrush, QColor, QCursor
 from lib import sqlitedb
 from lib import bibparse
 from lib.tools import parseAuthors
-from lib.widgets import Master
+from lib.widgets import Master, FailDialog
 import logging
 
 
@@ -369,6 +369,7 @@ class MainFrameDocTableSlots:
                             metaii['title'])
                     fail_entries.append(entryii)
 
+                '''
                 msg=QtWidgets.QMessageBox()
                 msg.resize(700,600)
                 msg.setIcon(QtWidgets.QMessageBox.Information)
@@ -376,6 +377,12 @@ class MainFrameDocTableSlots:
                 msg.setText('Oopsie.')
                 msg.setInformativeText('Failed to export these entries:\n\n %s'\
                         %('\n'.join(fail_entries)))
+                msg.exec_()
+                '''
+                msg=FailDialog()
+                msg.setText('Oopsie')
+                msg.setInformativeText('Failed to export some entires.')
+                msg.setDetailedText('\n'.join(fail_entries))
                 msg.exec_()
 
             return

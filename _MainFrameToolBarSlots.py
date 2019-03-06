@@ -3,6 +3,7 @@ from PyQt5 import QtWidgets
 from lib import sqlitedb
 from lib import bibparse
 from lib import retrievepdfmeta
+from lib.widgets import FailDialog
 import logging
 
 
@@ -109,6 +110,7 @@ class MainFrameToolBarSlots:
                         metaii['files_l']=[fii,]
                         self.updateTabelData(None,metaii)
 
+                    '''
                     msg=QtWidgets.QMessageBox()
                     msg.resize(500,400)
                     msg.setIcon(QtWidgets.QMessageBox.Information)
@@ -116,6 +118,12 @@ class MainFrameToolBarSlots:
                     msg.setText('Oopsie.')
                     msg.setInformativeText('Failed to retrieve metadata from these files:\n\n %s'\
                             %('\n'.join(fail_files)))
+                    msg.exec_()
+                    '''
+                    msg=FailDialog()
+                    msg.setText('Oopsie.')
+                    msg.setInformativeText('Failed to retrieve metadata from some files.')
+                    msg.setDetailedText('\n'.join(fail_files))
                     msg.exec_()
 
 

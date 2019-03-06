@@ -12,6 +12,7 @@ from .. import sqlitedb
 from .. import bibparse
 from ..tools import getHLine, createFolderTree, iterTreeWidgetItems, autoRename
 from .threadrun_dialog import ThreadRunDialog
+from .fail_dialog import FailDialog
 
 LOGGER=logging.getLogger('default_logger')
 
@@ -552,14 +553,19 @@ class ExportDialog(QtWidgets.QDialog):
                         metaii['title'])
                 fail_entries.append(entryii)
 
-            # TODO: make this into a dialog with scrollarea
+            '''
             msg=QtWidgets.QMessageBox()
-            msg.resize(700,600)
             msg.setIcon(QtWidgets.QMessageBox.Information)
             msg.setWindowTitle('Error')
             msg.setText('Oopsie.')
-            msg.setInformativeText('Failed to export these entries:\n\n %s'\
-                    %('\n'.join(fail_entries)))
+            msg.setInformativeText('Failed to export some entries')
+            msg.setDetailedText('\n'.join(fail_entries))
+            msg.exec_()
+            '''
+            msg=FailDialog()
+            msg.setText('Oopsie.')
+            msg.setInformativeText('Failed to export some entries.')
+            msg.setDetailedText('\n'.join(fail_entries))
             msg.exec_()
 
         return
