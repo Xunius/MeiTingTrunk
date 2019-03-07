@@ -89,6 +89,7 @@ class MainFrameOtherSlots:
 
         self.clearMetaTab()
         self.doc_table.model().arraydata=[]
+        self.doc_table.model().layoutChanged.emit()
         self.libtree.clear()
         self.filter_item_list.clear()
 

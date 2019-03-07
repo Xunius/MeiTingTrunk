@@ -85,7 +85,8 @@ LOG_CONFIG={
 # [y] text fold button has bug
 # export dialog
 # [N] add a copy to clipboard to messagebox showing failed tasks
-# connect the fail dialog's create folder button
+# [y] connect the fail dialog's create folder button
+# Name a database file on creation and create collections folder under that name
 
 
 if __name__=='__main__':

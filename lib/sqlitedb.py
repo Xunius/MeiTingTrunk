@@ -725,7 +725,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
 
     print('Creating empty table...')
     cout.execute(query)
-    dbout.commit()
+    #dbout.commit()
 
     #------------Create DocumentTags table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentTags (
@@ -733,7 +733,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     tag TEXT)'''
 
     cout.execute(query)
-    dbout.commit()
+    #dbout.commit()
 
     #------------Create DocumentNotes table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentNotes (
@@ -744,7 +744,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     )'''
 
     cout.execute(query)
-    dbout.commit()
+    #dbout.commit()
     
     #----------Create DocumentKeywords table----------
     query='''CREATE TABLE IF NOT EXISTS DocumentKeywords (
@@ -752,7 +752,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     text TEXT)'''
 
     cout.execute(query)
-    dbout.commit()
+    #dbout.commit()
 
     #-----------Create DocumentFolders table-----------
     query='''CREATE TABLE IF NOT EXISTS DocumentFolders (
@@ -761,7 +761,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     )'''
 
     cout.execute(query)
-    dbout.commit()
+    #dbout.commit()
 
     #---------------Create Folders table---------------
     query='''CREATE TABLE IF NOT EXISTS Folders (
@@ -773,7 +773,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     )'''
 
     cout.execute(query)
-    dbout.commit()
+    #dbout.commit()
 
     #--------Create DocumentContributors table--------
     query='''CREATE TABLE IF NOT EXISTS DocumentContributors (
@@ -784,7 +784,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     )'''
 
     cout.execute(query)
-    dbout.commit()
+    #dbout.commit()
 
     #------------Create DocumentFiles table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentFiles (
@@ -793,7 +793,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     )'''
 
     cout.execute(query)
-    dbout.commit()
+    #dbout.commit()
 
     #------------Create DocumentUrls table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentUrls (
@@ -802,7 +802,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     )'''
 
     cout.execute(query)
-    dbout.commit()
+    #dbout.commit()
 
     #--------------create Default folder--------------
     query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
@@ -812,19 +812,19 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     dbout.commit()
 
     #-----------------Add sample file-----------------
-    fname='./sample_bib.bib'
-    bib_entries=bibparse.readBibFile(fname)
+    #fname='./sample_bib.bib'
+    #bib_entries=bibparse.readBibFile(fname)
 
-    print('# <createNewDatabase>: sample bib file.')
-    print(bib_entries)
-    print(type(bib_entries[0]))
+    #print('# <createNewDatabase>: sample bib file.')
+    #print(bib_entries)
+    #print(type(bib_entries[0]))
 
-    doc=bib_entries[0]
-    doc['folders_l']=[(0,'Default')]
-    doc['files_l']=['./sample_pdf.pdf',]
+    #doc=bib_entries[0]
+    #doc['folders_l']=[(0,'Default')]
+    #doc['files_l']=['./sample_pdf.pdf',]
 
 
-    metaDictToDatabase(dbout,1,bib_entries[0],lib_folder,rename_files)
+    #metaDictToDatabase(dbout,1,bib_entries[0],lib_folder,rename_files)
 
     return dbout
 
@@ -931,7 +931,7 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
             #filename=re.sub(r'[<>:"|?*]','_',filename)
             if rename_files:
                 filename=renameFile(fii,meta_dict)
-            newabsii=os.path.join(lib_folder,'Collections')
+            newabsii=os.path.join(lib_folder,'_collections')
             newabsii=os.path.join(newabsii,filename)
 
             # deal with name conflicts

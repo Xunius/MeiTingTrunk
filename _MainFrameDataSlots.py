@@ -160,10 +160,12 @@ class MainFrameDataSlots:
 
         #----------------Save folders first----------------
         sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
-                self.settings.value('saving/storage_folder'))
+                #self.settings.value('saving/storage_folder'))
+                self.settings.value('saving/current_lib_folder'))
 
         sqlitedb.metaDictToDatabase(self.db,docid,self.meta_dict[docid],
-                self.settings.value('saving/storage_folder'),
+                #self.settings.value('saving/storage_folder'),
+                self.settings.value('saving/current_lib_folder'),
                 self.settings.value('saving/rename_files'))
 
         if docid in self.changed_doc_ids:

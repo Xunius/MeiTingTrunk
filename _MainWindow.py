@@ -9,7 +9,7 @@ from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 
 import _MainFrame
 from lib import sqlitedb
-from lib.widgets import PreferenceDialog, ExportDialog
+from lib.widgets import PreferenceDialog, ExportDialog, Master, ThreadRunDialog
 import resource
 
 from main import __version__
@@ -46,7 +46,7 @@ class MainWindow(QtWidgets.QMainWindow):
             recent=[]
         if self.settings.value('file/auto_open_last',type=int) and len(recent)>0:
             # add a delay, otherwise splash won't show
-            QTimer.singleShot(100, lambda: self._openDatabase(recent[0]))
+            QTimer.singleShot(100, lambda: self._openDatabase(recent[-1]))
 
     def initSettings(self):
         folder_name=os.path.dirname(os.path.abspath(__file__))
@@ -80,7 +80,7 @@ class MainWindow(QtWidgets.QMainWindow):
             settings.setValue('file/recent_open_num', 2)
             settings.setValue('file/auto_open_last', 1)
 
-            storage_folder=os.path.join(str(pathlib.Path.home()), 'Documents/MMT')
+            storage_folder=os.path.join(str(pathlib.Path.home()), 'Documents/MTT')
             settings.setValue('saving/storage_folder', storage_folder)
 
             settings.setValue('saving/auto_save_min', 1),
@@ -106,13 +106,6 @@ class MainWindow(QtWidgets.QMainWindow):
             print('# <loadSettings>: Create folder %s' %storage_folder)
             self.logger.info('Create folder %s' %storage_folder)
 
-        collection_folder=os.path.join(storage_folder,'Collections')
-        if not os.path.exists(collection_folder):
-            os.makedirs(collection_folder)
-
-            print('# <loadSettings>: Create folder %s' %collection_folder)
-            self.logger.info('Create folder %s' %collection_folder)
-
 
         return settings
 
@@ -121,8 +114,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         print('# <loadSettings>: settings.fielName()=%s' %settings.fileName())
         self.logger.info('settings.fielName()=%s' %settings.fileName())
-
-
 
         return settings
 
@@ -136,11 +127,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.file_menu=self.menu_bar.addMenu('&File')
 
-        create_database_action=self.file_menu.addAction('Create New Database')
-        open_database_action=self.file_menu.addAction('Open Database')
+        create_database_action=self.file_menu.addAction('Create New Library')
+        open_database_action=self.file_menu.addAction('Open Library')
         self.recent_open_menu=self.file_menu.addMenu('Open Recent')
-        save_database_action=self.file_menu.addAction('Save Database')
-        close_database_action=self.file_menu.addAction('Close Database')
+        save_database_action=self.file_menu.addAction('Save Library')
+        close_database_action=self.file_menu.addAction('Close Library')
         self.file_menu.addSeparator()
         create_backup_action=self.file_menu.addAction('Create Backup')
         quit_action=self.file_menu.addAction('Quit')
@@ -215,30 +206,90 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def createDatabaseTriggered(self):
 
-        fname = QtWidgets.QFileDialog.getSaveFileName(self, 'Create a sqlite file',
-     '',"sqlite files (*.sqlite);; All files (*)")[0]
+        # close current if loaded
+        if self.is_loaded:
+            self.closeDatabaseTriggered()
+
+        storage_folder=self.settings.value('saving/storage_folder')
+        fname = QtWidgets.QFileDialog.getSaveFileName(self,
+                'Create a sqlite file',
+                storage_folder,
+                "sqlite files (*.sqlite);; All files (*)")[0]
 
         if fname:
+            # make sure has .sqlite ext
+            dirname,filename=os.path.split(fname)
+            lib_name,ext=os.path.splitext(filename)
+            if ext=='':
+                filename='%s.sqlite' %lib_name
+                fname=os.path.join(dirname,filename)
+
             print('createDatabaseTriggered: database file:',fname)
+            lib_folder=os.path.join(storage_folder,lib_name)
+            if not os.path.exists(lib_folder):
+                os.makedirs(lib_folder)
 
-            storage_folder=self.settings.value('saving/storage_folder')
-            db=sqlitedb.createNewDatabase(fname,storage_folder)
+            print('# <loadSettings>: Create folder %s' %lib_folder)
+            self.logger.info('Create folder %s' %lib_folder)
 
-            # need to load the new database and start timer
+            def func(jobid,fname,storage_folder,rename_files):
+                try:
+                    result=sqlitedb.createNewDatabase(fname, lib_folder,
+                            rename_files)
+                    return 0,jobid,result
+                except:
+                    return 1,jobid,None
+
+            ThreadRunDialog(func,
+                [(0,fname,storage_folder,self.settings.value('saving/rename_files'))],
+                show_message='Creating new database...',
+                max_threads=1,
+                get_results=False,
+                close_on_finish=True,
+                progressbar_style='busy',
+                parent=None)
+
+            #self.main_frame.status_bar.showMessage('Creating new database...')
+            #sqlitedb.createNewDatabase(fname,storage_folder,
+                #self.settings.value('saving/rename_files'))
+            #self.main_frame.status_bar.clearMessage()
+
+            self._openDatabase(fname)
 
         return
 
 
+
     def openDatabaseTriggered(self):
+
+        # close current if loaded
+        if self.is_loaded:
+            do=self.closeDatabaseTriggered()
+            if not do:
+                return
 
         fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a sqlite file',
      '',"sqlite files (*.sqlite);; All files (*)")[0]
 
         if fname:
-            self._openDatabase(fname)
+            try:
+                self._openDatabase(fname)
+            except:
+                msg=QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Warning)
+                msg.setWindowTitle('Error')
+                msg.setText("Oopsi.")
+                msg.setInformativeText("Failed to open database file\n    %s" %fname)
+                msg.exec_()
             return
 
     def _openDatabase(self,fname):
+
+        # close current if loaded. For open recent calls
+        if self.is_loaded:
+            do=self.closeDatabaseTriggered()
+            if not do:
+                return
 
         if not os.path.exists(fname):
             msg=QtWidgets.QMessageBox()
@@ -248,13 +299,28 @@ class MainWindow(QtWidgets.QMainWindow):
             msg.setInformativeText("The requested database file\n    %s\nmay have be deleted, renamed or removed."\
                     %fname)
             msg.exec_()
+
+            # if this is recent, remove it from recent
+            recent=self.settings.value('file/recent_open',[],str)
+            if isinstance(recent,str) and recent=='':
+                recent=[]
+            if fname in recent:
+                print('# <_openDatabase>: fname in recent')
+                recent.remove(fname)
+                self.settings.setValue('file/recent_open', recent)
+
+                for actionii in self.recent_open_menu.findChildren(
+                        QtWidgets.QAction):
+                    if actionii.text()==fname:
+                        self.recent_open_menu.removeAction(actionii)
+
             return
 
-        # close current if loaded
-        if self.is_loaded:
-            self.closeDatabaseTriggered()
-
         self.main_frame.status_bar.showMessage('Opening database...')
+        QtWidgets.QApplication.processEvents() # needed?
+        # These won't work, the sqlitedb is in the same GUI thread.
+        #self.main_frame.progressbar.setVisible(True)
+        #self.main_frame.progressbar.setMaximum(0)
         db = sqlite3.connect(fname)
 
         print('# <openDatabaseTriggered>: Connected to database: %s' %fname)
@@ -264,26 +330,37 @@ class MainWindow(QtWidgets.QMainWindow):
         meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
         self.main_frame.loadLibTree(db,meta_dict,folder_data,folder_dict)
         self.main_frame.status_bar.clearMessage()
+        self.main_frame.progressbar.setVisible(False)
+
         self.is_loaded=True
+
+        # store folder name
+        lib_name=os.path.splitext(os.path.split(fname)[1])[0]
+        storage_folder=self.settings.value('saving/storage_folder')
+        self.current_lib=lib_name
+        self.current_lib_folder=os.path.join(storage_folder,lib_name)
+        self.settings.setValue('saving/current_lib_folder', self.current_lib_folder)
+
+        print('# <_openDatabase>: current_lib=',self.current_lib)
+        print('# <_openDatabase>: current_lib_folder=',self.current_lib_folder)
+
         self.main_frame.auto_save_timer.start()
+        print('# <openDatabaseTriggered>: Start auto save timer.')
+        self.logger.info('Start auto save timer.')
 
         self.import_action.setEnabled(True)
         self.export_action.setEnabled(True)
 
-        print('# <openDatabaseTriggered>: Start auto save timer.')
-        self.logger.info('Start auto save timer.')
-
         recent=self.settings.value('file/recent_open',[],str)
         if isinstance(recent,str) and recent=='':
             recent=[]
-        print('# <_openDatabase>: recent=',recent)
         if fname not in recent:
             recent.append(fname)
             recentii=self.recent_open_menu.addAction(fname)
             recentii.triggered.connect(lambda x,t=fname: self._openDatabase(t))
 
-        current_len=self.settings.value('file/recent_open_num',type=int)
-        if len(recent)>current_len:
+        recent_open_num=self.settings.value('file/recent_open_num',type=int)
+        if len(recent)>recent_open_num:
             recent.pop(0)
 
         self.settings.setValue('file/recent_open',recent)
@@ -297,7 +374,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def closeDatabaseTriggered(self):
 
         choice=QtWidgets.QMessageBox.question(self, 'Confirm Close',
-                'Save and close current database?',
+                'Save and close current library?',
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
         if choice==QtWidgets.QMessageBox.Yes:
@@ -308,9 +385,16 @@ class MainWindow(QtWidgets.QMainWindow):
             self.import_action.setEnabled(False)
             self.export_action.setEnabled(False)
 
+            self.current_lib=None
+            self.current_lib_folder=None
+            self.settings.setValue('saving/current_lib_folder','')
             self.main_frame.auto_save_timer.stop()
             print('# <closeDatabaseTriggered>: Stop auto save timer.')
             self.logger.info('Stop auto save timer.')
+
+            return True
+        else:
+            return False
 
 
 

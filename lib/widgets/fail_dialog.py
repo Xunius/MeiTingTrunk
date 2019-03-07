@@ -16,7 +16,7 @@ class FailDialog(QtWidgets.QDialog):
         self.detailed_text=detailed_text
 
         self.setWindowTitle('Error')
-        self.resize(400,300)
+        self.resize(400,200)
         self.grid=QtWidgets.QGridLayout(self)
 
         icon=self.style().standardIcon(QStyle.SP_MessageBoxWarning)

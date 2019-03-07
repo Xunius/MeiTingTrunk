@@ -188,9 +188,9 @@ class ExportDialog(QtWidgets.QDialog):
         label=QtWidgets.QLabel('''
         Choose folders to export documents. <br/>
         This will copy documents (e.g. PDFs) from the
-        <span style="font:bold;">"Collections"</span>
+        <span style="font:bold;">"_collections"</span>
         folder to a separate folder under <span style="font:bold;">"%s"</span>
-        ''' %self.settings.value('/saving/storage_folder',str))
+        ''' %self.settings.value('saving/current_lib_folder',str))
         label.setTextFormat(Qt.RichText)
         label.setWordWrap(True)
         va.addWidget(label)
