@@ -190,7 +190,7 @@ class MainFrameDataSlots:
 
 
     def createFailFolder(self,show_text,docids):
-        self.clear_filter_label.setText('Failed tasks in %s operation' %show_text)
+        self.clear_filter_label.setText('Failed tasks in %s' %show_text)
         self.clear_filter_frame.setVisible(True)
         self.loadDocTable(docids=docids)
 

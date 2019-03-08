@@ -1,7 +1,7 @@
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, pyqtSlot
 from PyQt5 import QtWidgets
 from lib import sqlitedb
-from lib import bibparse
+from lib import bibparse, risparse
 from lib import retrievepdfmeta
 from lib.widgets import FailDialog
 import logging
@@ -67,10 +67,17 @@ class MainFrameToolBarSlots:
     @pyqtSlot(QtWidgets.QAction)
     def addActionTriggered(self,action):
 
+        action_data=action.data()
+
+        if action.data()=='default_change':
+            return
+
         action_text=action.text()
 
         print('# <addActionTriggered>: action.text()=%s' %action_text)
         self.logger.info('action.text()=%s' %action_text)
+
+        print('# <addActionTriggered>: action data=',action.data())
 
         if action_text=='Add PDF File':
             fname = QtWidgets.QFileDialog.getOpenFileNames(self, 'Choose a PDF file',
@@ -124,7 +131,7 @@ class MainFrameToolBarSlots:
                         QtWidgets.QAbstractItemView.ExtendedSelection)
 
 
-        elif action_text=='Add BibTex File':
+        elif action_text=='Add Bibtex File':
             fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a bibtex file',
          '',"Bibtex files (*.bib);; All files (*)")[0]
 
@@ -148,6 +155,35 @@ class MainFrameToolBarSlots:
                     msg.setWindowTitle('Error')
                     msg.setText('Oopsie. Failed to parse bib file.')
                     msg.setInformativeText('bibtexparser complaints:\n\n%s' %str(e))
+                    msg.exec_()
+                finally:
+                    self.doc_table.setSelectionMode(
+                            QtWidgets.QAbstractItemView.ExtendedSelection)
+
+        elif action_text=='Add RIS File':
+            fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose an RIS file',
+         '',"RIS files (*.ris);; All files (*)")[0]
+
+            print('# <addActionTriggered>: Chosen ris file=%s' %fname)
+            self.logger.info('Chosen ris file=%s' %fname)
+
+            if fname:
+                try:
+                    ris_entries=risparse.readRISFile(fname)
+                    self.doc_table.clearSelection()
+                    self.doc_table.setSelectionMode(
+                            QtWidgets.QAbstractItemView.MultiSelection)
+                    for eii in ris_entries:
+                        self.updateTabelData(None,eii)
+                except Exception as e:
+                    print('# <addActionTriggered>: Failed to parse RIS file.')
+                    self.logger.info('Failed to parse RIS file.')
+
+                    msg=QtWidgets.QMessageBox()
+                    msg.setIcon(QtWidgets.QMessageBox.Critical)
+                    msg.setWindowTitle('Error')
+                    msg.setText('Oopsie. Failed to parse RIS file.')
+                    msg.setInformativeText('RISparser complaints:\n\n%s' %str(e))
                     msg.exec_()
                 finally:
                     self.doc_table.setSelectionMode(

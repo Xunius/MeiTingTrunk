@@ -16,7 +16,10 @@ try:
     from . import bibparse
 except:
     import bibparse
-from .tools import autoRename
+try:
+    from .tools import autoRename
+except:
+    from tools import autoRename
 
 DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',

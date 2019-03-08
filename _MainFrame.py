@@ -175,13 +175,35 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         button=QtWidgets.QToolButton(self)
         button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
-        # create popup menu
-        menu=QtWidgets.QMenu()
-        add_action1=menu.addAction('Add PDF File')
-        menu.addAction('Add BibTex File')
-        menu.addAction('Add Entry Manually')
+        def changeDefaultAction(action):
 
-        button.setDefaultAction(add_action1)
+            action_text=action.text()
+            for aii, (addii, cdii) in add_buttons.items():
+                if aii==action_text:
+                    text='%s  *' %addii.text()
+                    cdii.setText(text)
+                    button.setDefaultAction(addii)
+                    button.setText('Add')
+                    button.setIcon(QIcon.fromTheme('document-new'))
+                else:
+                    text='%s' %addii.text()
+                    cdii.setText(text)
+
+        add_buttons={}
+        menu=QtWidgets.QMenu()
+        choose_default_menu=QtWidgets.QMenu('Choose Default Action',menu)
+        for aii in ['Add PDF File', 'Add Bibtex File', 'Add RIS File',
+                'Add Entry Manually']:
+
+            add_actionii=menu.addAction(aii)
+            cd_actionii=choose_default_menu.addAction(aii)
+            cd_actionii.setData('default_change')
+            add_buttons[aii]=[add_actionii, cd_actionii]
+
+        choose_default_menu.triggered.connect(changeDefaultAction)
+        menu.addMenu(choose_default_menu)
+
+        button.setDefaultAction(add_buttons['Add PDF File'][0])
 
         # these has to happen after setDefaultAction()
         button.setText('Add')

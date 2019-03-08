@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QTimer, pyqtSlot
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QFont, QBrush, QColor, QCursor
 from lib import sqlitedb
-from lib import bibparse
+from lib import bibparse, risparse
 from lib.tools import parseAuthors
 from lib.widgets import Master, FailDialog
 import logging
@@ -124,7 +124,8 @@ class MainFrameDocTableSlots:
         check_duplicate_lib_action=menu.addAction('Check Duplicates Within Library')
         menu.addSeparator()
         #export_menu=menu.addMenu('Export Citation')
-        export_bib_action=menu.addAction('Export bib to File')
+        export_bib_action=menu.addAction('Export to bibtex File')
+        export_ris_action=menu.addAction('Export to RIS File')
         copy_clipboard_action=menu.addAction('Export Citation To Clipboard')
 
         sel_rows=self.doc_table.selectionModel().selectedRows()
@@ -195,6 +196,9 @@ class MainFrameDocTableSlots:
 
                 elif action==export_bib_action:
                     self.exportToBib(docids,self.meta_dict)
+
+                elif action==export_ris_action:
+                    self.exportToRIS(docids,self.meta_dict)
 
                 elif action==copy_clipboard_action:
                     self.copyToClipboard(docids,style=None)
@@ -369,16 +373,6 @@ class MainFrameDocTableSlots:
                             metaii['title'])
                     fail_entries.append(entryii)
 
-                '''
-                msg=QtWidgets.QMessageBox()
-                msg.resize(700,600)
-                msg.setIcon(QtWidgets.QMessageBox.Information)
-                msg.setWindowTitle('Error')
-                msg.setText('Oopsie.')
-                msg.setInformativeText('Failed to export these entries:\n\n %s'\
-                        %('\n'.join(fail_entries)))
-                msg.exec_()
-                '''
                 msg=FailDialog()
                 msg.setText('Oopsie')
                 msg.setInformativeText('Failed to export some entires.')
@@ -406,6 +400,74 @@ class MainFrameDocTableSlots:
 
         return
 
+
+
+    def exportToRIS(self,docids,meta_dict):
+
+        print('# <exportToRIS>: docids=%s' %docids)
+        self.logger.info('docids=%s' %docids)
+
+        if len(docids)==1:
+            default_path='%s.ris' %(meta_dict[docids[0]]['citationkey'])
+        else:
+            default_path='./RIS.ris'
+
+        print('# <exportToRIS>: Default export path=%s' %default_path)
+        self.logger.info('Default export path=%s' %default_path)
+
+        fname = QtWidgets.QFileDialog.getSaveFileName(self,
+                'Save Citaitons to RIS File',
+                default_path,
+                "bib Files (*.ris);; All files (*)")[0]
+
+        print('# <exportToRIS>: Chosen ris file=%s' %fname)
+        self.logger.info('Chosen ris file=%s' %fname)
+
+        def saveRIS(results):
+            #results=self.master1.results
+            faillist=[]
+
+            text=''
+            for recii,jobii,textii,docii in results:
+                if recii==0:
+                    text=text+textii+'\n'
+                elif recii==1:
+                    faillist.append(docii)
+
+            with open(fname,'w') as fout:
+                fout.write(text)
+
+            # show failed jobs
+            if len(faillist)>0:
+                fail_entries=[]
+                for docii in faillist:
+                    metaii=self.meta_dict[docii]
+                    entryii='* %s_%s_%s' %(', '.join(metaii['authors_l']),
+                            metaii['year'],
+                            metaii['title'])
+                    fail_entries.append(entryii)
+
+                msg=FailDialog()
+                msg.setText('Oopsie')
+                msg.setInformativeText('Failed to export some entires.')
+                msg.setDetailedText('\n'.join(fail_entries))
+                msg.create_fail_summary.connect(lambda: self.createFailFolder(
+                    'RIS export', faillist))
+                msg.exec_()
+
+            return
+
+        if fname:
+            job_list=[]
+            for ii,docii in enumerate(docids):
+                job_list.append((ii,meta_dict[docii]))
+            self.master1=Master(risparse.metaDictToRIS, job_list,
+                    1, self.progressbar,
+                    'classic', self.status_bar, 'Exporting to RIS...',
+                    post_process_func=saveRIS)
+            self.master1.run()
+
+        return
 
 
     def copyToClipboard(self,docids,style=None):

@@ -8,7 +8,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QTimer
 import _MainWindow
 
-__version__='v0.1'
+__version__='v0.1alpha'
 
 LOG_CONFIG={
         'version': 1,
@@ -86,7 +86,10 @@ LOG_CONFIG={
 # export dialog
 # [N] add a copy to clipboard to messagebox showing failed tasks
 # [y] connect the fail dialog's create folder button
-# Name a database file on creation and create collections folder under that name
+# [y] Name a database file on creation and create collections folder under that name
+# could probably make the thread call func using a decorator
+# possible to let user choose default add action?
+# break down addActionTriggered()
 
 
 if __name__=='__main__':

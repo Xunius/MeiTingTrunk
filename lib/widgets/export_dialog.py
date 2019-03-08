@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import QDialogButtonBox
 import resources
 from .. import sqlitedb
 from .. import bibparse
+from .. import risparse
 from ..tools import getHLine, createFolderTree, iterTreeWidgetItems, autoRename
 from .threadrun_dialog import ThreadRunDialog
 from .fail_dialog import FailDialog
@@ -294,7 +295,42 @@ class ExportDialog(QtWidgets.QDialog):
         scroll,va=self.createFrame('Export to RIS')
         self.current_task='ris_export'
 
+        self.ris_settings={}
+
+        #--------------Folder choice section--------------
+        label=QtWidgets.QLabel('Choose folder(s) to export.')
+        va.addWidget(label)
+
+        if self.folder_tree:
+            self.folder_tree.setMinimumHeight(300)
+            self.clearFolderTreeState()
+            va.addWidget(self.folder_tree)
+        else:
+            va.addWidget(QtWidgets.QLabel('Library empty'))
+            self.export_button.setEnabled(False)
+
+        #--------------Export manner section--------------
+        self.radio_groupbox=QtWidgets.QGroupBox('Saving manner')
+        ha2=QtWidgets.QHBoxLayout()
+        self.radio_groupbox.setLayout(ha2)
+
+        choices=['All in one', 'Per folder', 'Per document']
+        for ii in choices:
+            radioii=QtWidgets.QRadioButton(ii)
+            if ii=='Per folder':
+                radioii.setChecked(True)
+            ha2.addWidget(radioii)
+
+        va.addWidget(self.radio_groupbox)
+
+        #----------------Omit keys section----------------
+        #self.omitkey_groupbox=self.createOmitKeyGroup()
+        #va.addWidget(self.omitkey_groupbox)
+
         return scroll
+
+
+
 
     def loadExportZoteroOptions(self):
 
@@ -575,6 +611,193 @@ class ExportDialog(QtWidgets.QDialog):
 
 
 
+    def doRISExport(self):
+
+        #---------------Get selected folders---------------
+        folders=[]
+        for item in iterTreeWidgetItems(self.folder_tree):
+            if item.checkState(0):
+                folderid=item.data(1,0)
+                foldername=item.data(0,0)
+                folders.append((foldername, folderid))
+        if len(folders)==0:
+            self.popUpChooseFolder()
+            return
+
+        #------------Popup for saving location------------
+        manner=self.getExportManner()
+        if manner=='All in one':
+            default_path='RIS_export.ris'
+            fname = QtWidgets.QFileDialog.getSaveFileName(self,
+                    'Save Citaitons to RIS File',
+                    default_path,
+                    "ris Files (*.ris);; All files (*)")[0]
+        else:
+            fname=QtWidgets.QFileDialog.getExistingDirectory(self,
+                'Choose a folder to save RIS files')
+
+        if not fname:
+            return
+
+        print('# <doRIS>: Chosen ris file=%s' %fname)
+        LOGGER.info('Chosen ris file=%s' %fname)
+
+        #-----------------Prepare job list-----------------
+        folder_data=self.parent.main_frame.folder_data
+        meta_dict=self.parent.main_frame.meta_dict
+        print('# <doRISExport>: manner=',manner)
+        print('# <doRISExport>: folders=',folders)
+
+        #-----------------Create job list-----------------
+        job_list=[]
+        citationkeys=[]
+        docs=[]
+
+        if manner in ['All in one', 'Per document']:
+
+            for folderii in folders:
+                docs.extend(folder_data[folderii[1]])
+
+            docs=list(set(docs))
+            n=0
+            for docii in docs:
+                cii=meta_dict[docii]['citationkey']
+                if cii=='':
+                    cii=str(docii)
+                citationkeys.append(cii)
+                job_list.append((n, meta_dict[docii]))
+                n+=1
+
+            #---------------Sort by citationkey---------------
+            if manner=='All in one':
+                job_list=[x for _,x in sorted(zip(citationkeys,job_list))]
+                citationkeys=sorted(citationkeys)
+
+        elif manner=='Per folder':
+
+            n=0
+            for foldernameii,fidii in folders:
+
+                jobsii=[]
+                #----------------Loop through docs----------------
+                docids=folder_data[fidii]
+                citationkeysii=[]
+                for docii in docids:
+                    if docii in docs:
+                        # remove duplicates
+                        continue
+
+                    cii=meta_dict[docii]['citationkey']
+                    if cii=='':
+                        cii=str(docii)
+                    citationkeysii.append(cii)
+                    jobsii.append((n, meta_dict[docii]))
+                    n+=1
+                    docs.append(docii)
+
+                #---------------Sort by citationkey---------------
+                jobsii=[x for _,x in sorted(zip(citationkeysii,jobsii))]
+                citationkeysii=sorted(citationkeysii)
+                job_list.extend(jobsii)
+                citationkeys.extend(citationkeysii)
+
+        #------------------Run in thread------------------
+        thread_run_dialog=ThreadRunDialog(risparse.metaDictToRIS, job_list,
+                show_message='Processing...', max_threads=1, get_results=False,
+                close_on_finish=False,
+                progressbar_style='classic',
+                post_process_func=self.saveRIS,
+                post_process_func_args=(folders, manner, fname, folder_data,
+                    meta_dict,citationkeys),
+                parent=self)
+
+        return
+
+
+
+
+    def saveRIS(self,results,folders,manner,fname,folder_data,meta_dict,citationkeys):
+        faillist=[]
+
+        if manner=='All in one':
+            text=''
+            for recii,jobii,textii,docii in results:
+                if recii==0:
+                    text=text+textii
+                elif recii==1:
+                    faillist.append(docii)
+
+            print('# <saveRIS>: combine save to file',fname)
+            with open(fname,'w') as fout:
+                fout.write(text)
+
+        elif manner=='Per document':
+            for recii,jobii,textii,docii in results:
+                if recii==0:
+                    citationkey=citationkeys[jobii]
+                    fnameii='%s.ris' %citationkey
+
+                    print('# <saveRIS>: seperate save to file',fnameii)
+
+                    fnameii=os.path.join(fname,fnameii)
+                    fnameii=autoRename(fnameii)
+                    with open(fnameii,'w') as fout:
+                        fout.write(textii)
+                elif recii==1:
+                    faillist.append(docii)
+
+        elif manner=='Per folder':
+
+            #-------------Prepare result counting-------------
+            folder_counts={}
+            folder_results={}
+            for foldernameii,fidii in folders:
+                folder_results[fidii]=[]
+                folder_counts[fidii]=0
+
+            for recii,jobii,textii,docii in results:
+                if recii==1:
+                    faillist.append(docii)
+
+                for fnamejj,fidjj in folders:
+                    if docii in folder_data[fidjj]:
+                        folder_counts[fidjj]+=1
+                        if recii==0:
+                            folder_results[fidjj].append(textii)
+
+                        # save if folder got all its doc processed, even if failed
+                        if folder_counts[fidjj]==len(folder_data[fidjj]):
+                            print('# <saveRIS>: Folder',fnamejj,'got all data. Save.')
+                            fnamejj=os.path.join(fname,'%s.ris' %fnamejj)
+                            text='\n'.join(folder_results[fidjj])
+
+                            with open(fnamejj,'w') as fout:
+                                fout.write(text)
+
+        #-----------------Show failed jobs-----------------
+        if len(faillist)>0:
+            fail_entries=[]
+            for docii in faillist:
+                metaii=meta_dict[docii]
+                entryii='* %s_%s_%s' %(', '.join(metaii['authors_l']),
+                        metaii['year'],
+                        metaii['title'])
+                fail_entries.append(entryii)
+
+            msg=FailDialog()
+            msg.setText('Oopsie.')
+            msg.setInformativeText('Failed to export some entries.')
+            msg.setDetailedText('\n'.join(fail_entries))
+            msg.create_fail_summary.connect(lambda:\
+                    self.parent.main_frame.createFailFolder('RIS export',
+                        faillist))
+            msg.exec_()
+
+        return
+
+
+
+
     def doExport(self):
 
         print('# <doExport>: task=',self.current_task)
@@ -584,7 +807,7 @@ class ExportDialog(QtWidgets.QDialog):
         elif self.current_task=='bib_export':
             self.doBibExport()
         elif self.current_task=='ris_export':
-            pass
+            self.doRISExport()
         elif self.current_task=='zotero_export':
             pass
         return

@@ -80,7 +80,8 @@ class MainWindow(QtWidgets.QMainWindow):
             settings.setValue('file/recent_open_num', 2)
             settings.setValue('file/auto_open_last', 1)
 
-            storage_folder=os.path.join(str(pathlib.Path.home()), 'Documents/MTT')
+            storage_folder=os.path.join(str(pathlib.Path.home()),
+                    'Documents/MeiTingTrunk')
             settings.setValue('saving/storage_folder', storage_folder)
 
             settings.setValue('saving/auto_save_min', 1),
