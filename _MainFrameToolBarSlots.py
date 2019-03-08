@@ -69,7 +69,7 @@ class MainFrameToolBarSlots:
 
         action_data=action.data()
 
-        if action.data()=='default_change':
+        if action.data() is not None:
             return
 
         action_text=action.text()

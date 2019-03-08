@@ -177,33 +177,41 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         def changeDefaultAction(action):
 
-            action_text=action.text()
+            action_data=action.data()
             for aii, (addii, cdii) in add_buttons.items():
-                if aii==action_text:
-                    text='%s  *' %addii.text()
+                if aii==action_data:
+                    text='%s  *' %aii
                     cdii.setText(text)
                     button.setDefaultAction(addii)
                     button.setText('Add')
                     button.setIcon(QIcon.fromTheme('document-new'))
+                    self.settings.setValue('import/default_add_action',aii)
                 else:
-                    text='%s' %addii.text()
+                    text='%s' %aii
                     cdii.setText(text)
 
         add_buttons={}
         menu=QtWidgets.QMenu()
         choose_default_menu=QtWidgets.QMenu('Choose Default Action',menu)
+        default_act=self.settings.value('import/default_add_action',type=str)
+
         for aii in ['Add PDF File', 'Add Bibtex File', 'Add RIS File',
                 'Add Entry Manually']:
 
             add_actionii=menu.addAction(aii)
-            cd_actionii=choose_default_menu.addAction(aii)
-            cd_actionii.setData('default_change')
+
+            if aii==default_act:
+                text='%s  *' %aii
+            else:
+                text=aii
+            cd_actionii=choose_default_menu.addAction(text)
+            cd_actionii.setData(aii)
             add_buttons[aii]=[add_actionii, cd_actionii]
 
         choose_default_menu.triggered.connect(changeDefaultAction)
         menu.addMenu(choose_default_menu)
 
-        button.setDefaultAction(add_buttons['Add PDF File'][0])
+        button.setDefaultAction(add_buttons[default_act][0])
 
         # these has to happen after setDefaultAction()
         button.setText('Add')

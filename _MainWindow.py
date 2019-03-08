@@ -90,6 +90,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
             settings.setValue('duplicate_min_score', 60)
 
+            settings.setValue('import/default_add_action', 'Add PDF File')
+
             settings.sync()
 
         else:

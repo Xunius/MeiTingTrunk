@@ -297,9 +297,9 @@ class PreferenceDialog(QtWidgets.QDialog):
         label2=QtWidgets.QLabel('''
         Documents (e.g. PDFs) will be copied to the 
         <span style="font:bold;">
-        "/User/Documents/MTT/%s/_collections" </span> 
+        "%s/_collections" </span> 
         folder, and renamed by the following format.
-        ''')
+        ''' %(self.settings.value('saving/current_lib_folder')))
         label2.setTextFormat(Qt.RichText)
         label2.setWordWrap(True)
 
