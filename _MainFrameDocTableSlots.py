@@ -1,3 +1,4 @@
+import os
 import subprocess
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, pyqtSlot
 from PyQt5 import QtWidgets
@@ -214,11 +215,32 @@ class MainFrameDocTableSlots:
         for docii in docids:
             file_pathii=self.meta_dict[docii]['files_l'][0] # take the 1st file
 
+            if not os.path.exists(file_pathii):
+                msg=QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Warning)
+                msg.setWindowTitle('Error')
+                msg.setText("Can't find file.")
+                msg.setInformativeText("No such file: %s. Please re-attach the document file." %file_pathii)
+                msg.exec_()
+                return
+
             print('# <openDoc>: docid=%s. file_path=%s' %(docii, file_pathii))
             self.logger.info('docid=%s. file_path=%s' %(docii, file_pathii))
 
             # what if file is not found?
             prop=subprocess.call(('xdg-open', file_pathii))
+            print('# <openDoc>: prop=',prop)
+
+            if prop==0:
+                # set read to True
+                print('# <openDoc>: read=',self.meta_dict[docii]['read'])
+                self.meta_dict[docii]['read']='true'
+                print('# <openDoc>: after read=',self.meta_dict[docii]['read'])
+
+        # refresh to show read change
+        self.loadDocTable(folder=self._current_folder,sortidx=4,
+                sel_row=None)
+
         return
 
     def openDocFolder(self,docids):

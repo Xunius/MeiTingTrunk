@@ -148,7 +148,7 @@ class MainWindow(QtWidgets.QMainWindow):
         quit_action.setIcon(QIcon.fromTheme('window-close'))
 
 
-        create_database_action.setShortcut('Ctrl+n')
+        create_database_action.setShortcut('Ctrl+Shift+n')
         open_database_action.setShortcut('Ctrl+o')
         save_database_action.setShortcut('Ctrl+s')
         close_database_action.setShortcut('Ctrl+w')
@@ -211,7 +211,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # close current if loaded
         if self.is_loaded:
-            self.closeDatabaseTriggered()
+            do=self.closeDatabaseTriggered()
+            if not do:
+                return
 
         storage_folder=self.settings.value('saving/storage_folder')
         fname = QtWidgets.QFileDialog.getSaveFileName(self,

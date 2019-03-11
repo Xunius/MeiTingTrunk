@@ -55,7 +55,7 @@ class DocMeta(MutableMapping):
                 'institution': None, 'isbn': None, 'issn': None, 'month': None,
                 'day': None, 'publisher': None, 'series': None,
                 'type': 'article',
-                'read': None, 'favourite': None,
+                'read': 'false', 'favourite': 'false',
                 'pmid': None, 'added': str(int(time.time())),
                 'confirmed': 'false',
                 'firstNames_l': [],

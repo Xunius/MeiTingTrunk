@@ -44,11 +44,12 @@ LOG_CONFIG={
 # doc types, books, generic etc
 # [NO] insert images to note?
 # [y] add add folder functionality
-# add add doc functionalities, by doi
+# [indirectly y] add add doc functionalities, by doi
 # [y] add add doc functionalities, by bib
-# add add doc functionalities, by RIS
+# [y] add add doc functionalities, by RIS
 # import from Mendeley, zotero, Endnote?
-# autosave, auto backup
+# [y] autosave
+# auto backup
 # export to text (clipboard, styles), bibtex, ris. citation styles things.
 # [y] collapse side tab
 # [y] seperate libraries
@@ -61,18 +62,17 @@ LOG_CONFIG={
 # [y] get all bib entries for multiple selected docs?
 # [y] right click menus
 # [y] option menu
-# RIS
-# import/export menu
+# [y] import/export menu
 # [y] add trash can
 # sqlite text search: https://stackoverflow.com/questions/35020797/how-to-use-full-text-search-in-sqlite3-database-in-django 
 # PDF preview
 # add doc strings!!
-# make long actions threaded
+# [partially y] make long actions threaded
 # [y] need to deal with folder changes in sqlite
 # [y] add doc drag drop to folders
 # [y] change needs review states.
 # choose pdf viewer software.
-# add doi lookup button
+# [y] add doi lookup button
 # add option to set autosave and auto backup
 # add some actions to Edit menu
 # [y] disable the add file button when no doc is selected, but not when adding new mannualy
@@ -83,13 +83,15 @@ LOG_CONFIG={
 # perform duplicate check on adding
 # [y] write a connected component function to replace networkx
 # [y] text fold button has bug
-# export dialog
 # [N] add a copy to clipboard to messagebox showing failed tasks
 # [y] connect the fail dialog's create folder button
 # [y] Name a database file on creation and create collections folder under that name
 # could probably make the thread call func using a decorator
-# possible to let user choose default add action?
+# [y] possible to let user choose default add action?
 # break down addActionTriggered()
+# citation style stuff
+# change Ctrl-N shortcut to Add button. Maybe Ctrl-Shift-N for new lib.
+# add more shortcuts
 
 
 if __name__=='__main__':

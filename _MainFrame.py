@@ -180,15 +180,15 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
             action_data=action.data()
             for aii, (addii, cdii) in add_buttons.items():
                 if aii==action_data:
-                    text='%s  *' %aii
-                    cdii.setText(text)
+                    addii.setShortcut('Ctrl+n')
+                    cdii.setChecked(True)
                     button.setDefaultAction(addii)
                     button.setText('Add')
                     button.setIcon(QIcon.fromTheme('document-new'))
                     self.settings.setValue('import/default_add_action',aii)
                 else:
-                    text='%s' %aii
-                    cdii.setText(text)
+                    addii.setShortcut('')
+                    cdii.setChecked(False)
 
         add_buttons={}
         menu=QtWidgets.QMenu()
@@ -200,12 +200,16 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
             add_actionii=menu.addAction(aii)
 
-            if aii==default_act:
-                text='%s  *' %aii
-            else:
-                text=aii
-            cd_actionii=choose_default_menu.addAction(text)
+            cd_actionii=choose_default_menu.addAction(aii)
             cd_actionii.setData(aii)
+            cd_actionii.setCheckable(True)
+
+            if aii==default_act:
+                add_actionii.setShortcut('Ctrl+n')
+                cd_actionii.setChecked(True)
+            else:
+                add_actionii.setShortcut('')
+                cd_actionii.setChecked(False)
             add_buttons[aii]=[add_actionii, cd_actionii]
 
         choose_default_menu.triggered.connect(changeDefaultAction)

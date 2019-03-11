@@ -30,9 +30,13 @@ def prepareDocs(meta_dict,docids):
     data=[]
     for ii in docids:
         entryii=meta_dict[ii]
+        fav_check=QtWidgets.QCheckBox()
+        read_check=QtWidgets.QCheckBox()
+        fav_check.setChecked(True if entryii['favourite']=='true' else False)
+        read_check.setChecked(True if entryii['read']=='true' else False)
         aii=[ii,
-            QtWidgets.QCheckBox(entryii['favourite']),
-            QtWidgets.QCheckBox(entryii['read']),
+            fav_check,
+            read_check,
             entryii['has_file'],
             '; '.join(entryii['authors_l']),
             entryii['title'],
