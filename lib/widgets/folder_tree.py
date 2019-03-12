@@ -55,7 +55,7 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
         self.parent=parent
         super(MyTreeWidget,self).__init__(parent=parent)
 
-        self._trashed_doc_ids=[]
+        #self._trashed_doc_ids=[]
         self.setDropIndicatorShown(True)
 
     def commitData(self,widget):

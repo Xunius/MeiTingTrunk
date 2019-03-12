@@ -27,7 +27,7 @@ FILE_FOLDER=os.path.join(LIB_FOLDER,'collections')
 
 DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',
-'deduplicated', 'deletionPending', 'favourite', 'note',
+'deduplicated', 'favourite', 'note',
 'abstract', 'advisor', 'added',
 'arxivId', 'title', 'pmid',
 'publication', 'publicLawNumber', 'month',
@@ -41,7 +41,7 @@ DOC_ATTRS=[\
 'internationalUserType', 'genre',
 'institution', 'lastUpdate', 'legalStatus', 'length', 'medium', 'isbn']
 
-INT_COLUMNS=['read', 'confirmed', 'deduplicated', 'deletionPending',
+INT_COLUMNS=['read', 'confirmed', 'deduplicated',
         'favourite', 'month', 'year', 'day']
 
 

@@ -115,11 +115,17 @@ class MainFrameDocTableSlots:
 
     def docTableMenu(self,pos):
 
+
         menu=QtWidgets.QMenu()
         open_action=menu.addAction('Open File Externally')
         open_folder_action=menu.addAction('Open Containing Folder')
         del_from_folder_action=menu.addAction('Delete From Current Folder')
-        del_action=menu.addAction('Delete From Library')
+        del_from_trash_action=QtWidgets.QAction('Delete From Trash',menu)
+        del_from_lib_action=QtWidgets.QAction('Delete From Library',menu)
+        if self._current_folder_item==self.trash_folder:
+            menu.addAction(del_from_trash_action)
+        else:
+            menu.addAction(del_from_lib_action)
         mark_needsreview_action=menu.addAction('Mark document as Needs Review')
         check_duplicate_folder_action=menu.addAction('Check Duplicates Within Folder')
         check_duplicate_lib_action=menu.addAction('Check Duplicates Within Library')
@@ -152,7 +158,6 @@ class MainFrameDocTableSlots:
                 open_action.setDisabled(True)
                 open_folder_action.setDisabled(True)
 
-            foldername,folderid=self._current_folder
             if self._current_folder_item in self.sys_folders:
                 del_from_folder_action.setDisabled(True)
             else:
@@ -181,10 +186,14 @@ class MainFrameDocTableSlots:
                     self.openDocFolder(open_docs)
 
                 elif action==del_from_folder_action:
+                    foldername,folderid=self._current_folder
                     self.delFromFolder(docids, foldername, folderid, True)
 
-                elif action==del_action:
+                elif action==del_from_lib_action:
                     self.delDoc(docids,True)
+
+                elif action==del_from_trash_action:
+                    self.destroyDoc(docids,True)
 
                 elif action==mark_needsreview_action:
                     self.markDocNeedsReview(docids)
@@ -274,16 +283,22 @@ class MainFrameDocTableSlots:
         self.logger.info('docids=%s. foldername=%s. folderid=%s'\
                 %(docids, foldername, folderid))
 
-        # check orphan docs
+        # remove doc from folder
         for idii in docids:
             self.folder_data[folderid].remove(idii)
             print('####',self.meta_dict[idii]['folders_l'])
+            # remove folder from doc
             if (int(folderid),foldername) in self.meta_dict[idii]['folders_l']:
                 self.meta_dict[idii]['folders_l'].remove((int(folderid),foldername))
 
+        # check orphan
         orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,docids,
                 self._trashed_folder_ids)
-        self.libtree._trashed_doc_ids.extend(orphan_docs)
+        self._orphan_doc_ids.extend(orphan_docs)
+
+        for idii in orphan_docs:
+            self.meta_dict[idii]['deletionPending']='true'
+            self.folder_data['-3'].append(idii)
 
         if reload_table:
             self.loadDocTable(folder=(foldername,folderid),sel_row=None)
@@ -297,12 +312,13 @@ class MainFrameDocTableSlots:
         self.logger.info('docids=%s' %docids)
 
         choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
-                'Confirm deleting a document permanently?',
+                'Confirm deleting a document from library?',
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
         if choice==QtWidgets.QMessageBox.Yes:
 
             for idii in docids:
+                # remove from all folders
                 for kk,vv in self.folder_data.items():
                     if idii in vv:
                         vv.remove(idii)
@@ -312,20 +328,24 @@ class MainFrameDocTableSlots:
                         self.logger.info('docid %s in folder_data[%s]?: %s'\
                                 %(idii, kk, idii in self.folder_data[kk]))
 
-                del self.meta_dict[idii]
+                #del self.meta_dict[idii]
+                self.meta_dict[idii]['folders_l']=[]
 
-                print('# <delDoc>: docid %s in meta_dict?: %s'\
-                        %(idii, idii in self.meta_dict))
-                self.logger.info('docid %s in meta_dict?: %s'\
-                        %(idii, idii in self.meta_dict))
+                #print('# <delDoc>: docid %s in meta_dict?: %s'\
+                        #%(idii, idii in self.meta_dict))
+                #self.logger.info('docid %s in meta_dict?: %s'\
+                        #%(idii, idii in self.meta_dict))
 
-                if idii in self.libtree._trashed_doc_ids:
-                    self.libtree._trashed_doc_ids.remove(idii)
+                if idii not in self._orphan_doc_ids:
+                    self._orphan_doc_ids.append(idii)
 
-                print('# <delDoc>: docid %s in _trashed_doc_ids?: %s'\
-                        %(idii, idii in self.libtree._trashed_doc_ids))
-                self.logger.info('docid %s in _trashed_doc_ids?: %s'\
-                        %(idii, idii in self.libtree._trashed_doc_ids))
+                self.folder_data['-3'].append(idii)
+                self.meta_dict[idii]['deletionPending']='true'
+
+                #print('# <delDoc>: docid %s in _trashed_doc_ids?: %s'\
+                        #%(idii, idii in self.libtree._trashed_doc_ids))
+                #self.logger.info('docid %s in _trashed_doc_ids?: %s'\
+                        #%(idii, idii in self.libtree._trashed_doc_ids))
 
             if reload_table:
                 self.loadDocTable(folder=self._current_folder,sel_row=None)
@@ -349,6 +369,54 @@ class MainFrameDocTableSlots:
 
         return
 
+    def destroyDoc(self,docids,reload_table):
+
+        print('# <destroyDoc>: docids=%s' %docids)
+        self.logger.info('docids=%s' %docids)
+
+        choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
+                'Confirm deleting a document permanently?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+
+        if choice==QtWidgets.QMessageBox.Yes:
+
+            for idii in docids:
+                # remove from all folders
+                for kk,vv in self.folder_data.items():
+                    if idii in vv:
+                        vv.remove(idii)
+
+                        print('# <destroyDoc>: docid %s in folder_data[%s]?: %s'\
+                                %(idii, kk, idii in self.folder_data[kk]))
+                        self.logger.info('docid %s in folder_data[%s]?: %s'\
+                                %(idii, kk, idii in self.folder_data[kk]))
+
+                del self.meta_dict[idii]
+
+                # TODO: need to del this from sqlite
+                #self.meta_dict[idii]['folders_l']=[]
+
+                #print('# <destroyDoc>: docid %s in meta_dict?: %s'\
+                        #%(idii, idii in self.meta_dict))
+                #self.logger.info('docid %s in meta_dict?: %s'\
+                        #%(idii, idii in self.meta_dict))
+
+                #if idii not in self._orphan_doc_ids:
+                    #self._orphan_doc_ids.append(idii)
+
+                #self.folder_data['-3'].append(idii)
+                #self.meta_dict[idii]['deletionPending']='true'
+
+                #print('# <destroyDoc>: docid %s in _trashed_doc_ids?: %s'\
+                        #%(idii, idii in self.libtree._trashed_doc_ids))
+                #self.logger.info('docid %s in _trashed_doc_ids?: %s'\
+                        #%(idii, idii in self.libtree._trashed_doc_ids))
+
+            if reload_table:
+                self.loadDocTable(folder=self._current_folder,sel_row=None)
+
+
+        return
 
     def exportToBib(self,docids,meta_dict):
 

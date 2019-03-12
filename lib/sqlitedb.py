@@ -144,7 +144,7 @@ def readSqlite(dbin):
 
         if metaii['confirmed'] is None or metaii['confirmed']=='false':
             folder_data['-2'].append(idii)
-        if metaii['deletionPending']:
+        if metaii['deletionPending']=='true':
             folder_data['-3'].append(idii)
 
         # note: convert folder id to str, why?
@@ -261,7 +261,7 @@ def getMetaData(db, did):
             'publication','volume','year','doi','abstract',\
             'arxivId','chapter','city','country','edition','institution',\
             'isbn','issn','month','day','publisher','series','type',\
-            'read','favourite','pmid','added','confirmed']
+            'read','favourite','pmid','added','confirmed', 'deletionPending']
 
     #result={}
     result=DocMeta()
@@ -290,8 +290,6 @@ def getMetaData(db, did):
     folders=result['folders_l']
     # if no folder name, add to Default
     result['folders_l']=folders or [(0, 'Default')]
-
-    #result['deletionPending']=False
 
     return result
 
@@ -377,6 +375,18 @@ def findOrphanDocs(folder_data,docids,trashed_folder_ids):
 
     return result
 
+
+def findOrphanDocs2(db):
+
+    cin=db.cursor()
+    query='''SELECT rowid FROM Documents
+    WHERE Documents.deletionPending='true'
+    '''
+
+    ret=cin.execute(query)
+    ret=[ii[0] for ii in ret]
+    print('# <findOrphanDocs2>: orphans=',ret)
+    return ret
 
 
 

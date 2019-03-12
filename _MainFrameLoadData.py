@@ -173,6 +173,9 @@ class MainFrameLoadData:
         for fnameii,idii in trashed_folders:
             addFolder(self.trash_folder,idii,self.folder_dict)
 
+        orphan_docs=sqlitedb.findOrphanDocs2(self.db)
+        self._orphan_doc_ids=orphan_docs
+
         #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
         self.libtree.itemDoubleClicked.connect(self.renameFolder)
         self.libtree.add_doc_to_folder_signal.connect(self.addDocToFolder)
@@ -205,22 +208,23 @@ class MainFrameLoadData:
             if folder is None:
                 docids=self.meta_dict.keys()
 
-                print('# <loadDocTable>: NO before difference trashed_docs: %d'\
+                print('# <loadDocTable>: NO before difference orphan docs: %d'\
                         %len(docids))
-                self.logger.info('NO before difference trashed_docs: %d'\
+                self.logger.info('NO before difference orphan docs: %d'\
                         %len(docids))
 
-                docids=list(set(docids).difference(self.libtree._trashed_doc_ids))
+                docids=list(set(docids).difference(self._orphan_doc_ids))
 
-                print('# <loadDocTable>: NO after difference trashed_docs: %d'\
+                print('# <loadDocTable>: NO after difference orphan docs: %d'\
                         %len(docids))
-                self.logger.info('NO after difference trashed_docs: %d'\
+                self.logger.info('NO after difference orphan docs: %d'\
                         %len(docids))
 
             elif folder is not None and folder[0]=='All' and folder[1]=='-1':
                 docids=self.meta_dict.keys()
             else:
                 folderid=folder[1]
+                print('# <loadDocTable>: folderid=',folderid, len(self.folder_data[folderid]))
                 docids=self.folder_data[folderid]
 
         data=prepareDocs(self.meta_dict,docids)

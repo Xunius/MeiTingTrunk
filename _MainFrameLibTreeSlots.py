@@ -82,7 +82,7 @@ class MainFrameLibTreeSlots:
         folderid=item.data(1,0)
 
         if item:
-            if item==self.trash_folder or folderid in self.libtree._trashed_folder_ids:
+            if item==self.trash_folder or folderid in self._trashed_folder_ids:
                 menu=QtWidgets.QMenu()
                 restore_action=menu.addAction('Restore Folder(s)')
                 clear_action=menu.addAction('Clear Folder(s) From Trash')
@@ -180,8 +180,6 @@ class MainFrameLibTreeSlots:
         orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,deldocids,
                 self._trashed_folder_ids)
 
-        self.libtree._trashed_doc_ids.extend(orphan_docs)
-
         print('# <postTrashFolder>: delfolderids=%s' %delfolderids)
         self.logger.info('delfolderids=%s' %delfolderids)
 
@@ -190,6 +188,8 @@ class MainFrameLibTreeSlots:
 
         print('# <postTrashFolder>: Orphan docs=%s' %orphan_docs)
         self.logger.info('Orphan docs=%s' %orphan_docs)
+
+        self._orphan_doc_ids.extend(orphan_docs)
 
         for idii in orphan_docs:
             self.meta_dict[idii]['deletionPending']='true'
