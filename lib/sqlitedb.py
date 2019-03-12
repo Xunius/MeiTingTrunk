@@ -316,6 +316,28 @@ def zipAuthors(firstnames,lastnames):
     return authors
 
 
+
+def getTrashedFolders(folder_dict):
+    results=[kk for kk,vv in folder_dict.items() if vv[1]=='-3']
+    print('# <getTrashedFolders>: results=',results)
+
+
+    def _getChildFolder(folder_dict,folderid,results=None):
+        if results is None:
+            results=[]
+        for idii in folder_dict:
+            fii,pii=folder_dict[idii]
+            if pii==folderid:
+                results.append(idii)
+                results=_getChildFolder(folder_dict,fii,results)
+        return results
+    for fii in results:
+        subids=_getChildFolder(folder_dict,fii)
+        results.extend(subids)
+
+    return results
+
+
 def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
 
     if docids is None:
@@ -327,6 +349,7 @@ def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
     folderids.append(folderid)
 
     subfolderids=getChildFolders(folder_dict,folderid)
+    print('# <walkFolderTree>: subfolderids',subfolderids)
     for sii in subfolderids:
         folderids,docids=walkFolderTree(folder_dict,folder_data,sii,
                 docids,folderids)

@@ -55,7 +55,6 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
         self.parent=parent
         super(MyTreeWidget,self).__init__(parent=parent)
 
-        self._trashed_folder_ids=[]
         self._trashed_doc_ids=[]
         self.setDropIndicatorShown(True)
 
@@ -188,7 +187,7 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
                     return
 
                 # move to trash
-                elif newparent.data(1,0) in ['-3']+self._trashed_folder_ids:
+                elif newparent.data(1,0) in ['-3']+self.parent._trashed_folder_ids:
 
                     print('# <dropEvent>: Trashing folder.')
                     LOGGER.info('Trashing folder.')

@@ -109,6 +109,12 @@ class MainFrameLoadData:
         else:
             return None
 
+    @property
+    def _trashed_folder_ids(self):
+        if hasattr(self,'folder_dict'):
+            #return self.libtree._trashed_folder_ids
+            return sqlitedb.getTrashedFolders(self.folder_dict)
+
 
 
     def loadLibTree(self,db,meta_dict,folder_data,folder_dict):
@@ -156,11 +162,12 @@ class MainFrameLoadData:
             addFolder(self.libtree,idii,self.folder_dict)
 
         #---------------Add folders in trash---------------
-        self.libtree._trashed_folder_ids=[kk for kk,vv in self.folder_dict.items()\
-                if vv[1]=='-3']
+        #self.libtree._trashed_folder_ids=sqlitedb.getTrashedFolders(self.folder_dict)
+        #self.libtree._trashed_folder_ids=[kk for kk,vv in self.folder_dict.items()\
+                #if vv[1]=='-3']
         trashed_folders=[(self.folder_dict[kk][0], kk) for kk in \
-                self.libtree._trashed_folder_ids]
-        print('# <loadLibTree>: trashed_folder_ids',self.libtree._trashed_folder_ids)
+                self._trashed_folder_ids]
+        print('# <loadLibTree>: trashed_folder_ids',self._trashed_folder_ids)
         print('# <loadLibTree>: trashed_folders',trashed_folders)
 
         for fnameii,idii in trashed_folders:

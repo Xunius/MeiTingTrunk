@@ -19,7 +19,7 @@ else:
     from urlparse import urlparse
 
 FTS_VERSION='fts5'
-FILE_OUT_NAME='new8_%s.sqlite' %FTS_VERSION
+FILE_OUT_NAME='new7_%s.sqlite' %FTS_VERSION
 FILE_IN_NAME='mendeley.sqlite'
 LIB_FOLDER='~/Papers2'
 FILE_FOLDER=os.path.join(LIB_FOLDER,'collections')
@@ -244,8 +244,6 @@ if __name__=='__main__':
 
         ii+=1
         print('\n# <createsqlite>: Copying doc ', ii)
-        if ii>=20:
-            break
 
         meta_query='''SELECT %s from Documents
         WHERE Documents.id = ?''' %', '.join(DOC_ATTRS)

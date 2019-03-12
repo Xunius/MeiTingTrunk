@@ -44,7 +44,7 @@ class MainFrameLibTreeSlots:
             self.search_button.setEnabled(True)
             #self.create_subfolder_action.setDisabled(True)
         else:
-            if folderid in self.libtree._trashed_folder_ids:
+            if folderid in self._trashed_folder_ids:
                 self.add_button.setDisabled(True)
                 self.add_folder_button.setDisabled(True)
                 self.create_subfolder_action.setDisabled(True)
@@ -147,20 +147,21 @@ class MainFrameLibTreeSlots:
 
         if not ask or (ask and choice==QtWidgets.QMessageBox.Yes):
 
-            self.libtree._trashed_folder_ids.append(item.data(1,0))
-            print('# <trashFolder>: Add folder id to _trashed_folders. _trashed_folders=%s' %self.libtree._trashed_folder_ids)
-            self.logger.info('Add folder id to _trashed_folders. _trashed_folders=%s' %self.libtree._trashed_folder_ids)
+            #self.libtree._trashed_folder_ids.append(item.data(1,0))
+            #print('# <trashFolder>: Add folder id to _trashed_folders. _trashed_folders=%s' %self.libtree._trashed_folder_ids)
+            #self.logger.info('Add folder id to _trashed_folders. _trashed_folders=%s' %self.libtree._trashed_folder_ids)
 
             root=self.libtree.invisibleRootItem()
             (item.parent() or root).removeChild(item)
 
+            folderid=item.data(1,0)
             if newparent is None:
                 self.trash_folder.addChild(item)
+                self.changeFolderParent(folderid,'-3')
             else:
                 newparent.addChild(item)
+                self.changeFolderParent(folderid,newparent.data(1,0))
 
-            folderid=item.data(1,0)
-            self.changeFolderParent(folderid,'-3')
             self.postTrashFolder(item)
 
         return
@@ -177,7 +178,7 @@ class MainFrameLibTreeSlots:
                 self.folder_data,folderid)
 
         orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,deldocids,
-                self.libtree._trashed_folder_ids)
+                self._trashed_folder_ids)
 
         self.libtree._trashed_doc_ids.extend(orphan_docs)
 

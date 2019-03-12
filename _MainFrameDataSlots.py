@@ -180,18 +180,18 @@ class MainFrameDataSlots:
         print('# <autoSaveToDatabase>: Auto save called. %s' %mtime)
         self.logger.info('Auto save called. %s' %mtime)
 
-        if len(self.changed_doc_ids)>0:
-            #----------------Save folders first----------------
-            sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
-                    #self.settings.value('saving/storage_folder'))
-                    self.settings.value('saving/current_lib_folder'))
+        #if len(self.changed_doc_ids)>0:
+        #----------------Save folders first----------------
+        sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
+                #self.settings.value('saving/storage_folder'))
+                self.settings.value('saving/current_lib_folder'))
 
-            for ii in self.changed_doc_ids:
-                self.saveToDatabase(ii,False)
-                print('# <autoSaveToDatabase>: Save doc %s' %ii)
-                self.logger.info('Save doc %s' %ii)
+        for ii in self.changed_doc_ids:
+            self.saveToDatabase(ii,False)
+            print('# <autoSaveToDatabase>: Save doc %s' %ii)
+            self.logger.info('Save doc %s' %ii)
 
-            self.changed_doc_ids=[]
+        self.changed_doc_ids=[]
         self.settings.sync()
 
         return

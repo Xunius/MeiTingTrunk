@@ -282,7 +282,7 @@ class MainFrameDocTableSlots:
                 self.meta_dict[idii]['folders_l'].remove((int(folderid),foldername))
 
         orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,docids,
-                self.libtree._trashed_folder_ids)
+                self._trashed_folder_ids)
         self.libtree._trashed_doc_ids.extend(orphan_docs)
 
         if reload_table:
