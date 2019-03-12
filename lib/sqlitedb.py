@@ -718,14 +718,14 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     cout=dbout.cursor()
 
     #--------------Create documents table--------------
-    query='''CREATE VIRTUAL TABLE IF NOT EXISTS Documents USING fts4(
+    query='''CREATE VIRTUAL TABLE IF NOT EXISTS Documents USING fts5(
     %s)'''
     columns=[]
     for kii in DOC_ATTRS:
         if kii in INT_COLUMNS:
-            columns.append('%s INT' %kii)
+            columns.append('%s' %kii)
         else:
-            columns.append('%s TEXT' %kii)
+            columns.append('%s' %kii)
 
     columns=', '.join(columns)
     query=query %columns
@@ -735,28 +735,27 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     #dbout.commit()
 
     #------------Create DocumentTags table------------
-    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentTags USING fts4(
-    docid INT,
-    tag TEXT)'''
+    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentTags USING fts5(
+    docid, tag)'''
 
     cout.execute(query)
     #dbout.commit()
 
     #------------Create DocumentNotes table------------
-    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentNotes USING fts4(
-    docid INT,
-    note TEXT,
-    modifiedTime TEXT,
-    createdTime TEXT
+    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentNotes USING fts5(
+    docid,
+    note,
+    modifiedTime,
+    createdTime
     )'''
 
     cout.execute(query)
     #dbout.commit()
     
     #----------Create DocumentKeywords table----------
-    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentKeywords USING fts4(
-    docid INT,
-    text TEXT)'''
+    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentKeywords USING fts5(
+    docid,
+    text)'''
 
     cout.execute(query)
     #dbout.commit()
@@ -783,11 +782,11 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     #dbout.commit()
 
     #--------Create DocumentContributors table--------
-    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentContributors USING fts4(
-    docid INT,
-    contribution TEXT,
-    firstNames TEXT,
-    lastName TEXT
+    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentContributors USING fts5(
+    docid,
+    contribution,
+    firstNames,
+    lastName
     )'''
 
     cout.execute(query)
