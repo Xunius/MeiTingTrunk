@@ -92,6 +92,9 @@ LOG_CONFIG={
 # citation style stuff
 # change Ctrl-N shortcut to Add button. Maybe Ctrl-Shift-N for new lib.
 # add more shortcuts
+# qcompleter in some meta fields e.g. author, keyworgs
+# add search bar, result treewidget, clear frame, add folder from selection
+# add tooltip to search bar
 
 
 if __name__=='__main__':

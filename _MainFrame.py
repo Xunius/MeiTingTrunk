@@ -58,13 +58,17 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         # seach bar
         self.search_bar=QtWidgets.QLineEdit(self)
-        self.search_bar.setText('Type to search')
-
-        self.search_bar.setFixedWidth(280)
+        self.search_bar.setPlaceholderText('Type to search')
+        self.search_bar.setFixedWidth(300)
         self.search_bar.setSizePolicy(getMinSizePolicy())
         self.search_bar.returnPressed.connect(self.searchBarClicked)
 
+        # search button
+        self.search_button=self.createSearchButton()
+        self.search_button.setEnabled(False)
+
         h_layout0.addWidget(self.search_bar)
+        h_layout0.addWidget(self.search_button)
 
         #-------------Add hline below tool bar-------------
         v_layout0.addWidget(getHLine(self))
@@ -256,6 +260,29 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         button.clicked.connect(self.checkDuplicateClicked)
 
         return button
+
+    def createSearchButton(self):
+
+        button=QtWidgets.QToolButton(self)
+        menu=QtWidgets.QMenu()
+
+        for fieldii in ['Authors', 'Title', 'Abstract', 'Keywords', 'Tags',
+                'Notes']:
+            cbii=QtWidgets.QCheckBox(fieldii, menu)
+            aii=QtWidgets.QWidgetAction(menu)
+            cbii.stateChanged.connect(aii.trigger)
+            aii.setDefaultWidget(cbii)
+            aii.setText(fieldii)
+            menu.addAction(aii)
+
+        button.setIcon(QIcon.fromTheme('edit-find'))
+        button.setMenu(menu)
+        button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
+        #menu.triggered.connect(self.searchButtonTriggered)
+        button.clicked.connect(self.searchButtonTriggered)
+
+        return button
+
 
 
     def createLibTree(self):

@@ -27,7 +27,7 @@ INV_ALT_KEYS=dict([(vv,kk) for kk,vv in ALT_KEYS.items()])
 
 OMIT_KEYS=[
         'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
-        'lastName_l', 'pend_delete', 'folders_l', 'type', 'id'
+        'lastName_l', 'deletionPending', 'folders_l', 'type', 'id'
         ]
 
 def splitFields(record, key, sep=',|;'):

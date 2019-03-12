@@ -1,6 +1,7 @@
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, pyqtSlot
 from PyQt5 import QtWidgets
 from lib import sqlitedb
+from lib import sqlitefts
 from lib import bibparse, risparse
 from lib import retrievepdfmeta
 from lib.widgets import FailDialog
@@ -66,8 +67,6 @@ class MainFrameToolBarSlots:
 
     @pyqtSlot(QtWidgets.QAction)
     def addActionTriggered(self,action):
-
-        action_data=action.data()
 
         if action.data() is not None:
             return
@@ -380,6 +379,41 @@ class MainFrameToolBarSlots:
             self.loadBibTab(docid)
             self.loadNoteTab(docid)
         return
+
+    @pyqtSlot()
+    def searchButtonTriggered(self):
+        self.searchBarClicked()
+        return
+
+    def searchBarClicked(self):
+        text=self.search_bar.text()
+        if len(text)==0:
+            return
+
+        menu=self.search_button.menu()
+        actions=menu.findChildren(QtWidgets.QWidgetAction)
+        adict={}
+        do=False
+        for actii in actions:
+            wii=actii.defaultWidget()
+            adict[actii.text()]=wii.isChecked()
+            print('# <searchBarClicked>: actii',actii.text(),wii.isChecked())
+            do=do + wii.isChecked()
+
+        if not do:
+            msg=QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Information)
+            msg.setWindowTitle('Information')
+            msg.setText('Input needed')
+            msg.setInformativeText('Select at least one field to search')
+            msg.exec_()
+            return
+
+        current_folder=self._current_folder
+        print('# <searchBarClicked>: folder=',current_folder)
+
+        search_res=sqlitefts.searchMultiple(self.db, text, adict,
+                current_folder[1])
 
 
 

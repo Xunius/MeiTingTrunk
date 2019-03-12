@@ -26,7 +26,7 @@ logging.basicConfig()
 # make this into option dialog
 EXCLUDE_KEYS=[
         'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
-        'lastNames_l', 'pend_delete'
+        'lastNames_l', 'deletionPending'
         ]
 
 

@@ -77,8 +77,6 @@ class MainFrameOtherSlots:
 
 
 
-    def searchBarClicked(self):
-        print('search term:', self.search_bar.text())
 
     def copyBibButtonClicked(self):
         self.bib_textedit.selectAll()

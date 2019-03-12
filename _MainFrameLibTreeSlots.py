@@ -33,23 +33,28 @@ class MainFrameLibTreeSlots:
             self.create_folder_action.setEnabled(True)
             self.add_folder_button.setEnabled(True)
             self.duplicate_check_button.setEnabled(True)
+            self.search_button.setEnabled(True)
         elif item==self.needsreview_folder:
             self.add_button.setDisabled(True)
             self.add_folder_button.setDisabled(True)
+            self.search_button.setEnabled(True)
         elif item==self.trash_folder:
             self.add_button.setDisabled(True)
             self.add_folder_button.setDisabled(True)
+            self.search_button.setEnabled(True)
             #self.create_subfolder_action.setDisabled(True)
         else:
             if folderid in self.libtree._trashed_folder_ids:
                 self.add_button.setDisabled(True)
                 self.add_folder_button.setDisabled(True)
                 self.create_subfolder_action.setDisabled(True)
+                self.search_button.setEnabled(True)
             else:
                 self.add_button.setEnabled(True)
                 self.add_folder_button.setEnabled(True)
                 self.create_subfolder_action.setEnabled(True)
                 self.duplicate_check_button.setEnabled(True)
+                self.search_button.setEnabled(True)
 
         # Refresh filter list
         self.filterTypeCombboxChange(item)
@@ -186,12 +191,12 @@ class MainFrameLibTreeSlots:
         self.logger.info('Orphan docs=%s' %orphan_docs)
 
         for idii in orphan_docs:
-            self.meta_dict[idii]['pend_delete']=True
+            self.meta_dict[idii]['deletionPending']='true'
 
-            print('# <postTrashFolder>: Set pend_delete to orphan doc %s %s' \
-                    %(idii, self.meta_dict[idii]['pend_delete']))
-            self.logger.info('Set pend_delete to orphan doc %s %s' \
-                    %(idii, self.meta_dict[idii]['pend_delete']))
+            print('# <postTrashFolder>: Set deletionPending to orphan doc %s %s' \
+                    %(idii, self.meta_dict[idii]['deletionPending']))
+            self.logger.info('Set deletionPending to orphan doc %s %s' \
+                    %(idii, self.meta_dict[idii]['deletionPending']))
 
         for fii in delfolderids:
             #print('del folder',fii,self.folder_dict[fii])

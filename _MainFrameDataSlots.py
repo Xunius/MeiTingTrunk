@@ -153,15 +153,16 @@ class MainFrameDataSlots:
 
 
 
-    def saveToDatabase(self,docid):
+    def saveToDatabase(self,docid,save_folder=True):
 
         print('# <saveToDatabase>: Saving folders to database.')
         self.logger.info('Saving folders to database')
 
         #----------------Save folders first----------------
-        sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
-                #self.settings.value('saving/storage_folder'))
-                self.settings.value('saving/current_lib_folder'))
+        if save_folder:
+            sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
+                    #self.settings.value('saving/storage_folder'))
+                    self.settings.value('saving/current_lib_folder'))
 
         sqlitedb.metaDictToDatabase(self.db,docid,self.meta_dict[docid],
                 #self.settings.value('saving/storage_folder'),
@@ -179,11 +180,18 @@ class MainFrameDataSlots:
         print('# <autoSaveToDatabase>: Auto save called. %s' %mtime)
         self.logger.info('Auto save called. %s' %mtime)
 
-        for ii in self.changed_doc_ids:
-            print('# <autoSaveToDatabase>: Save doc %s' %ii)
-            self.logger.info('Save doc %s' %ii)
+        if len(self.changed_doc_ids)>0:
+            #----------------Save folders first----------------
+            sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
+                    #self.settings.value('saving/storage_folder'))
+                    self.settings.value('saving/current_lib_folder'))
 
-        self.changed_doc_ids=[]
+            for ii in self.changed_doc_ids:
+                self.saveToDatabase(ii,False)
+                print('# <autoSaveToDatabase>: Save doc %s' %ii)
+                self.logger.info('Save doc %s' %ii)
+
+            self.changed_doc_ids=[]
         self.settings.sync()
 
         return

@@ -16,7 +16,7 @@ from main import __version__
 
 OMIT_KEYS=[
     'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
-    'lastName_l', 'pend_delete', 'folders_l', 'type', 'id',
+    'lastName_l', 'deletionPending', 'folders_l', 'type', 'id',
     'abstract', 'advisor', 'month', 'language', 'confirmed',
     'deletionPending', 'note', 'publicLawNumber', 'sections',
     'reviewedArticle', 'userType', 'shortTitle', 'sourceType',
@@ -373,7 +373,7 @@ class MainWindow(QtWidgets.QMainWindow):
         return
 
     def saveDatabaseTriggered(self):
-        self.main_frame.saveToDatabase()
+        self.main_frame.autoSaveToDatabase()
         return
 
     def closeDatabaseTriggered(self):

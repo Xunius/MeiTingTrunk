@@ -65,7 +65,7 @@ class DocMeta(MutableMapping):
                 'folders_l': [],
                 'tags_l': [],
                 'urls_l': [],
-                'pend_delete': False,
+                'deletionPending': 'false',
                 'notes': None
                 }
 
@@ -125,7 +125,7 @@ def readSqlite(dbin):
 
     #-------------------Get metadata-------------------
     meta={}
-    query='''SELECT DISTINCT id
+    query='''SELECT DISTINCT rowid
     FROM Documents
     '''
     docids=dbin.execute(query).fetchall()
@@ -144,7 +144,7 @@ def readSqlite(dbin):
 
         if metaii['confirmed'] is None or metaii['confirmed']=='false':
             folder_data['-2'].append(idii)
-        if metaii['pend_delete']:
+        if metaii['deletionPending']:
             folder_data['-3'].append(idii)
 
         # note: convert folder id to str, why?
@@ -180,14 +180,14 @@ def fetchField(db,query,values,ncol=1,ret_type='str'):
         aa=[ii[0] for ii in aa]
     if ret_type=='str':
         if len(aa)==1:
-            return aa[0]
+            return str(aa[0])
         else:
             return '; '.join(aa)
     else:
         return aa
 
 
-def getMetaData(db, docid):
+def getMetaData(db, did):
     '''Get meta-data of a doc by docid.
     '''
 
@@ -195,42 +195,42 @@ def getMetaData(db, docid):
     query_base=\
     '''SELECT Documents.%s
        FROM Documents
-       WHERE (Documents.id=?)
+       WHERE (Documents.rowid=?)
     '''
 
     query_tags=\
     '''
     SELECT DocumentTags.tag
     FROM DocumentTags
-    WHERE (DocumentTags.docid=?)
+    WHERE (DocumentTags.did=?)
     '''
 
     query_urls=\
     '''
     SELECT DocumentUrls.url
     FROM DocumentUrls
-    WHERE (DocumentUrls.docid=?)
+    WHERE (DocumentUrls.did=?)
     '''
 
     query_firstnames=\
     '''
     SELECT DocumentContributors.firstNames
     FROM DocumentContributors
-    WHERE (DocumentContributors.docid=?)
+    WHERE (DocumentContributors.did=?)
     '''
 
     query_lastnames=\
     '''
     SELECT DocumentContributors.lastName
     FROM DocumentContributors
-    WHERE (DocumentContributors.docid=?)
+    WHERE (DocumentContributors.did=?)
     '''
 
     query_keywords=\
     '''
     SELECT DocumentKeywords.text
     FROM DocumentKeywords
-    WHERE (DocumentKeywords.docid=?)
+    WHERE (DocumentKeywords.did=?)
     '''
 
     query_folder=\
@@ -238,25 +238,26 @@ def getMetaData(db, docid):
     SELECT Folders.id, Folders.name
     FROM Folders
     LEFT JOIN DocumentFolders ON DocumentFolders.folderid=Folders.id
-    WHERE (DocumentFolders.docid=?)
+    WHERE (DocumentFolders.did=?)
     '''
 
     query_files=\
     '''
     SELECT DocumentFiles.abspath
     FROM DocumentFiles
-    WHERE (DocumentFiles.docid=?)
+    WHERE (DocumentFiles.did=?)
     '''
 
     query_notes=\
     '''
     SELECT DocumentNotes.note
     FROM DocumentNotes
-    WHERE (DocumentNotes.docid=?)
+    WHERE (DocumentNotes.did=?)
     '''
 
     #------------------Get file meta data------------------
-    fields=['id','citationkey','title','issue','pages',\
+    #NOTE: rowid here is required by sqlite fts5 virtual table
+    fields=['rowid','citationkey','title','issue','pages',\
             'publication','volume','year','doi','abstract',\
             'arxivId','chapter','city','country','edition','institution',\
             'isbn','issn','month','day','publisher','series','type',\
@@ -267,26 +268,30 @@ def getMetaData(db, docid):
 
     # query single-worded fields, e.g. year, city
     for kii in fields:
-        vii=fetchField(db,query_base %(kii), (docid,))
-        result[kii]=vii
+        vii=fetchField(db,query_base %(kii), (did,))
+        if kii=='rowid':
+            # fts5 in sqlite no longer has docid alias
+            result['id']=vii
+        else:
+            result[kii]=vii
 
     # query notes
-    result['notes']=fetchField(db,query_notes,(docid,),1,'str')
+    result['notes']=fetchField(db,query_notes,(did,),1,'str')
 
     # query list fields, .e.g firstnames, tags
-    result['firstNames_l']=fetchField(db,query_firstnames,(docid,),1,'list')
-    result['lastName_l']=fetchField(db,query_lastnames,(docid,),1,'list')
-    result['keywords_l']=fetchField(db,query_keywords,(docid,),1,'list')
-    result['files_l']=fetchField(db,query_files,(docid,),1,'list')
-    result['folders_l']=fetchField(db,query_folder,(docid,),2,'list')
-    result['tags_l']=fetchField(db,query_tags,(docid,),1,'list')
-    result['urls_l']=fetchField(db,query_urls,(docid,),1,'list')
+    result['firstNames_l']=fetchField(db,query_firstnames,(did,),1,'list')
+    result['lastName_l']=fetchField(db,query_lastnames,(did,),1,'list')
+    result['keywords_l']=fetchField(db,query_keywords,(did,),1,'list')
+    result['files_l']=fetchField(db,query_files,(did,),1,'list')
+    result['folders_l']=fetchField(db,query_folder,(did,),2,'list')
+    result['tags_l']=fetchField(db,query_tags,(did,),1,'list')
+    result['urls_l']=fetchField(db,query_urls,(did,),1,'list')
 
     folders=result['folders_l']
     # if no folder name, add to Default
     result['folders_l']=folders or [(0, 'Default')]
 
-    result['pend_delete']=False
+    #result['deletionPending']=False
 
     return result
 
@@ -713,8 +718,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     cout=dbout.cursor()
 
     #--------------Create documents table--------------
-    query='''CREATE TABLE IF NOT EXISTS Documents (
-    id INTEGER PRIMARY KEY,
+    query='''CREATE VIRTUAL TABLE IF NOT EXISTS Documents USING fts4(
     %s)'''
     columns=[]
     for kii in DOC_ATTRS:
@@ -731,7 +735,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     #dbout.commit()
 
     #------------Create DocumentTags table------------
-    query='''CREATE TABLE IF NOT EXISTS DocumentTags (
+    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentTags USING fts4(
     docid INT,
     tag TEXT)'''
 
@@ -739,7 +743,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     #dbout.commit()
 
     #------------Create DocumentNotes table------------
-    query='''CREATE TABLE IF NOT EXISTS DocumentNotes (
+    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentNotes USING fts4(
     docid INT,
     note TEXT,
     modifiedTime TEXT,
@@ -750,7 +754,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     #dbout.commit()
     
     #----------Create DocumentKeywords table----------
-    query='''CREATE TABLE IF NOT EXISTS DocumentKeywords (
+    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentKeywords USING fts4(
     docid INT,
     text TEXT)'''
 
@@ -779,7 +783,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     #dbout.commit()
 
     #--------Create DocumentContributors table--------
-    query='''CREATE TABLE IF NOT EXISTS DocumentContributors (
+    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentContributors USING fts4(
     docid INT,
     contribution TEXT,
     firstNames TEXT,
@@ -834,7 +838,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
 
 def metaDictToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
-    query='''SELECT DISTINCT id
+    query='''SELECT DISTINCT rowid
     FROM Documents
     '''
     docids=db.execute(query).fetchall()
@@ -872,10 +876,10 @@ def insertToDocuments(db,docid,meta_dict,action):
             value_list.append(vv)
 
     if action=='insert':
-        query='''INSERT OR IGNORE INTO Documents (id, %s) VALUES (%s)''' \
+        query='''INSERT OR IGNORE INTO Documents (rowid, %s) VALUES (%s)''' \
                 %(', '.join(key_list), ','.join(['?',]*(1+len(key_list))))
     elif action=='replace':
-        query='''REPLACE INTO Documents (id, %s) VALUES (%s)''' \
+        query='''REPLACE INTO Documents (rowid, %s) VALUES (%s)''' \
                 %(', '.join(key_list), ','.join(['?',]*(1+len(key_list))))
     else:
         raise Exception("action not defined.")
@@ -907,7 +911,7 @@ def insertToTable(db, table, columns, values):
 def delFromTable(db, table, docid):
 
     cout=db.cursor()
-    query='DELETE FROM %s WHERE (%s.docid=?)' %(table,table)
+    query='DELETE FROM %s WHERE (%s.did=?)' %(table,table)
 
     print('# <delFromTable>: Delete old table rows. query=%s' %query)
     LOGGER.info('Delete old table rows. query=%s' %query)
@@ -923,7 +927,7 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
     cout=db.cursor()
     files=meta_dict['files_l']
     if len(files)>0:
-        query='''INSERT OR IGNORE INTO DocumentFiles (docid, abspath)
+        query='''INSERT OR IGNORE INTO DocumentFiles (did, abspath)
         VALUES (?,?)'''
 
         for fii in files:
@@ -978,7 +982,7 @@ def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
         lasts=meta_dict['lastName_l']
         rec=insertToTable(db, 'DocumentContributors',
-                ('docid', 'contribution', 'firstNames', 'lastName'),
+                ('did', 'contribution', 'firstNames', 'lastName'),
                 list(zip((docid,)*len(firsts),
                     ('DocumentAuthor',)*len(firsts),
                     firsts, lasts))
@@ -995,7 +999,7 @@ def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
     #------------------Update folder------------------
     rec=insertToTable(db, 'DocumentFolders',
-            ('docid', 'folderid'),
+            ('did', 'folderid'),
             [(docid,fii[0]) for fii in meta_dict['folders_l']])
 
     print('# <addToDatabase>: rec of insertDocumentFolders=%s' %rec)
@@ -1003,7 +1007,7 @@ def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
     #-----------------Update keywords-----------------
     rec=insertToTable(db, 'DocumentKeywords',
-            ('docid', 'text'),
+            ('did', 'text'),
             [(docid, kii) for kii in meta_dict['keywords_l']])
 
     print('# <addToDatabase>: rec of insertDocumentKeywords=%s' %rec)
@@ -1014,7 +1018,7 @@ def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
     if notes:
         ctime=datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         rec=insertToTable(db, 'DocumentNotes',
-                ('docid', 'note', 'modifiedTime', 'createdTime'),
+                ('did', 'note', 'modifiedTime', 'createdTime'),
                 [(docid, notes, ctime, ctime)]
                 )
 
@@ -1023,7 +1027,7 @@ def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
     #-----------------Update tags-----------------
     rec=insertToTable(db, 'DocumentTags',
-            ('docid', 'tag'),
+            ('did', 'tag'),
             [(docid, kii) for kii in meta_dict['tags_l']])
 
     print('# <addToDatabase>: rec of insertDocumentTags=%s' %rec)
@@ -1031,7 +1035,7 @@ def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
     #-------------------Update urls-------------------
     rec=insertToTable(db, 'DocumentUrls',
-            ('docid', 'url'),
+            ('did', 'url'),
             [(docid, kii) for kii in meta_dict['urls_l']])
 
     print('# <addToDatabase>: rec of insertDocumentUrls=%s' %rec)
@@ -1068,13 +1072,13 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
         for fii in del_folders:
 
             query='''DELETE FROM DocumentFolders
-            WHERE (DocumentFolders.docid=? AND DocumentFolders.folderid=?)
+            WHERE (DocumentFolders.did=? AND DocumentFolders.folderid=?)
             '''
             cout.execute(query, (docid, int(fii[0])))
 
         for fii in new_folders:
 
-            query='''INSERT OR IGNORE INTO DocumentFolders (docid, folderid)
+            query='''INSERT OR IGNORE INTO DocumentFolders (did, folderid)
             VALUES (?,?)'''
 
             cout.execute(query, (docid, int(fii[0])))
@@ -1099,7 +1103,7 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
             lasts=meta_dict['lastName_l']
             rec=insertToTable(db, 'DocumentContributors',
-                    ('docid', 'contribution', 'firstNames', 'lastName'),
+                    ('did', 'contribution', 'firstNames', 'lastName'),
                     list(zip((docid,)*len(firsts),
                         ('DocumentAuthor',)*len(firsts),
                         firsts, lasts))
@@ -1124,7 +1128,7 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
         delFromTable(db, 'DocumentKeywords', docid)
 
         rec=insertToTable(db, 'DocumentKeywords',
-                ('docid', 'text'),
+                ('did', 'text'),
                 [(docid, kii) for kii in meta_dict['keywords_l']])
 
         print('# <updateToDatabase>: rec of insertDocumentKeywords=%s' %rec)
@@ -1139,7 +1143,7 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
             # Get createdTime if old note exists
             query='''
             SELECT (DocumentNotes.createdTime) FROM DocumentNotes
-            WHERE (DocumentNotes.docid=?)
+            WHERE (DocumentNotes.did=?)
             '''
             ctime=fetchField(db,query,(docid,),1,'str')
 
@@ -1149,7 +1153,7 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
             delFromTable(db, 'DocumentNotes', docid)
 
             rec=insertToTable(db, 'DocumentNotes',
-                    ('docid', 'note', 'modifiedTime', 'createdTime'),
+                    ('did', 'note', 'modifiedTime', 'createdTime'),
                     [(docid, notes, mtime, ctime)]
                     )
             print('# <updateToDatabase>: rec of insertDocumentNotes=%s' %rec)
@@ -1164,7 +1168,7 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
         delFromTable(db, 'DocumentTags', docid)
 
         rec=insertToTable(db, 'DocumentTags',
-                ('docid', 'tag'),
+                ('did', 'tag'),
                 [(docid, kii) for kii in meta_dict['tags_l']])
 
         print('# <updateToDatabase>: rec of insertDocumentTags=%s' %rec)
@@ -1177,7 +1181,7 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
         delFromTable(db, 'DocumentUrls', docid)
 
         rec=insertToTable(db, 'DocumentUrls',
-                ('docid', 'url'),
+                ('did', 'url'),
                 [(docid, kii) for kii in meta_dict['urls_l']])
 
         print('# <updateToDatabase>: rec of insertDocumentUrls=%s' %rec)

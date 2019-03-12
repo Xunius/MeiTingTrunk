@@ -570,7 +570,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         for kk,vv in old_dict.items():
             if kk in ['id', 'read', 'favourite', 'added', 'files_l',
-                    'folders_l', 'tags_l', 'pend_delete', 'notes',
+                    'folders_l', 'tags_l', 'deletionPending', 'notes',
                     'abstract' ]:
                 new_dict[kk]=vv
             else:

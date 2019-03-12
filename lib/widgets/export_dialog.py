@@ -145,7 +145,7 @@ class ExportDialog(QtWidgets.QDialog):
 
         omittable_keys=[
             'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
-            'lastName_l', 'pend_delete', 'folders_l', 'type', 'id',
+            'lastName_l', 'deletionPending', 'folders_l', 'type', 'id',
             'abstract', 'advisor', 'month', 'language', 'confirmed',
             'deletionPending', 'note', 'publicLawNumber', 'sections',
             'reviewedArticle', 'userType', 'shortTitle', 'sourceType',
