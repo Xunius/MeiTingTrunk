@@ -124,10 +124,15 @@ def readSqlite(dbin):
     folder_dict=getFolders(dbin)
 
     #-------------------Get metadata-------------------
+    cursor=dbin.execute('SELECT * FROM Documents')
+    names=list(map(lambda x:x[0], cursor.description))
+
     meta={}
-    query='''SELECT DISTINCT rowid
+
+    query='''SELECT DISTINCT %s
     FROM Documents
-    '''
+    ''' %('id' if 'id' in names else 'rowid')
+
     docids=dbin.execute(query).fetchall()
     docids=[ii[0] for ii in docids]
     docids.sort()
@@ -191,12 +196,22 @@ def getMetaData(db, did):
     '''Get meta-data of a doc by docid.
     '''
 
+    cursor=db.execute('SELECT * FROM Documents')
+    names=list(map(lambda x:x[0], cursor.description))
+
     # fetch column from Document table
-    query_base=\
-    '''SELECT Documents.%s
-       FROM Documents
-       WHERE (Documents.rowid=?)
-    '''
+    if 'id' in names:
+        query_base=\
+        '''SELECT Documents.%s
+           FROM Documents
+           WHERE (Documents.id=?)
+        '''
+    else:
+        query_base=\
+        '''SELECT Documents.%s
+           FROM Documents
+           WHERE (Documents.rowid=?)
+        '''
 
     query_tags=\
     '''
@@ -257,7 +272,7 @@ def getMetaData(db, did):
 
     #------------------Get file meta data------------------
     #NOTE: rowid here is required by sqlite fts5 virtual table
-    fields=['rowid','citationkey','title','issue','pages',\
+    fields=['citationkey','title','issue','pages',\
             'publication','volume','year','doi','abstract',\
             'arxivId','chapter','city','country','edition','institution',\
             'isbn','issn','month','day','publisher','series','type',\
@@ -266,14 +281,21 @@ def getMetaData(db, did):
     #result={}
     result=DocMeta()
 
+    if 'id' in names:
+        vii=fetchField(db,query_base %'id', (did,))
+        result['id']=vii
+    else:
+        vii=fetchField(db,query_base %'rowid', (did,))
+        result['rowid']=vii
+
     # query single-worded fields, e.g. year, city
     for kii in fields:
         vii=fetchField(db,query_base %(kii), (did,))
-        if kii=='rowid':
+        #if kii=='rowid':
             # fts5 in sqlite no longer has docid alias
-            result['id']=vii
-        else:
-            result[kii]=vii
+            #result['id']=vii
+        #else:
+        result[kii]=vii
 
     # query notes
     result['notes']=fetchField(db,query_notes,(did,),1,'str')

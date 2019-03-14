@@ -412,8 +412,60 @@ class MainFrameToolBarSlots:
         current_folder=self._current_folder
         print('# <searchBarClicked>: folder=',current_folder)
 
-        search_res=sqlitefts.searchMultiple(self.db, text, adict,
-                current_folder[1])
+        # TODO: need to write sqlite before searching
+
+        # NOTE: order matters here:
+        self.status_bar.showMessage('Searching ...')
+        self.doc_table.setVisible(False)
+        self.search_res_frame.search(self.db, text, adict, current_folder[1],
+                self.meta_dict)
+
+        return
+
+
+    @pyqtSlot(str,list)
+    def createFolderFromSearch(self, search_text, docids):
+        foldername='search_%s' %search_text
+
+        toplevelfolders=[vv[0] for kk,vv in self.folder_dict.items() if\
+                vv[1] in ['-1',]]
+        print('# <createFolderFromSearch>: toplevel folders=',toplevelfolders)
+
+        # rename till no conflict
+        append=1
+        while foldername in toplevelfolders:
+            foldername='%s_(%d)' %(foldername,append)
+            append+=1
+
+        # create new item
+        current_ids=map(int,self.folder_dict.keys())
+        newid=str(max(current_ids)+1)
+        newitem=QtWidgets.QTreeWidgetItem([foldername,str(newid)])
+        style=QtWidgets.QApplication.style()
+        diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+        newitem.setIcon(0,diropen_icon)
+        newitem.setFlags(newitem.flags() | Qt.ItemIsEditable)
+
+        self.folder_dict[newid]=(foldername,'-1')
+        self.folder_data[newid]=docids
+        self.libtree.addTopLevelItem(newitem)
+        self.libtree.scrollToItem(newitem)
+        self.libtree.setCurrentItem(newitem)
+
+        print('# <createFolderFromSearch>: Folder new id=%s. New entry in folder_dict=%s' %(newid, self.folder_dict[newid]))
+        self.logger.info('Folder new id=%s. New entry in folder_dict=%s' %(newid, self))
+
+        return
+
+    @pyqtSlot()
+    def hideDocTable(self):
+        if self.doc_table.isVisible():
+            self.doc_table.setVisible(False)
+        return
+
+
+
+
 
 
 

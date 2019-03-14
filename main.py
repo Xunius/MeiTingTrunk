@@ -93,8 +93,9 @@ LOG_CONFIG={
 # change Ctrl-N shortcut to Add button. Maybe Ctrl-Shift-N for new lib.
 # add more shortcuts
 # qcompleter in some meta fields e.g. author, keyworgs
-# add search bar, result treewidget, clear frame, add folder from selection
-# add tooltip to search bar
+# [y] add search bar, result treewidget, clear frame, add folder from selection
+# [Not now] add tooltip to search bar
+# the folder highlighting is still buggy
 
 
 if __name__=='__main__':

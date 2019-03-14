@@ -9,7 +9,9 @@ import _MainFrameLoadData, _MainFrameDataSlots, _MainFrameToolBarSlots,\
 from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy, \
         getXExpandYMinSizePolicy, getXExpandYExpandSizePolicy, getHLine
 from lib.widgets import TreeWidgetDelegate, MyTreeWidget, TableModel,\
-        MyHeaderView, MetaTabScroll, CheckDuplicateFrame, NoteTextEdit
+        MyHeaderView, MetaTabScroll, CheckDuplicateFrame, NoteTextEdit,\
+        SearchResFrame
+
 
 
 class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
@@ -117,6 +119,10 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         self.duplicate_result_frame=self.createDuplicateResultFrame()
         v_la.addWidget(self.duplicate_result_frame)
 
+        #-------------Add search result frame-------------
+        self.search_res_frame=self.createSearchResultFrame()
+        v_la.addWidget(self.search_res_frame)
+
         #------------------Add doc table------------------
         self.doc_table=self.createDocTable()
         v_la.addWidget(self.doc_table)
@@ -159,6 +165,9 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         self.progressbar.setMaximum(1)
         self.progressbar.setVisible(False)
         self.status_bar.addPermanentWidget(self.progressbar)
+
+        # search_res_frame created before status bar
+        self.search_res_frame.search_done_sig.connect(self.status_bar.clearMessage)
 
         h_split.setHandleWidth(4)
         w=h_split.size().width()
@@ -267,8 +276,9 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         menu=QtWidgets.QMenu()
 
         for fieldii in ['Authors', 'Title', 'Abstract', 'Keywords', 'Tags',
-                'Notes']:
+                'Notes', 'Publication']:
             cbii=QtWidgets.QCheckBox(fieldii, menu)
+            cbii.setChecked(True)
             aii=QtWidgets.QWidgetAction(menu)
             cbii.stateChanged.connect(aii.trigger)
             aii.setDefaultWidget(cbii)
@@ -365,6 +375,15 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
                 self.clearDuplicateButtonClicked)
         frame.setVisible(False)
         return frame
+
+    def createSearchResultFrame(self):
+        frame=SearchResFrame(self.settings,self)
+        frame.clear_searchres_button.clicked.connect(self.clearSearchResButtonClicked)
+        frame.create_folder_sig.connect(self.createFolderFromSearch)
+        frame.hide_doc_sig.connect(self.hideDocTable)
+        frame.setVisible(False)
+        return frame
+
 
     def createClearFilterFrame(self):
 

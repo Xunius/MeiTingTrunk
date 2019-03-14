@@ -18,7 +18,7 @@ else:
     from urllib import unquote
     from urlparse import urlparse
 
-FILE_OUT_NAME='new5.sqlite'
+FILE_OUT_NAME='nonfts.sqlite'
 FILE_IN_NAME='mendeley.sqlite'
 LIB_FOLDER='~/Papers2'
 FILE_FOLDER=os.path.join(LIB_FOLDER,'collections')
@@ -26,7 +26,7 @@ FILE_FOLDER=os.path.join(LIB_FOLDER,'collections')
 
 DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',
-'deduplicated', 'deletionPending', 'favourite', 'note',
+'deduplicated', 'favourite', 'note', 'deletionPending',
 'abstract', 'advisor', 'added',
 'arxivId', 'title', 'pmid',
 'publication', 'publicLawNumber', 'month',
@@ -40,7 +40,7 @@ DOC_ATTRS=[\
 'internationalUserType', 'genre',
 'institution', 'lastUpdate', 'legalStatus', 'length', 'medium', 'isbn']
 
-INT_COLUMNS=['read', 'confirmed', 'deduplicated', 'deletionPending',
+INT_COLUMNS=['read', 'confirmed', 'deduplicated',
         'favourite', 'month', 'year', 'day']
 
 
@@ -127,7 +127,7 @@ if __name__=='__main__':
 
     #------------Create DocumentTags table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentTags (
-    docid INT,
+    did INT,
     tag TEXT)'''
 
     cout.execute(query)
@@ -135,7 +135,7 @@ if __name__=='__main__':
 
     #------------Create DocumentNotes table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentNotes (
-    docid INT,
+    did INT,
     note TEXT,
     modifiedTime TEXT,
     createdTime TEXT
@@ -146,7 +146,7 @@ if __name__=='__main__':
     
     #----------Create DocumentKeywords table----------
     query='''CREATE TABLE IF NOT EXISTS DocumentKeywords (
-    docid INT,
+    did INT,
     text TEXT)'''
 
     cout.execute(query)
@@ -154,7 +154,7 @@ if __name__=='__main__':
 
     #-----------Create DocumentFolders table-----------
     query='''CREATE TABLE IF NOT EXISTS DocumentFolders (
-    docid INT,
+    did INT,
     folderid INT
     )'''
 
@@ -176,7 +176,7 @@ if __name__=='__main__':
 
     #--------Create DocumentContributors table--------
     query='''CREATE TABLE IF NOT EXISTS DocumentContributors (
-    docid INT,
+    did INT,
     contribution TEXT,
     firstNames TEXT,
     lastName TEXT
@@ -187,7 +187,7 @@ if __name__=='__main__':
 
     #------------Create DocumentFiles table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentFiles (
-    docid INT,
+    did INT,
     abspath TEXT
     )'''
 
@@ -196,7 +196,7 @@ if __name__=='__main__':
 
     #------------Create DocumentUrls table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentUrls (
-    docid INT,
+    did INT,
     url TEXT
     )'''
 
@@ -285,22 +285,22 @@ if __name__=='__main__':
         cout.execute(query, metaii)
 
         for tagii in tags:
-            query='''INSERT INTO DocumentTags (docid, tag)
+            query='''INSERT INTO DocumentTags (did, tag)
             VALUES (?, ?)'''
             cout.execute(query, (ii, tagii))
 
         for keyii in keywords:
-            query='''INSERT INTO DocumentKeywords (docid, text)
+            query='''INSERT INTO DocumentKeywords (did, text)
             VALUES (?, ?)'''
             cout.execute(query, (ii, keyii))
 
         for nii in notes:
-            query='''INSERT INTO DocumentNotes (docid, note, modifiedTime, createdTime)
+            query='''INSERT INTO DocumentNotes (did, note, modifiedTime, createdTime)
             VALUES (?, ?, ?, ?)'''
             cout.execute(query, (ii,)+ nii)
 
         for fii in folder_info:
-            query='''INSERT INTO DocumentFolders (docid, folderid)
+            query='''INSERT INTO DocumentFolders (did, folderid)
             VALUES (?, ?)'''
             cout.execute(query, (ii, fii[0]))
             #cout.execute(query, (ii, fii[1], fii[2],
@@ -312,12 +312,12 @@ if __name__=='__main__':
 
         for aii in authors:
             query='''INSERT INTO DocumentContributors (
-            docid, contribution, firstNames, lastName)
+            did, contribution, firstNames, lastName)
             VALUES (?, ?, ?, ?)'''
             cout.execute(query, (ii,)+aii)
 
         for urlii in urls:
-            query='''INSERT INTO DocumentUrls (docid, url)
+            query='''INSERT INTO DocumentUrls (did, url)
             VALUES (?, ?)'''
             cout.execute(query, (ii, urlii))
 
@@ -347,7 +347,7 @@ if __name__=='__main__':
 
                 shutil.copy2(filepath,newpath)
 
-                query='''INSERT INTO DocumentFiles (docid, abspath)
+                query='''INSERT INTO DocumentFiles (did, abspath)
                 VALUES (?, ?)'''
 
                 cout.execute(query, (ii, newpath))

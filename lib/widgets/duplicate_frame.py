@@ -183,8 +183,8 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
     def addResultToTree(self):
 
-        #hi_color=self.settings.value('display/folder/highlight_color_br',
-                #QBrush)
+        hi_color=self.settings.value('display/folder/highlight_color_br',
+                QBrush)
 
         def createEntry(docid,gid,score):
 
@@ -243,7 +243,7 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
             # highlight group header
             for jj in range(self.tree.columnCount()):
-                itemii.setBackground(jj, QBrush(QColor(230,230,249)))
+                itemii.setBackground(jj, hi_color)
 
             self.tree.addTopLevelItem(itemii)
 

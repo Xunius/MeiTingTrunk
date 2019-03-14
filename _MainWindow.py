@@ -277,6 +277,8 @@ class MainWindow(QtWidgets.QMainWindow):
      '',"sqlite files (*.sqlite);; All files (*)")[0]
 
         if fname:
+            self._openDatabase(fname)
+            '''
             try:
                 self._openDatabase(fname)
             except:
@@ -286,6 +288,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 msg.setText("Oopsi.")
                 msg.setInformativeText("Failed to open database file\n    %s" %fname)
                 msg.exec_()
+            '''
             return
 
     def _openDatabase(self,fname):

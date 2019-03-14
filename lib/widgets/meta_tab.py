@@ -113,26 +113,24 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
         self.is_fold=False
         self.fold_above_nl=3
 
-        self.fold_button=QtWidgets.QPushButton()
-        self.fold_button.setText('-')
+        self.fold_button=QtWidgets.QToolButton()
+        self.fold_button.setArrowType(Qt.DownArrow)
         font_height=self.fontMetrics().height()
         self.fold_button.setFixedWidth(int(font_height))
         self.fold_button.setFixedHeight(int(font_height))
         self.fold_button.clicked.connect(self.toggleFold)
         self.fold_button.setStyleSheet('''
-        QPushButton {
+        QToolButton {
             border: 1px solid rgb(190,190,190);
             background-color: rgb(190,190,190);
             border-radius: %dpx;
             font: bold %dpx;
             color: white;
-            text-align: center;
-            padding-bottom: 2px;
             }
 
-        QPushButton:pressed {
+        QToolButton:pressed {
             border-style: inset;
-            } 
+            }
         ''' %(int(font_height/2), max(1,font_height-2))
         )
 
@@ -148,13 +146,13 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
     def resizeTextEdit(self):
         if self.getNumberOfLines()<self.fold_above_nl:
             self.fold_button.setVisible(False)
-            self.unfoldText()
+            #self.unfoldText()
         else:
             self.fold_button.setVisible(True)
-            if self.is_fold:
-                self.foldText()
-            else:
-                self.unfoldText()
+        if self.is_fold:
+            self.foldText()
+        else:
+            self.unfoldText()
 
         return
 
@@ -171,8 +169,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
             self.setMinimumHeight(fontheight+2*margin)
             self.setMaximumHeight(fontheight+2*margin)
             self.is_fold=True
-            self.fold_button.setText('+')
-            #self.fold_button.setIcon(QIcon.fromTheme('list-add'))
+            self.fold_button.setArrowType(Qt.LeftArrow)
 
         return
 
@@ -182,7 +179,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
         self.setMinimumHeight(docheight+2*margin)
         self.setMaximumHeight(docheight+2*margin)
         self.is_fold=False
-        self.fold_button.setText('\u2212')
+        self.fold_button.setArrowType(Qt.DownArrow)
         return
 
 
