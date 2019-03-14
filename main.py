@@ -64,7 +64,7 @@ LOG_CONFIG={
 # [y] option menu
 # [y] import/export menu
 # [y] add trash can
-# sqlite text search: https://stackoverflow.com/questions/35020797/how-to-use-full-text-search-in-sqlite3-database-in-django 
+# [y] sqlite text search: https://stackoverflow.com/questions/35020797/how-to-use-full-text-search-in-sqlite3-database-in-django
 # PDF preview
 # add doc strings!!
 # [partially y] make long actions threaded
@@ -95,7 +95,7 @@ LOG_CONFIG={
 # qcompleter in some meta fields e.g. author, keyworgs
 # [y] add search bar, result treewidget, clear frame, add folder from selection
 # [Not now] add tooltip to search bar
-# the folder highlighting is still buggy
+# [y] the folder highlighting is still buggy
 
 
 if __name__=='__main__':

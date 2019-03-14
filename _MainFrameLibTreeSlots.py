@@ -1,6 +1,6 @@
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QCursor
+from PyQt5.QtGui import QCursor, QBrush, QColor
 from lib import sqlitedb
 
 
@@ -59,7 +59,7 @@ class MainFrameLibTreeSlots:
         # Refresh filter list
         self.filterTypeCombboxChange(item)
 
-        return 
+        return
 
 
     def selFolder(self,selected,deselected):
@@ -221,5 +221,26 @@ class MainFrameLibTreeSlots:
             self.libtree.scrollToItem(item)
             self.libtree.editItem(item)
 
+
+    def removeFolderHighlights(self):
+
+        def iterItems(treewidget, root):
+            if root is not None:
+                stack = [root]
+                while stack:
+                    parent = stack.pop(0)
+                    for row in range(parent.childCount()):
+                        child = parent.child(row)
+                        yield child
+                        if child.childCount()>0:
+                            stack.append(child)
+
+        #------------Remove highlights for all------------
+        ori_color=QBrush(QColor(255,255,255))
+        root=self.libtree.invisibleRootItem()
+        for item in iterItems(self.libtree, root):
+            item.setBackground(0, ori_color)
+
+        return
 
 

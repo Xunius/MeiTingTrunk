@@ -83,17 +83,18 @@ class MainFrameDocTableSlots:
                             stack.append(child)
 
         #------------Remove highlights for all------------
-        ori_color=QBrush(QColor(255,255,255))
-        hi_color=self.settings.value('display/folder/highlight_color_br',
-                QBrush)
+        self.removeFolderHighlights()
+        #ori_color=QBrush(QColor(255,255,255))
 
-        root=self.libtree.invisibleRootItem()
+        #root=self.libtree.invisibleRootItem()
         # disconnect libtree item change signal
         #self.libtree.itemChanged.disconnect()
-        for item in iterItems(self.libtree, root):
-            item.setBackground(0, ori_color)
+        #for item in iterItems(self.libtree, root):
+            #item.setBackground(0, ori_color)
 
         #------------Search folders in libtree------------
+        hi_color=self.settings.value('display/folder/highlight_color_br',
+                QBrush)
         for fii in folders:
             mii=self.libtree.findItems(fii, Qt.MatchExactly | Qt.MatchRecursive,
                     column=1)
@@ -106,7 +107,7 @@ class MainFrameDocTableSlots:
             self.confirm_review_frame.setVisible(True)
         else:
             self.confirm_review_frame.setVisible(False)
-        
+
 
         # re-connect libtree item change signal
         #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
@@ -353,7 +354,7 @@ class MainFrameDocTableSlots:
 
         return
 
-    
+
     def markDocNeedsReview(self,docids):
         print('# <markDocNeedsReview>: docids=%s' %docids)
         self.logger.info('docids=%s' %docids)

@@ -519,10 +519,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         frame=QtWidgets.QFrame()
         v_layout=QtWidgets.QVBoxLayout()
 
-        #self.note_textedit=QtWidgets.QTextEdit(self)
-        #self.note_textedit.setFont(self.font_dict['meta_keywords'])
-        #self.note_textedit.setSizePolicy(getXExpandYExpandSizePolicy())
-        #self.note_textedit=NoteTextEdit(self.font_dict['meta_keywords'])
         self.note_textedit=NoteTextEdit(self.settings)
         self.note_textedit.note_edited_signal.connect(lambda: self.updateNotes(
             self._current_doc,self.note_textedit.toPlainText()))
@@ -558,7 +554,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
     def createBiBTab(self):
 
         frame=QtWidgets.QWidget()
-        #frame.setStyleSheet('background-color:white')
         scroll=QtWidgets.QScrollArea(self)
         scroll.setWidgetResizable(True)
         scroll.setWidget(frame)

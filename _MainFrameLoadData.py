@@ -256,6 +256,7 @@ class MainFrameLoadData:
                 self.selDoc(self.doc_table.currentIndex(),None)
         else:
             # clear meta tab
+            self.removeFolderHighlights()
             self.clearMetaTab()
 
         #self.doc_table.viewport().update()
