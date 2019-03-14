@@ -55,7 +55,7 @@ class MainFrameToolBarSlots:
     #######################################################################
     #                        Tool bar button slots                        #
     #######################################################################
-    
+
 
     def addPDF(self,jobid,abpath):
         rec,jobid,meta_dict=_addPDF(jobid,abpath)
@@ -380,11 +380,8 @@ class MainFrameToolBarSlots:
             self.loadNoteTab(docid)
         return
 
-    @pyqtSlot()
-    def searchButtonTriggered(self):
-        self.searchBarClicked()
-        return
 
+    @pyqtSlot()
     def searchBarClicked(self):
         text=self.search_bar.text()
         if len(text)==0:
@@ -392,15 +389,16 @@ class MainFrameToolBarSlots:
 
         menu=self.search_button.menu()
         actions=menu.findChildren(QtWidgets.QWidgetAction)
-        adict={}
-        do=False
+        new_search_fields=[]
         for actii in actions:
             wii=actii.defaultWidget()
-            adict[actii.text()]=wii.isChecked()
             print('# <searchBarClicked>: actii',actii.text(),wii.isChecked())
-            do=do + wii.isChecked()
+            if wii.isChecked():
+                new_search_fields.append(actii.text())
 
-        if not do:
+        self.settings.setValue('search/search_fields',new_search_fields)
+
+        if len(new_search_fields)==0:
             msg=QtWidgets.QMessageBox()
             msg.setIcon(QtWidgets.QMessageBox.Information)
             msg.setWindowTitle('Information')
@@ -417,8 +415,8 @@ class MainFrameToolBarSlots:
         # NOTE: order matters here:
         self.status_bar.showMessage('Searching ...')
         self.doc_table.setVisible(False)
-        self.search_res_frame.search(self.db, text, adict, current_folder[1],
-                self.meta_dict)
+        self.search_res_frame.search(self.db, text, new_search_fields,
+                current_folder[1], self.meta_dict)
 
         return
 

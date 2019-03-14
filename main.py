@@ -96,6 +96,8 @@ LOG_CONFIG={
 # [y] add search bar, result treewidget, clear frame, add folder from selection
 # [Not now] add tooltip to search bar
 # [y] the folder highlighting is still buggy
+# add search result caching
+# save to sqlite before calling search
 
 
 if __name__=='__main__':

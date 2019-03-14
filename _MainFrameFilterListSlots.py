@@ -7,7 +7,7 @@ class MainFrameFilterListSlots:
     #######################################################################
     #                          Filter list slots                          #
     #######################################################################
-    
+
     def filterItemClicked(self,item):
 
         print('# <filterItemClicked>: Clicked item.text()=%s' %item.text())
@@ -51,6 +51,9 @@ class MainFrameFilterListSlots:
 
         # remove duplicate frame
         self.clearDuplicateButtonClicked()
+
+        # remove search result frame
+        self.clearSearchResButtonClicked()
 
         sel=self.filter_type_combbox.currentText()
         current_folder=self._current_folder

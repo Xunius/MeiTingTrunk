@@ -92,6 +92,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
             settings.setValue('import/default_add_action', 'Add PDF File')
 
+            settings.setValue('search/search_fields', ['Authors', 'Title',
+                'Abstract', 'Keywords', 'Tags', 'Notes', 'Publication'])
+
             settings.sync()
 
         else:

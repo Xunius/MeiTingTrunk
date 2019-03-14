@@ -275,10 +275,15 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         button=QtWidgets.QToolButton(self)
         menu=QtWidgets.QMenu()
 
+        search_fields=self.settings.value('search/search_fields',[],str)
+        if isinstance(search_fields,str) and search_fields=='':
+            search_fields=[]
+
         for fieldii in ['Authors', 'Title', 'Abstract', 'Keywords', 'Tags',
                 'Notes', 'Publication']:
             cbii=QtWidgets.QCheckBox(fieldii, menu)
-            cbii.setChecked(True)
+            if fieldii in search_fields:
+                cbii.setChecked(True)
             aii=QtWidgets.QWidgetAction(menu)
             cbii.stateChanged.connect(aii.trigger)
             aii.setDefaultWidget(cbii)
@@ -288,8 +293,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         button.setIcon(QIcon.fromTheme('edit-find'))
         button.setMenu(menu)
         button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
-        #menu.triggered.connect(self.searchButtonTriggered)
-        button.clicked.connect(self.searchButtonTriggered)
+        button.clicked.connect(self.searchBarClicked)
 
         return button
 
@@ -380,7 +384,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         frame=SearchResFrame(self.settings,self)
         frame.clear_searchres_button.clicked.connect(self.clearSearchResButtonClicked)
         frame.create_folder_sig.connect(self.createFolderFromSearch)
-        frame.hide_doc_sig.connect(self.hideDocTable)
+        #frame.hide_doc_sig.connect(self.hideDocTable)
         frame.setVisible(False)
         return frame
 

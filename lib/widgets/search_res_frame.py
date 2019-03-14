@@ -210,7 +210,7 @@ class BorderItemDelegate(QtWidgets.QStyledItemDelegate):
 class SearchResFrame(QtWidgets.QScrollArea):
 
     search_done_sig=pyqtSignal()
-    hide_doc_sig=pyqtSignal()
+    #hide_doc_sig=pyqtSignal()
     create_folder_sig=pyqtSignal(str,list)
     MyBorderRole = Qt.UserRole + 1
 
@@ -275,9 +275,9 @@ class SearchResFrame(QtWidgets.QScrollArea):
         self.create_folder_button.clicked.connect(self.createFolder)
 
         # hide doc table button
-        self.hide_doc_table_button=QtWidgets.QToolButton(self)
-        self.hide_doc_table_button.setText('Hide Document Table')
-        self.hide_doc_table_button.clicked.connect(lambda: self.hide_doc_sig.emit())
+        #self.hide_doc_table_button=QtWidgets.QToolButton(self)
+        #self.hide_doc_table_button.setText('Hide Document Table')
+        #self.hide_doc_table_button.clicked.connect(lambda: self.hide_doc_sig.emit())
 
         # clear button
         self.clear_searchres_button=QtWidgets.QToolButton(self)
@@ -286,7 +286,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
         self.label=QtWidgets.QLabel('Search results')
         ha.addWidget(self.label)
         ha.addWidget(self.create_folder_button)
-        ha.addWidget(self.hide_doc_table_button)
+        #ha.addWidget(self.hide_doc_table_button)
         ha.addWidget(self.clear_searchres_button)
 
         frame.setLayout(ha)
@@ -346,14 +346,14 @@ class SearchResFrame(QtWidgets.QScrollArea):
         return
 
 
-    def search(self,db,text,field_dict,folderid,meta_dict):
+    def search(self,db,text,field_list,folderid,meta_dict):
 
         self.tree.clear()
         self.setVisible(True)
         self.meta_dict=meta_dict
         self.search_text=text
 
-        search_res=sqlitefts.searchMultipleLike(db, text, field_dict, folderid)
+        search_res=sqlitefts.searchMultipleLike(db, text, field_list, folderid)
         self.label.setText('%d searches results related to "%s"'\
                 %(len(search_res),text))
         self.addResultToTree(text, search_res)

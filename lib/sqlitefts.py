@@ -97,7 +97,7 @@ def searchNotes(db, text):
 
     return ret
 
-def searchMultiple(db, text, field_dict, folderid):
+def searchMultiple(db, text, field_list, folderid):
 
     cin=db.cursor()
 
@@ -117,9 +117,7 @@ def searchMultiple(db, text, field_dict, folderid):
 
     #---------------Compose search query---------------
     queries=[]
-    for kk,vv in field_dict.items():
-        if not vv:
-            continue
+    for kk in field_list:
         if kk=='Authors':
             qkk='''SELECT did, ("firstNames" || " " || "lastName") as name, rank
             FROM DocumentContributors
@@ -265,7 +263,7 @@ def searchNotesLike(db, text):
     return ret
 
 
-def searchMultipleLike(db, text, field_dict, folderid):
+def searchMultipleLike(db, text, field_list, folderid):
 
     cin=db.cursor()
 
@@ -285,9 +283,7 @@ def searchMultipleLike(db, text, field_dict, folderid):
 
     #---------------Compose search query---------------
     queries=[]
-    for kk,vv in field_dict.items():
-        if not vv:
-            continue
+    for kk in field_list:
         if kk=='Authors':
             qkk='''SELECT did, ("firstNames" || " " || "lastName") as name, 'authors'
             FROM DocumentContributors
@@ -392,6 +388,6 @@ if __name__=='__main__':
     #aa=searchNotes(db, 'the')
     #aa=searchMultiple(db, 'ENSO')
 
-    field_dict={'Authors': True, 'Title': True, 'Keywords': True, 'Tag': True, \
-            'Abstract': False, 'Publication':True, 'Notes':True}
-    aa=searchMultipleLike(db, 'ENSO', field_dict, '-1')
+    field_list=['Authors', 'Title', 'Keywords', 'Tag', \
+            'Abstract', 'Publication', 'Notes']
+    aa=searchMultipleLike(db, 'ENSO', field_list, '-1')
