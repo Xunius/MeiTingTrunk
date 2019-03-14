@@ -467,6 +467,11 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         tv.customContextMenuRequested.connect(self.docTableMenu)
 
         tv.doubleClicked.connect(self.docDoubleClicked)
+        tv.setAlternatingRowColors(True)
+
+        tv.setStyleSheet('''alternate-background-color: rgb(230,230,249);
+                background-color: none''')
+                #return QBrush(QColor(230,230,249))
 
         return tv
 

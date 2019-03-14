@@ -266,6 +266,14 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
             self.tree.expandAll()
 
+        color=hi_color.color().getRgb()
+        color_str='rgb(%s)' %','.join(map(str,color))
+
+        self.tree.setStyleSheet('''
+        QTreeWidget::item:has-children { border-left: 1px solid black;
+        background-color: %s;}
+        ''' %color_str)
+
         return
 
 

@@ -392,13 +392,13 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
             itemii=createEntry(docii, str(ii+1))
             # highlight group header
-            pen = QPen(QColor(120, 120, 120))
-            pen.setWidth(1)
+            #pen = QPen(QColor(120, 120, 120))
+            #pen.setWidth(1)
             # Store the border pen in the item as the role we defined
             for jj in range(self.tree.columnCount()):
-                itemii.setBackground(jj, hi_color)
+                #itemii.setBackground(jj, hi_color)
                 #itemii.setBackground(jj, QColor(200,190,180))
-                itemii.setData(jj, self.MyBorderRole, pen)
+                #itemii.setData(jj, self.MyBorderRole, pen)
                 pass
 
             self.tree.addTopLevelItem(itemii)
@@ -407,12 +407,18 @@ class SearchResFrame(QtWidgets.QScrollArea):
             self.addFieldRows(itemii, fieldii, self.meta_dict[docii], search_text)
 
         self.tree.expandAll()
-        #self.tree.setStyleSheet('''QTreeWidget::item { border-left: 1px solid black;}
-                    #''')
+
+        color=hi_color.color().getRgb()
+        color_str='rgb(%s)' %','.join(map(str,color))
+
+        self.tree.setStyleSheet('''
+        QTreeWidget::item:has-children { border-left: 1px solid black;
+        background-color: %s;}
+        ''' %color_str)
 
         # Pass the role where we stored the border pen to the delegate constructor
-        delegate = BorderItemDelegate(self.tree, self.MyBorderRole)
-        self.tree.setItemDelegate(delegate)
+        #delegate = BorderItemDelegate(self.tree, self.MyBorderRole)
+        #self.tree.setItemDelegate(delegate)
 
         self.search_done_sig.emit()
 

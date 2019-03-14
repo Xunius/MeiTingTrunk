@@ -368,11 +368,11 @@ def searchMultipleLike(db, text, field_dict, folderid):
         '''
         ret=cin.execute(query, (folderid,))
 
-    print(query)
+    #print(query)
     ret=ret.fetchall()
 
-    for ii in ret:
-        print(ii)
+    #for ii in ret:
+        #print(ii)
 
     return ret
 

@@ -47,7 +47,8 @@ class TableModel(QAbstractTableModel):
             return QVariant()
         if role == Qt.BackgroundRole:
             if index.row()%2==0:
-                return QBrush(QColor(230,230,249))
+                #return QBrush(QColor(230,230,249))
+                pass
         if role == Qt.FontRole:
             font=self.settings.value('display/fonts/doc_table',QFont)
             if self.arraydata[index.row()][9] in [None, 'false']:
