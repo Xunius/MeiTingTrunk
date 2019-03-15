@@ -234,7 +234,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
         self.tree.setColumnHidden(5,True)
 
         headers=OrderedDict([
-            (' ', 50),
+            ('Fold all', 70),
             ('Authors', 150),
             ('Title', 300),
             ('Publication', 100),
@@ -251,12 +251,16 @@ class SearchResFrame(QtWidgets.QScrollArea):
         self.tree.header().setStretchLastSection(True)
         self.tree.header().setSectionResizeMode(
                 QtWidgets.QHeaderView.Interactive)
+        self.tree.header().setSectionsClickable(True)
+        self.tree.header().sectionClicked.connect(self.headerSectionClicked)
         self.tree.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.tree.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.tree.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
         #self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         #self.tree.customContextMenuRequested.connect(self.docTreeMenu)
         self.tree.itemSelectionChanged.connect(self.changeBGColor)
+
+        self.is_all_fold=False
 
         self.noMatchLabel=QtWidgets.QLabel('No match found.')
         self.noMatchLabel.setVisible(False)
@@ -385,6 +389,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
                 else:
                     wii.setStyleSheet('')
 
+
     def search(self,db,text,field_list,folderid,meta_dict):
 
         self.tree.clear()
@@ -439,14 +444,22 @@ class SearchResFrame(QtWidgets.QScrollArea):
                 QBrush).color().name()
 
         self.tree.setStyleSheet('''
-        QTreeWidget::item:has-children:!selected { border-left: 1px solid black;
+        QTreeWidget::item:has-children:!selected {
+        border-left: 1px solid black;
+        border-bottom: 1px solid black;
         background-color: %s;
         }
         ''' %hi_color)
 
         self.search_done_sig.emit()
         header=self.tree.header()
-        print('# <addFieldRows>: header=',header,type(header),dir(header))
+        header2=self.tree.headerItem()
+        print('# <addFieldRows>: header=',header,type(header),header2)
+        print('# <createEntry>: child count=',header2.childCount(),
+                'columncount=',header2.columnCount())
+
+        for ii in range(6):
+            print(header2.data(ii,0))
 
         return
 
@@ -467,3 +480,26 @@ class SearchResFrame(QtWidgets.QScrollArea):
         self.create_folder_sig.emit(self.search_text, docids)
 
         return
+
+
+    @pyqtSlot(int)
+    def headerSectionClicked(self,idx):
+        print('# <headerSectionClicked>: section=',idx)
+        if idx==0:
+
+            if self.is_all_fold:
+                print('# <headerSectionClicked>: fold all')
+                for ii in range(self.tree.topLevelItemCount()):
+                    itemii=self.tree.topLevelItem(ii)
+                    self.tree.expandItem(itemii)
+                self.is_all_fold=False
+                self.tree.setHeaderLabels(['Fold all', 'Authors', 'Title',
+                    'Publication', 'Year', 'id'])
+            else:
+                print('# <headerSectionClicked>: expand all')
+                for ii in range(self.tree.topLevelItemCount()):
+                    itemii=self.tree.topLevelItem(ii)
+                    self.tree.collapseItem(itemii)
+                self.is_all_fold=True
+                self.tree.setHeaderLabels(['Unfold all', 'Authors', 'Title',
+                    'Publication', 'Year', 'id'])
