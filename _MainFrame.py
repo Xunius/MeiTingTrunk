@@ -290,6 +290,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
             aii.setText(fieldii)
             menu.addAction(aii)
 
+
         button.setIcon(QIcon.fromTheme('edit-find'))
         button.setMenu(menu)
         button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
@@ -382,6 +383,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
     def createSearchResultFrame(self):
         frame=SearchResFrame(self.settings,self)
+        frame.tree.currentItemChanged.connect(self.searchResultCurrentChange)
         frame.clear_searchres_button.clicked.connect(self.clearSearchResButtonClicked)
         frame.create_folder_sig.connect(self.createFolderFromSearch)
         #frame.hide_doc_sig.connect(self.hideDocTable)

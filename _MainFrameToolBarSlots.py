@@ -461,6 +461,20 @@ class MainFrameToolBarSlots:
             self.doc_table.setVisible(False)
         return
 
+    @pyqtSlot(QtWidgets.QTreeWidgetItem,QtWidgets.QTreeWidgetItem)
+    def searchResultCurrentChange(self,current,previous):
+
+        if current:
+            docid=int(current.data(5,0))
+
+            print('# <searchResultCurrentChange>: current=%s' %docid)
+            self.logger.info('current=%s' %docid)
+
+            self.loadMetaTab(docid)
+            self.loadBibTab(docid)
+            self.loadNoteTab(docid)
+
+        return
 
 
 

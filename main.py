@@ -98,6 +98,7 @@ LOG_CONFIG={
 # [y] the folder highlighting is still buggy
 # add search result caching
 # save to sqlite before calling search
+# crop file path within 255?
 
 
 if __name__=='__main__':

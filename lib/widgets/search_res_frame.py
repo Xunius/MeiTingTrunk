@@ -256,8 +256,10 @@ class SearchResFrame(QtWidgets.QScrollArea):
         self.tree.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
         #self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         #self.tree.customContextMenuRequested.connect(self.docTreeMenu)
+        self.tree.itemSelectionChanged.connect(self.changeBGColor)
 
         self.noMatchLabel=QtWidgets.QLabel('No match found.')
+        self.noMatchLabel.setVisible(False)
         va.addWidget(self.noMatchLabel)
         va.addWidget(self.tree)
 
@@ -290,6 +292,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
         ha.addWidget(self.clear_searchres_button)
 
         frame.setLayout(ha)
+
 
         return frame
 
@@ -327,7 +330,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
                 raise Exception("Exception")
 
             labelii=QtWidgets.QLabel('%s: ' %fii)
-            text_editii=AdjustableTextEditWithFold(fii)
+            text_editii=AdjustableTextEditWithFold()
             text_editii.setFont(font)
             text_editii.setText(textii)
             text_editii.setHighlightText(search_text)
@@ -340,11 +343,47 @@ class SearchResFrame(QtWidgets.QScrollArea):
             crow+=1
 
         self.tree.setItemWidget(item,0,frame)
+        # add doc id to column 5
+        item.setText(5,str(meta['id']))
         frame.resize_sig.connect(lambda size: (item.setSizeHint(0,size),
             self.tree.model().layoutChanged.emit()))
 
+
         return
 
+    def changeBGColor(self):
+
+        def iterItems(treewidget, root):
+            if root is not None:
+                stack = [root]
+                while stack:
+                    parent = stack.pop(0)
+                    for row in range(parent.childCount()):
+                        child = parent.child(row)
+                        yield child
+                        if child.childCount()>0:
+                            stack.append(child)
+
+        #------------Remove highlights for all------------
+        sel_rows=self.tree.selectedItems()
+        hlcolor=self.tree.palette().highlight().color().name()
+
+        docids=[itemii.data(5,0) for itemii in sel_rows]
+        root=self.tree.invisibleRootItem()
+
+        # set all widgetitems with selected docids selected.
+        for item in iterItems(self.tree, root):
+            idii=item.data(5,0)
+            if idii in docids:
+                # I thought this would results in endless loop, but it doesn't!
+                item.setSelected(True)
+
+            wii=self.tree.itemWidget(item,0)
+            if wii:
+                if idii in docids:
+                    wii.setStyleSheet('background-color: %s;' %hlcolor)
+                else:
+                    wii.setStyleSheet('')
 
     def search(self,db,text,field_list,folderid,meta_dict):
 
@@ -363,8 +402,6 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
     def addResultToTree(self, search_text, search_res):
 
-        hi_color=self.settings.value('display/folder/highlight_color_br',
-                QBrush)
 
         def createEntry(docid, gid):
 
@@ -391,16 +428,6 @@ class SearchResFrame(QtWidgets.QScrollArea):
             fieldii=list(set(fieldii.split(',')))
 
             itemii=createEntry(docii, str(ii+1))
-            # highlight group header
-            #pen = QPen(QColor(120, 120, 120))
-            #pen.setWidth(1)
-            # Store the border pen in the item as the role we defined
-            for jj in range(self.tree.columnCount()):
-                #itemii.setBackground(jj, hi_color)
-                #itemii.setBackground(jj, QColor(200,190,180))
-                #itemii.setData(jj, self.MyBorderRole, pen)
-                pass
-
             self.tree.addTopLevelItem(itemii)
 
             # add group members
@@ -408,38 +435,18 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
         self.tree.expandAll()
 
-        color=hi_color.color().getRgb()
-        color_str='rgb(%s)' %','.join(map(str,color))
+        hi_color=self.settings.value('display/folder/highlight_color_br',
+                QBrush).color().name()
 
         self.tree.setStyleSheet('''
-        QTreeWidget::item:has-children { border-left: 1px solid black;
-        background-color: %s;}
-        ''' %color_str)
-
-        # Pass the role where we stored the border pen to the delegate constructor
-        #delegate = BorderItemDelegate(self.tree, self.MyBorderRole)
-        #self.tree.setItemDelegate(delegate)
+        QTreeWidget::item:has-children:!selected { border-left: 1px solid black;
+        background-color: %s;
+        }
+        ''' %hi_color)
 
         self.search_done_sig.emit()
-
-        return
-
-
-    def docTreeMenu(self,pos):
-
-        menu=QtWidgets.QMenu()
-
-        print('# <docTreeMenu>: current_folder=',self.current_folder)
-        foldername,folderid=self.current_folder
-        if folderid=='-1':
-            menu.addAction('Delete From Library')
-        else:
-            menu.addAction('Delete From Current Folder')
-
-        action=menu.exec_(QCursor.pos())
-
-        if action:
-            self.delDocs()
+        header=self.tree.header()
+        print('# <addFieldRows>: header=',header,type(header),dir(header))
 
         return
 
@@ -451,10 +458,9 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
             docids=[]
             for ii in sel_rows:
-                idii=ii.data(5,0)
-                if idii:
-                    docids.append(int(idii))
+                docids.append(int(ii.data(5,0)))
 
+            docids=list(set(docids))
             print('# <createFolder>: Selected docids=%s.' %docids)
             LOGGER.info('Selected docids=%s.' %docids)
 
