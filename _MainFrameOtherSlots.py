@@ -47,9 +47,9 @@ class MainFrameOtherSlots:
             if 'Toggle Filter List' not in show_widgets:
                 show_widgets.append('Toggle Filter List')
 
-        #self.settings.setValue('view/show_widgets',show_widgets)
-        st=SettingsThread(self.settings, 'view/show_widgets', show_widgets)
-        st.start()
+        self.setting_thread=SettingsThread(self.settings,
+                'view/show_widgets', show_widgets)
+        self.setting_thread.start()
 
         return
 
@@ -97,9 +97,9 @@ class MainFrameOtherSlots:
                 if 'Toggle Tab Pane' not in show_widgets:
                     show_widgets.append('Toggle Tab Pane')
 
-        #self.settings.setValue('view/show_widgets',show_widgets)
-        st=SettingsThread(self.settings, 'view/show_widgets', show_widgets)
-        st.start()
+        self.setting_thread=SettingsThread(self.settings,
+                'view/show_widgets', show_widgets)
+        self.setting_thread.start()
 
         return
 
@@ -147,9 +147,9 @@ class MainFrameOtherSlots:
             if 'Toggle Tab Pane' not in show_widgets:
                 show_widgets.append('Toggle Tab Pane')
 
-        #self.settings.setValue('view/show_widgets',show_widgets)
-        st=SettingsThread(self.settings, 'view/show_widgets', show_widgets)
-        st.start()
+        self.setting_thread=SettingsThread(self.settings,
+                'view/show_widgets', show_widgets)
+        self.setting_thread.start()
 
         return
 
@@ -167,9 +167,9 @@ class MainFrameOtherSlots:
             if 'Toggle Status bar' not in show_widgets:
                 show_widgets.append('Toggle status bar')
 
-        #self.settings.setValue('view/show_widgets',show_widgets)
-        st=SettingsThread(self.settings, 'view/show_widgets', show_widgets)
-        st.start()
+        self.setting_thread=SettingsThread(self.settings,
+                'view/show_widgets', show_widgets)
+        self.setting_thread.start()
 
         return
 
