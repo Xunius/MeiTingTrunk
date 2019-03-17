@@ -184,6 +184,7 @@ class MainFrameLoadData:
         self.libtree.setCurrentItem(self.all_folder)
 
         self.changed_doc_ids=[] # store ids of changed docs, for auto save
+        self.changed_folder_ids=[] # store ids of changed folders, for auto save
 
         return
 

@@ -352,6 +352,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.current_lib_folder=os.path.join(storage_folder,lib_name)
         self.settings.setValue('saving/current_lib_folder', self.current_lib_folder)
 
+        #-----------Make sure lib folder exists-----------
+        if not os.path.exists(self.current_lib_folder):
+            os.makedirs(self.current_lib_folder)
+            print('# <_openDatabase>: Create lib folder: %s' %self.current_lib_folder)
+            self.logger.info('Create lib folder: %s' %self.current_lib_folder)
+
+        lib_collection_folder=os.path.join(self.current_lib_folder,'_collections')
+        if not os.path.exists(lib_collection_folder):
+            os.makedirs(lib_collection_folder)
+
         print('# <_openDatabase>: current_lib=',self.current_lib)
         print('# <_openDatabase>: current_lib_folder=',self.current_lib_folder)
 
@@ -379,7 +389,7 @@ class MainWindow(QtWidgets.QMainWindow):
         return
 
     def saveDatabaseTriggered(self):
-        self.main_frame.autoSaveToDatabase()
+        self.main_frame.saveToDatabase()
         return
 
     def closeDatabaseTriggered(self):

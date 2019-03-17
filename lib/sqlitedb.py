@@ -737,13 +737,15 @@ def renameFile(fname,meta_dict,replace_space=False):
     return fname2
 
 
-def saveFoldersToDatabase(db,folder_dict,lib_folder):
+def saveFoldersToDatabase(db,folder_ids,folder_dict,lib_folder):
 
     cout=db.cursor()
 
-    for idii,vv in folder_dict.items():
+    #for idii,vv in folder_dict.items():
+    folder_ids=list(set(folder_ids))
+    for idii in folder_ids:
+        nameii,pidii=folder_dict[idii]
         idii=int(idii)
-        nameii,pidii=vv
         pathii=os.path.join(lib_folder,nameii)
         pathii=os.path.abspath(pathii)
 
@@ -806,7 +808,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
 
     cout.execute(query)
     #dbout.commit()
-    
+
     #----------Create DocumentKeywords table----------
     query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentKeywords USING fts5(
     docid,
@@ -899,15 +901,29 @@ def metaDictToDatabase(db,docid,meta_dict,lib_folder,rename_files):
     docids=[ii[0] for ii in docids]
 
     if docid in docids:
-        print('# <metaDictToDatabase>: docid %s in database. Updating...' %docid)
-        LOGGER.info('docid %s in database. Updating...' %docid)
 
-        rec=updateToDatabase(db,docid,meta_dict,lib_folder,rename_files)
+        if meta_dict=={}:
+            print('# <metaDictToDatabase>: docid %s in database. New meta={}. Deleting...' %docid)
+            LOGGER.info('docid %s in database. New meta={}. Deleting...' %docid)
+
+            rec=delDocFromDatabase(db,docid,lib_folder)
+
+        else:
+            print('# <metaDictToDatabase>: docid %s in database. Updating...' %docid)
+            LOGGER.info('docid %s in database. Updating...' %docid)
+
+            rec=updateToDatabase(db,docid,meta_dict,lib_folder,rename_files)
     else:
-        print('# <metaDictToDatabase>: docid %s not in database. Inserting...' %docid)
-        LOGGER.info('docid %s not in database. Inserting...' %docid)
+        if meta_dict=={}:
+            print('# <metaDictToDatabase>: docid %s not in database. New meta={}. Ignored.' %docid)
+            LOGGER.info('docid %s not in database. New meta={}. Ignored.' %docid)
+            rec=0
 
-        rec=addToDatabase(db,docid,meta_dict,lib_folder,rename_files)
+        else:
+            print('# <metaDictToDatabase>: docid %s not in database. Inserting...' %docid)
+            LOGGER.info('docid %s not in database. Inserting...' %docid)
+
+            rec=addToDatabase(db,docid,meta_dict,lib_folder,rename_files)
 
     print('# <metaDictToDatabase>: rec=%s' %rec)
 
@@ -1243,5 +1259,52 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
     print('# <updateToDatabase>: Finished updating doc to database.')
     LOGGER.info('Finished updating doc to database.')
+
+    return 0
+
+def delDocFromDatabase(db,docid,lib_folder):
+
+    cout=db.cursor()
+
+    #--------------del Documents table--------------
+    query='DELETE FROM Documents WHERE (Documents.id=?)'
+    cout.execute(query, (docid,))
+    #db.commit()
+
+    #------------------del folders------------------
+    delFromTable(db, 'DocumentFolders', docid)
+
+    #------------------del authors------------------
+    delFromTable(db, 'DocumentContributors', docid)
+
+    #-------------------del files-------------------
+    query_files='''
+    SELECT DocumentFiles.abspath
+    FROM DocumentFiles
+    WHERE (DocumentFiles.did=?)
+    '''
+
+    old_files=fetchField(db, query_files, (docid,), 1, 'list')
+    print('# <delDocFromDatabase>: old_files=', old_files)
+    delFromTable(db, 'DocumentFiles', docid)
+
+    for fii in old_files:
+        if os.path.exists(fii):
+            os.remove(fii)
+
+    #-----------------del keywords-----------------
+    delFromTable(db, 'DocumentKeywords', docid)
+
+    #-------------------del notes-------------------
+    delFromTable(db, 'DocumentNotes', docid)
+
+    #-------------------del tags-------------------
+    delFromTable(db, 'DocumentTags', docid)
+
+    #-------------------del urls-------------------
+    delFromTable(db, 'DocumentUrls', docid)
+
+    print('# <delDocFromDatabase>: Finished deleting doc from database.')
+    LOGGER.info('Finished deleting doc from database.')
 
     return 0

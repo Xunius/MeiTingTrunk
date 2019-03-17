@@ -90,7 +90,7 @@ LOG_CONFIG={
 # [y] possible to let user choose default add action?
 # break down addActionTriggered()
 # citation style stuff
-# change Ctrl-N shortcut to Add button. Maybe Ctrl-Shift-N for new lib.
+# [y] change Ctrl-N shortcut to Add button. Maybe Ctrl-Shift-N for new lib.
 # add more shortcuts
 # qcompleter in some meta fields e.g. author, keyworgs
 # [y] add search bar, result treewidget, clear frame, add folder from selection

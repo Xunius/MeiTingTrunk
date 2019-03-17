@@ -2,7 +2,7 @@ import os
 import subprocess
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, pyqtSlot
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QFont, QBrush, QColor, QCursor
+from PyQt5.QtGui import QFont, QBrush, QColor, QCursor, QIcon
 from lib import sqlitedb
 from lib import bibparse, risparse
 from lib.tools import parseAuthors
@@ -46,6 +46,8 @@ class MainFrameDocTableSlots:
         self.logger.info('Changed row=%s. Changed docid=%s. meta_dict["favourite"]=%s. meta_dict["read"]=%s' \
                 %(row, docid, self.meta_dict[docid]['favourite'],\
                 self.meta_dict[docid]['read']))
+
+        self.changed_doc_ids.append(docid)
 
         return
 
@@ -116,25 +118,58 @@ class MainFrameDocTableSlots:
 
     def docTableMenu(self,pos):
 
-
         menu=QtWidgets.QMenu()
-        open_action=menu.addAction('Open File Externally')
-        open_folder_action=menu.addAction('Open Containing Folder')
-        del_from_folder_action=menu.addAction('Delete From Current Folder')
-        del_from_trash_action=QtWidgets.QAction('Delete From Trash',menu)
+
+        open_action=menu.addAction('&Open File Externally')
+        open_action.setIcon(QIcon.fromTheme('document-open'))
+        open_action.setShortcut('O')
+
+        open_folder_action=menu.addAction('Open Containing &Folder')
+        #open_folder_action.setIcon(QIcon.fromTheme('system-file-manager'))
+        open_folder_action.setIcon(self.style().standardIcon(
+            QtWidgets.QStyle.SP_DirIcon))
+        open_folder_action.setShortcut('F')
+
+        del_from_folder_action=menu.addAction('&Delete From Current Folder')
+        del_from_folder_action.setIcon(QIcon.fromTheme('user-trash'))
+        del_from_folder_action.setShortcut('D')
+
         del_from_lib_action=QtWidgets.QAction('Delete From Library',menu)
+        del_from_lib_action.setIcon(QIcon.fromTheme('user-trash'))
+
+        del_from_trash_action=QtWidgets.QAction('Delete From Trash',menu)
+        del_from_trash_action.setIcon(QIcon.fromTheme('edit-delete'))
+
         if self._current_folder_item==self.trash_folder:
             menu.addAction(del_from_trash_action)
         else:
             menu.addAction(del_from_lib_action)
-        mark_needsreview_action=menu.addAction('Mark document as Needs Review')
-        check_duplicate_folder_action=menu.addAction('Check Duplicates Within Folder')
+
+        mark_needsreview_action=menu.addAction('&Mark document as Needs Review')
+        mark_needsreview_action.setIcon(self.style().standardIcon(
+            QtWidgets.QStyle.SP_MessageBoxInformation))
+        mark_needsreview_action.setShortcut('M')
+
+        check_duplicate_folder_action=menu.addAction('Check Du&plicates Within Folder')
+        check_duplicate_folder_action.setIcon(QIcon.fromTheme('edit-find'))
+        check_duplicate_folder_action.setShortcut('P')
+
         check_duplicate_lib_action=menu.addAction('Check Duplicates Within Library')
+        check_duplicate_lib_action.setIcon(QIcon.fromTheme('edit-find'))
+
         menu.addSeparator()
         #export_menu=menu.addMenu('Export Citation')
-        export_bib_action=menu.addAction('Export to bibtex File')
-        export_ris_action=menu.addAction('Export to RIS File')
-        copy_clipboard_action=menu.addAction('Export Citation To Clipboard')
+        export_bib_action=menu.addAction('Export to &bibtex File')
+        export_bib_action.setIcon(QIcon.fromTheme('document-save-as'))
+        export_bib_action.setShortcut('B')
+
+        export_ris_action=menu.addAction('Export to &RIS File')
+        export_ris_action.setIcon(QIcon.fromTheme('document-save-as'))
+        export_ris_action.setShortcut('R')
+
+        copy_clipboard_action=menu.addAction('Export Citation To &Clipboard')
+        copy_clipboard_action.setIcon(QIcon.fromTheme('edit-copy'))
+        copy_clipboard_action.setShortcut('C')
 
         sel_rows=self.doc_table.selectionModel().selectedRows()
         sel_rows=[ii.row() for ii in sel_rows]
@@ -247,6 +282,8 @@ class MainFrameDocTableSlots:
                 self.meta_dict[docii]['read']='true'
                 print('# <openDoc>: after read=',self.meta_dict[docii]['read'])
 
+                self.changed_doc_ids.append(docii)
+
         # refresh to show read change
         self.loadDocTable(folder=self._current_folder,sortidx=4,
                 sel_row=None)
@@ -291,6 +328,7 @@ class MainFrameDocTableSlots:
             # remove folder from doc
             if (int(folderid),foldername) in self.meta_dict[idii]['folders_l']:
                 self.meta_dict[idii]['folders_l'].remove((int(folderid),foldername))
+                self.changed_doc_ids.append(idii)
 
         # check orphan
         orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,docids,
@@ -300,9 +338,11 @@ class MainFrameDocTableSlots:
         for idii in orphan_docs:
             self.meta_dict[idii]['deletionPending']='true'
             self.folder_data['-3'].append(idii)
+            self.changed_doc_ids.append(idii)
 
         if reload_table:
             self.loadDocTable(folder=(foldername,folderid),sel_row=None)
+
 
         return
 
@@ -347,6 +387,7 @@ class MainFrameDocTableSlots:
                         #%(idii, idii in self.libtree._trashed_doc_ids))
                 #self.logger.info('docid %s in _trashed_doc_ids?: %s'\
                         #%(idii, idii in self.libtree._trashed_doc_ids))
+                self.changed_doc_ids.append(idii)
 
             if reload_table:
                 self.loadDocTable(folder=self._current_folder,sel_row=None)
@@ -363,6 +404,7 @@ class MainFrameDocTableSlots:
             self.meta_dict[idii]['confirmed']='false'
             if idii not in self.folder_data['-2']:
                 self.folder_data['-2'].append(idii)
+            self.changed_doc_ids.append(idii)
 
         row=self.doc_table.currentIndex().row()
         self.loadDocTable(folder=self._current_folder,sortidx=4,
@@ -392,9 +434,11 @@ class MainFrameDocTableSlots:
                         self.logger.info('docid %s in folder_data[%s]?: %s'\
                                 %(idii, kk, idii in self.folder_data[kk]))
 
-                del self.meta_dict[idii]
+                #del self.meta_dict[idii]
 
                 # TODO: need to del this from sqlite
+                self.changed_doc_ids.append(idii)
+                self.meta_dict[idii]={}
                 #self.meta_dict[idii]['folders_l']=[]
 
                 #print('# <destroyDoc>: docid %s in meta_dict?: %s'\
@@ -678,7 +722,16 @@ class MainFrameDocTableSlots:
 
                 if len(sel_files)>0:
                     for fii in sel_files:
-                        subprocess.call(('xdg-open',fii))
+                        prop=subprocess.call(('xdg-open',fii))
+                        if prop==0:
+                            # set read to True
+                            print('# <docDoubleClicked>: read=',
+                                    self.meta_dict[docid]['read'])
+                            self.meta_dict[docid]['read']='true'
+                            print('# <docDoubleClicked>: after read=',
+                                    self.meta_dict[docid]['read'])
+
+                            self.changed_doc_ids.append(docid)
 
     def checkDocDuplicate(self,docids2,domain):
 

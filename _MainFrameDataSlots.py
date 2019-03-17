@@ -1,3 +1,4 @@
+from datetime import datetime
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QBrush
 from queue import Queue
@@ -153,42 +154,30 @@ class MainFrameDataSlots:
 
 
 
-    def saveToDatabase(self,docid,save_folder=True):
+    def saveToDatabase(self):
 
-        print('# <saveToDatabase>: Saving folders to database.')
-        self.logger.info('Saving folders to database')
+        mtime=datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+        print('# <saveToDatabase>: Save called. %s' %mtime)
+        self.logger.info('Save called. %s' %mtime)
 
         #----------------Save folders first----------------
-        if save_folder:
-            sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
-                    #self.settings.value('saving/storage_folder'))
+        if len(self.changed_folder_ids)>0:
+            sqlitedb.saveFoldersToDatabase(self.db,
+                    self.changed_folder_ids, self.folder_dict,
                     self.settings.value('saving/current_lib_folder'))
 
-        sqlitedb.metaDictToDatabase(self.db,docid,self.meta_dict[docid],
-                #self.settings.value('saving/storage_folder'),
-                self.settings.value('saving/current_lib_folder'),
-                self.settings.value('saving/rename_files'))
+            self.changed_folder_ids=[]
+            print('# <saveToDatabase>: Saving folders to database.')
+            self.logger.info('Saving folders to database')
 
-        if docid in self.changed_doc_ids:
-            self.changed_doc_ids.remove(docid)
+        self.changed_doc_ids=list(set(self.changed_doc_ids))
+        for docid in self.changed_doc_ids:
+            print('# <saveToDatabase>: Save doc %s' %docid)
+            self.logger.info('Save doc %s' %docid)
+            sqlitedb.metaDictToDatabase(self.db,docid,self.meta_dict[docid],
+                    self.settings.value('saving/current_lib_folder'),
+                    self.settings.value('saving/rename_files'))
 
-        return
-
-    def autoSaveToDatabase(self):
-        from datetime import datetime
-        mtime=datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
-        print('# <autoSaveToDatabase>: Auto save called. %s' %mtime)
-        self.logger.info('Auto save called. %s' %mtime)
-
-        #if len(self.changed_doc_ids)>0:
-        #----------------Save folders first----------------
-        #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
-                #self.settings.value('saving/current_lib_folder'))
-
-        for ii in self.changed_doc_ids:
-            #self.saveToDatabase(ii,False)
-            print('# <autoSaveToDatabase>: Save doc %s' %ii)
-            self.logger.info('Save doc %s' %ii)
 
         self.changed_doc_ids=[]
         self.settings.sync()

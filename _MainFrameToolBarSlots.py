@@ -223,7 +223,7 @@ class MainFrameToolBarSlots:
             newitem.setIcon(0,diropen_icon)
             newitem.setFlags(newitem.flags() | Qt.ItemIsEditable)
 
-            action_text=action.text()
+            action_text=action.text().replace('&','') # remove shortcut symbol
 
             if action_text=='Create Folder':
                 toplevelids=[self.libtree.topLevelItem(jj).data(1,0) for jj\
@@ -301,6 +301,7 @@ class MainFrameToolBarSlots:
         self.sortFolders()
         self.libtree.setCurrentItem(item)
 
+        self.changed_folder_ids.append(folderid)
         #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
                 #self.settings.value('saving/storage_folder'))
 
@@ -319,28 +320,6 @@ class MainFrameToolBarSlots:
         for itemii in reversed(self.sys_folders):
             moveItemToTop(itemii)
 
-        return
-
-
-    @pyqtSlot(str,str)
-    def changeFolderParent(self,move_folder_id,new_parent_id):
-
-        folder_name=self.folder_dict[move_folder_id][0]
-
-        print('# <changeFolderParent>: folder_dict[id] before change=%s'\
-                %str(self.folder_dict[move_folder_id]))
-        self.logger.info('folder_dict[id] before change=%s'\
-                %str(self.folder_dict[move_folder_id]))
-
-        self.folder_dict[move_folder_id]=(folder_name, new_parent_id)
-
-        print('# <changeFolderParent>: folder_dict[id] after change=%s'\
-                %str(self.folder_dict[move_folder_id]))
-        self.logger.info('folder_dict[id] after change=%s'\
-                %str(self.folder_dict[move_folder_id]))
-
-        #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
-                #self.settings.value('saving/storage_folder'))
         return
 
 
@@ -452,6 +431,8 @@ class MainFrameToolBarSlots:
 
         print('# <createFolderFromSearch>: Folder new id=%s. New entry in folder_dict=%s' %(newid, self.folder_dict[newid]))
         self.logger.info('Folder new id=%s. New entry in folder_dict=%s' %(newid, self))
+
+        self.changed_folder_ids.append(newid)
 
         return
 

@@ -1,6 +1,6 @@
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QCursor, QBrush, QColor
+from PyQt5.QtGui import QCursor, QBrush, QColor, QIcon
 from lib import sqlitedb
 
 
@@ -89,10 +89,25 @@ class MainFrameLibTreeSlots:
                 menu_type='trash'
             else:
                 menu=QtWidgets.QMenu()
-                add_action=menu.addAction('Create Folder')
-                addsub_action=menu.addAction('Create Sub Folder')
-                del_action=menu.addAction('Delete Folder')
-                rename_action=menu.addAction('Rename Folder')
+                add_action=menu.addAction('&Create Folder')
+                add_action.setIcon(self.style().standardIcon(
+                    QtWidgets.QStyle.SP_DirOpenIcon))
+                add_action.setShortcut('C')
+
+                addsub_action=menu.addAction('Create &Sub Folder')
+                addsub_action.setIcon(self.style().standardIcon(
+                    QtWidgets.QStyle.SP_DirClosedIcon))
+                addsub_action.setShortcut('S')
+
+                del_action=menu.addAction('&Delete Folder')
+                del_action.setIcon(self.style().standardIcon(
+                    QtWidgets.QStyle.SP_TrashIcon))
+                del_action.setShortcut('D')
+
+                rename_action=menu.addAction('&Rename Folder')
+                rename_action.setIcon(QIcon.fromTheme('edit-select-all'))
+                rename_action.setShortcut('R')
+
                 menu_type='default'
 
             if menu_type=='trash':
@@ -132,6 +147,29 @@ class MainFrameLibTreeSlots:
                     elif action==rename_action:
                         self.renameFolder()
 
+        return
+
+
+    @pyqtSlot(str,str)
+    def changeFolderParent(self,move_folder_id,new_parent_id):
+
+        folder_name=self.folder_dict[move_folder_id][0]
+
+        print('# <changeFolderParent>: folder_dict[id] before change=%s'\
+                %str(self.folder_dict[move_folder_id]))
+        self.logger.info('folder_dict[id] before change=%s'\
+                %str(self.folder_dict[move_folder_id]))
+
+        self.folder_dict[move_folder_id]=(folder_name, new_parent_id)
+
+        print('# <changeFolderParent>: folder_dict[id] after change=%s'\
+                %str(self.folder_dict[move_folder_id]))
+        self.logger.info('folder_dict[id] after change=%s'\
+                %str(self.folder_dict[move_folder_id]))
+
+        self.changed_folder_ids.append(move_folder_id)
+        #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
+                #self.settings.value('saving/storage_folder'))
         return
 
 
@@ -198,6 +236,8 @@ class MainFrameLibTreeSlots:
                     %(idii, self.meta_dict[idii]['deletionPending']))
             self.logger.info('Set deletionPending to orphan doc %s %s' \
                     %(idii, self.meta_dict[idii]['deletionPending']))
+
+        self.changed_doc_ids.extend(orphan_docs)
 
         for fii in delfolderids:
             #print('del folder',fii,self.folder_dict[fii])

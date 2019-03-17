@@ -32,7 +32,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         self.auto_save_timer=QTimer(self)
         tinter=self.settings.value('saving/auto_save_min', 1, int)*60*1000
         self.auto_save_timer.setInterval(tinter)
-        self.auto_save_timer.timeout.connect(self.autoSaveToDatabase)
+        self.auto_save_timer.timeout.connect(self.saveToDatabase)
 
     def initUI(self):
 
