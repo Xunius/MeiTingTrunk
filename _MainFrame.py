@@ -27,6 +27,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         super(MainFrame,self).__init__()
 
         self.settings=settings
+        #self.main_window=main_window
         self.logger=logging.getLogger('default_logger')
         self.initUI()
         self.auto_save_timer=QTimer(self)
@@ -136,12 +137,13 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         self.fold_tab_button=self.createFoldTabButton()
         h_layout.addWidget(self.fold_tab_button)
         frame.setLayout(h_layout)
+        frame.setSizePolicy(getXExpandYExpandSizePolicy())
         h_split.addWidget(frame)
 
         #------------------Add right pane------------------
-        fr1=QtWidgets.QFrame()
+        self.tab_pane=QtWidgets.QFrame()
         v_la2=QtWidgets.QVBoxLayout()
-        fr1.setLayout(v_la2)
+        self.tab_pane.setLayout(v_la2)
 
         #-------------Add confirm review frame-------------
         self.confirm_review_frame=self.createConfirmReviewFrame()
@@ -151,7 +153,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         self.tabs=self.createTabs()
         v_la2.addWidget(self.tabs)
 
-        h_split.addWidget(fr1)
+        h_split.addWidget(self.tab_pane)
 
         #------------------Add status bar------------------
         self.status_bar=QtWidgets.QStatusBar()
@@ -168,6 +170,13 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         # search_res_frame created before status bar
         self.search_res_frame.search_done_sig.connect(self.status_bar.clearMessage)
+
+        show_widgets=self.settings.value('view/show_widgets',[],str)
+        if isinstance(show_widgets,str) and show_widgets=='':
+            show_widgets=[]
+
+        if 'Toggle Status bar' not in show_widgets:
+            self.status_bar.setVisible(False)
 
         h_split.setHandleWidth(4)
         w=h_split.size().width()
@@ -368,6 +377,13 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         frame.setLayout(v_layout)
         scroll.setWidget(frame)
 
+        show_widgets=self.settings.value('view/show_widgets',[],str)
+        if isinstance(show_widgets,str) and show_widgets=='':
+            show_widgets=[]
+
+        if 'Toggle Filter List' not in show_widgets:
+            scroll.setVisible(False)
+
         return scroll
 
 
@@ -510,10 +526,34 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
             self._current_doc,self.t_meta._meta_dict,field_list))
         self.t_meta.update_by_doi_signal.connect(self.updateByDOI)
 
-        tabs.addTab(self.t_meta,'Meta Data')
-        tabs.addTab(self.t_notes,'Notes')
-        tabs.addTab(self.t_bib,'Bibtex')
-        tabs.addTab(self.t_scratchpad,'Strach Pad')
+        show_widgets=self.settings.value('view/show_widgets',[],str)
+        if isinstance(show_widgets,str) and show_widgets=='':
+            show_widgets=[]
+
+        self.tab_dict={'Toggle Meta Tab': [self.t_meta, 'Meta Data'],
+                'Toggle Notes Tab': [self.t_notes, 'Notes'],
+                'Toggle BibTex Tab': [self.t_bib, 'BibTex'],
+                'Toggle Scratch Pad Tab': [self.t_scratchpad, 'Scratch Pad']
+                }
+
+        print('# <createTabs>: show widgets=',show_widgets)
+        for tii in show_widgets:
+            if tii in self.tab_dict:
+                tabs.addTab(*self.tab_dict[tii])
+
+        for tii in list(set(self.tab_dict.keys()).difference(show_widgets)):
+            self.tab_dict[tii][0].setVisible(False)
+
+        '''
+        if 'Toggle Meta Tab' in show_widgets:
+            tabs.addTab(self.t_meta,'Meta Data')
+        if 'Toggle Notes Tab' in show_widgets:
+            tabs.addTab(self.t_notes,'Notes')
+        if 'Toggle BibTex Tab' in show_widgets:
+            tabs.addTab(self.t_bib,'Bibtex')
+        if 'Toggle Scratch Tab' in show_widgets:
+            tabs.addTab(self.t_scratchpad,'Scratch Pad')
+        '''
 
         return tabs
 

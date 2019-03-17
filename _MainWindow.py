@@ -4,7 +4,7 @@ import logging.config
 import sqlite3
 import pathlib
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QSettings, QTimer
+from PyQt5.QtCore import Qt, QSettings, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 
 import _MainFrame
@@ -36,10 +36,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings=self.loadSettings()
         self.is_loaded=False
 
-        self.initUI()
-
         self.main_frame=_MainFrame.MainFrame(self.settings)
+        self.main_frame.view_change_sig.connect(self.viewChangeResponse)
         self.setCentralWidget(self.main_frame)
+
+        # put initUI() after main_frame as it's referencing widgets in main_frame
+        self.initUI()
 
         recent=self.settings.value('file/recent_open',[],str)
         if isinstance(recent,str) and recent=='':
@@ -94,6 +96,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
             settings.setValue('search/search_fields', ['Authors', 'Title',
                 'Abstract', 'Keywords', 'Tags', 'Notes', 'Publication'])
+
+            settings.setValue('view/show_widgets', ['Toggle Filter List',
+                'Toggle Tab Pane', 'Toggle Meta Tab', 'Toggle Notes Tab',
+                'Toggle BibTex Tab', 'Toggle Scratch Pad Tab',
+                'Toggle Status bar'])
 
             settings.sync()
 
@@ -174,6 +181,27 @@ class MainWindow(QtWidgets.QMainWindow):
         preference_action.setIcon(QIcon.fromTheme('preferences-system'))
         self.edit_menu.addAction(preference_action)
 
+        self.view_menu=self.menu_bar.addMenu('&View')
+
+        self.view_action_dict={}
+        show_widgets=self.settings.value('view/show_widgets',[],str)
+        if isinstance(show_widgets,str) and show_widgets=='':
+            show_widgets=[]
+
+        for tii in ['Toggle Filter List', None, 'Toggle Tab Pane',
+                'Toggle Meta Tab', 'Toggle Notes Tab', 'Toggle BibTex Tab',
+                'Toggle Scratch Pad Tab', None, 'Toggle Status bar']:
+            if tii is None:
+                self.view_menu.addSeparator()
+            else:
+                tii_view_action=self.view_menu.addAction(tii)
+                tii_view_action.setCheckable(True)
+                if tii in show_widgets:
+                    tii_view_action.setChecked(True)
+                else:
+                    tii_view_action.setChecked(False)
+                self.view_action_dict[tii]=tii_view_action
+
         self.tool_menu=self.menu_bar.addMenu('&Tool')
         self.import_action=QtWidgets.QAction('Import', self)
         self.export_action=QtWidgets.QAction('Export', self)
@@ -196,6 +224,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.export_action.triggered.connect(self.exportTriggered)
         self.help_menu.triggered.connect(self.helpMenuTriggered)
         quit_action.triggered.connect(self.close)
+        self.view_menu.triggered.connect(self.viewChangeTriggered)
 
         self.show()
 
@@ -437,4 +466,23 @@ class MainWindow(QtWidgets.QMainWindow):
         diag.exec_()
         return
 
+    def viewChangeTriggered(self,action):
+        action_text=action.text()
+        print('# <viewChangeTriggered>: action=',action_text)
+
+        if action_text=='Toggle Filter List':
+            self.main_frame.foldFilterButtonClicked()
+        elif action_text=='Toggle Tab Pane':
+            self.main_frame.foldTabButtonClicked()
+        elif action_text=='Toggle Status bar':
+            self.main_frame.statusbarViewChange()
+        else:
+            self.main_frame.metaTabViewChange(action_text)
+        return
+
+
+    @pyqtSlot(str,bool)
+    def viewChangeResponse(self,view_name,state):
+
+        self.view_action_dict[view_name].setChecked(state)
 

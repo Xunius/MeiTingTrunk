@@ -1,37 +1,178 @@
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread
+
+
+class SettingsThread(QThread):
+    def __init__(self, setting, key, value):
+        super(SettingsThread,self).__init__()
+        self.setting=setting
+        self.key=key
+        self.value=value
+
+    def __del__(self):
+        self.wait()
+
+    def run(self):
+        self.setting.setValue(self.key,self.value)
+        print('# <SettingsThread>: Settings saved.')
+        return
 
 
 
 class MainFrameOtherSlots:
 
 
+    view_change_sig=pyqtSignal(str,bool)
+
+
     #######################################################################
     #                             Other slots                             #
     #######################################################################
 
-
     def foldFilterButtonClicked(self):
 
-        height=self.filter_list.height()
-        if height>0:
-            self.filter_list.setVisible(not self.filter_list.isVisible())
+        show_widgets=self.settings.value('view/show_widgets',[],str)
+        if isinstance(show_widgets,str) and show_widgets=='':
+            show_widgets=[]
+
+        if self.filter_list.isVisible():
+            self.filter_list.setVisible(False)
             self.fold_filter_button.setArrowType(Qt.UpArrow)
+            self.view_change_sig.emit('Toggle Filter List',False)
+            if 'Toggle Filter List' in show_widgets:
+                show_widgets.remove('Toggle Filter List')
         else:
-            self.filter_list.setVisible(not self.filter_list.isVisible())
+            self.filter_list.setVisible(True)
             self.fold_filter_button.setArrowType(Qt.DownArrow)
+            self.view_change_sig.emit('Toggle Filter List',True)
+            if 'Toggle Filter List' not in show_widgets:
+                show_widgets.append('Toggle Filter List')
+
+        #self.settings.setValue('view/show_widgets',show_widgets)
+        st=SettingsThread(self.settings, 'view/show_widgets', show_widgets)
+        st.start()
+
         return
 
 
+    @pyqtSlot()
     def foldTabButtonClicked(self):
 
-        width=self.tabs.width()
-        if width>0:
-            self.tabs.setVisible(not self.tabs.isVisible())
+        show_widgets=self.settings.value('view/show_widgets',[],str)
+        if isinstance(show_widgets,str) and show_widgets=='':
+            show_widgets=[]
+
+        if self.tab_pane.isVisible():
+            self.tab_pane.setVisible(False)
             self.fold_tab_button.setArrowType(Qt.LeftArrow)
+            self.view_change_sig.emit('Toggle Tab Pane',False)
+
+            if 'Toggle Tab Pane' in show_widgets:
+                show_widgets.remove('Toggle Tab Pane')
         else:
-            self.tabs.setVisible(not self.tabs.isVisible())
+            self.tab_pane.setVisible(True)
             self.fold_tab_button.setArrowType(Qt.RightArrow)
+            self.view_change_sig.emit('Toggle Tab Pane',True)
+
+            if 'Toggle Tab Pane' not in show_widgets:
+                show_widgets.append('Toggle Tab Pane')
+
+            has_tab=False
+
+            for kk, vv in self.tab_dict.items():
+                tabii, tabnameii=vv
+                idx=self.tabs.indexOf(tabii)
+                if idx!=-1:
+                    has_tab=True
+
+            if not has_tab:
+                for kk, vv in self.tab_dict.items():
+                    tabii, tabnameii=vv
+                    idx=self.tabs.indexOf(tabii)
+                    self.tabs.addTab(tabii, tabnameii)
+                    self.view_change_sig.emit(kk,True)
+
+                    if kk not in show_widgets:
+                        show_widgets.append(kk)
+
+                if 'Toggle Tab Pane' not in show_widgets:
+                    show_widgets.append('Toggle Tab Pane')
+
+        #self.settings.setValue('view/show_widgets',show_widgets)
+        st=SettingsThread(self.settings, 'view/show_widgets', show_widgets)
+        st.start()
+
         return
+
+    @pyqtSlot()
+    def metaTabViewChange(self, view_name='Toggle Tab Pane'):
+
+        show_widgets=self.settings.value('view/show_widgets',[],str)
+        if isinstance(show_widgets,str) and show_widgets=='':
+            show_widgets=[]
+
+        has_tab=False
+        for kk, vv in self.tab_dict.items():
+
+            tabii, tabnameii=vv
+            idx=self.tabs.indexOf(tabii)
+            if idx==-1:
+                if view_name==kk:
+                    tabii.setVisible(True)
+                    self.tabs.addTab(tabii, tabnameii)
+                    self.view_change_sig.emit(view_name,True)
+                    has_tab=True
+                    if view_name not in show_widgets:
+                        show_widgets.append(view_name)
+            else:
+                if view_name==kk:
+                    tabii.setVisible(False)
+                    self.tabs.removeTab(idx)
+                    self.view_change_sig.emit(view_name,False)
+                    if view_name in show_widgets:
+                        show_widgets.remove(view_name)
+                else:
+                    has_tab=True
+
+        print('# <metaTabViewChange>: has_tab:',has_tab)
+        if not has_tab:
+            self.tab_pane.setVisible(False)
+            self.fold_tab_button.setArrowType(Qt.LeftArrow)
+            self.view_change_sig.emit('Toggle Tab Pane',False)
+            if 'Toggle Tab Pane' in show_widgets:
+                show_widgets.remove('Toggle Tab Pane')
+        else:
+            self.tab_pane.setVisible(True)
+            self.fold_tab_button.setArrowType(Qt.RightArrow)
+            self.view_change_sig.emit('Toggle Tab Pane',True)
+            if 'Toggle Tab Pane' not in show_widgets:
+                show_widgets.append('Toggle Tab Pane')
+
+        #self.settings.setValue('view/show_widgets',show_widgets)
+        st=SettingsThread(self.settings, 'view/show_widgets', show_widgets)
+        st.start()
+
+        return
+
+    def statusbarViewChange(self):
+        show_widgets=self.settings.value('view/show_widgets',[],str)
+        if isinstance(show_widgets,str) and show_widgets=='':
+            show_widgets=[]
+
+        if self.status_bar.isVisible():
+            self.status_bar.setVisible(False)
+            if 'Toggle Status bar' in show_widgets:
+                show_widgets.remove('Toggle Status bar')
+        else:
+            self.status_bar.setVisible(True)
+            if 'Toggle Status bar' not in show_widgets:
+                show_widgets.append('Toggle status bar')
+
+        #self.settings.setValue('view/show_widgets',show_widgets)
+        st=SettingsThread(self.settings, 'view/show_widgets', show_widgets)
+        st.start()
+
+        return
+
 
     def clearFilterButtonClicked(self):
 
