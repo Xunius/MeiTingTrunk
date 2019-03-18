@@ -138,6 +138,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.menu_bar=self.menuBar()
 
+        #--------------------Files menu--------------------
         self.file_menu=self.menu_bar.addMenu('&File')
 
         create_database_action=self.file_menu.addAction('Create New Library')
@@ -157,7 +158,6 @@ class MainWindow(QtWidgets.QMainWindow):
         create_backup_action.setIcon(QIcon.fromTheme('document-send'))
         quit_action.setIcon(QIcon.fromTheme('window-close'))
 
-
         create_database_action.setShortcut('Ctrl+Shift+n')
         open_database_action.setShortcut('Ctrl+o')
         save_database_action.setShortcut('Ctrl+s')
@@ -176,11 +176,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 recentii=self.recent_open_menu.addAction(rii)
                 recentii.triggered.connect(lambda x,t=rii: self._openDatabase(t))
 
+        #--------------------Edit menu--------------------
         self.edit_menu=self.menu_bar.addMenu('&Edit')
         preference_action=QtWidgets.QAction('Preferences',self)
         preference_action.setIcon(QIcon.fromTheme('preferences-system'))
+        preference_action.setShortcut('Ctrl+p')
         self.edit_menu.addAction(preference_action)
 
+        #--------------------View menu--------------------
         self.view_menu=self.menu_bar.addMenu('&View')
 
         self.view_action_dict={}
@@ -193,6 +196,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 'Toggle Scratch Pad Tab', None, 'Toggle Status bar']:
             if tii is None:
                 self.view_menu.addSeparator()
+            elif tii=='Toggle Status bar':
+                continue
             else:
                 tii_view_action=self.view_menu.addAction(tii)
                 tii_view_action.setCheckable(True)
@@ -202,17 +207,25 @@ class MainWindow(QtWidgets.QMainWindow):
                     tii_view_action.setChecked(False)
                 self.view_action_dict[tii]=tii_view_action
 
-        self.tool_menu=self.menu_bar.addMenu('&Tool')
-        self.import_action=QtWidgets.QAction('Import', self)
-        self.export_action=QtWidgets.QAction('Export', self)
+        # remove the box of checkboxes
+        self.menu_bar.setStyleSheet('''
+        QMenu::indicator {
+        }
+        ''')
+
+        #--------------------Tools menu--------------------
+        self.tool_menu=self.menu_bar.addMenu('&Tools')
+        self.import_action=QtWidgets.QAction('&Import', self)
+        self.export_action=QtWidgets.QAction('&Export', self)
         self.tool_menu.addAction(self.import_action)
         self.tool_menu.addAction(self.export_action)
         if not self.is_loaded:
             self.import_action.setEnabled(False)
             self.export_action.setEnabled(False)
 
+        #--------------------Help menu--------------------
         self.help_menu=self.menu_bar.addMenu('&Help')
-        self.help_menu.addAction('Help')
+        self.help_menu.addAction('&Help')
 
         #-----------------Connect signals-----------------
         create_database_action.triggered.connect(self.createDatabaseTriggered)

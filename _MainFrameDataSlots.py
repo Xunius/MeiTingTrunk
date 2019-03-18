@@ -130,6 +130,16 @@ class MainFrameDataSlots:
         if docid not in self.folder_data[folderid]:
             self.folder_data[folderid].append(docid)
 
+        #-------------Restoring a trashed doc-------------
+        current_folderid=self._current_folder[1]
+        trashed_folders=self._trashed_folder_ids+['-3']
+        if current_folderid in trashed_folders:
+            if self.meta_dict[docid]['deletionPending']=='true':
+                self.meta_dict[docid]['deletionPending']=='false'
+                if docid in self.folder_data[current_folderid]:
+                    self.folder_data[current_folderid].remove(docid)
+                    self.loadDocTable(folder=self._current_folder,sel_row=None,sortidx=4)
+
         print('# <addDocToFolder>: Updated meta_dict["folders_l"]=%s' %self.meta_dict[docid]['folders_l'])
         self.logger.info('Updated meta_dict["folders_l"]=%s' %self.meta_dict[docid]['folders_l'])
 
@@ -149,6 +159,7 @@ class MainFrameDataSlots:
 
         self.changed_doc_ids.append(docid)
 
+
         return
 
 
@@ -159,6 +170,12 @@ class MainFrameDataSlots:
         mtime=datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         print('# <saveToDatabase>: Save called. %s' %mtime)
         self.logger.info('Save called. %s' %mtime)
+
+        self.status_bar.setVisible(True)
+        self.status_bar.showMessage('Saving. Please standby ...')
+        # progressbar doesn't work in the same thread
+        self.progressbar.setVisible(True)
+        self.progressbar.setMaximum(0)
 
         #----------------Save folders first----------------
         if len(self.changed_folder_ids)>0:
@@ -178,9 +195,11 @@ class MainFrameDataSlots:
                     self.settings.value('saving/current_lib_folder'),
                     self.settings.value('saving/rename_files'))
 
-
         self.changed_doc_ids=[]
         self.settings.sync()
+
+        self.status_bar.clearMessage()
+        self.progressbar.setVisible(False)
 
         return
 

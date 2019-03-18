@@ -10,6 +10,9 @@ from ..tools import getHLine, getXMinYExpandSizePolicy
 
 LOGGER=logging.getLogger('default_logger')
 
+
+
+
 class PreferenceDialog(QtWidgets.QDialog):
 
     def __init__(self,settings,parent=None):
@@ -295,9 +298,9 @@ class PreferenceDialog(QtWidgets.QDialog):
         le.setText('Renaming Format: Author_Year_Title.pdf')
 
         label2=QtWidgets.QLabel('''
-        Documents (e.g. PDFs) will be copied to the 
+        Documents (e.g. PDFs) will be copied to the
         <span style="font:bold;">
-        "%s/_collections" </span> 
+        "%s/_collections" </span>
         folder, and renamed by the following format.
         ''' %(self.settings.value('saving/current_lib_folder')))
         label2.setTextFormat(Qt.RichText)

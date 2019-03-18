@@ -389,7 +389,8 @@ class MainFrameToolBarSlots:
         current_folder=self._current_folder
         print('# <searchBarClicked>: folder=',current_folder)
 
-        # TODO: need to write sqlite before searching
+        # NOTE: need to write to sqlite before searching
+        self.saveToDatabase()
 
         # NOTE: order matters here:
         self.status_bar.showMessage('Searching ...')

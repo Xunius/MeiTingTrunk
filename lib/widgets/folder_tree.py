@@ -147,8 +147,9 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
             print('# <dropEvent>: doc id=',dropped_docid,'parentid=',
                     newparent.data(1,0))
+            if newparent.data(1,0)!='':
 
-            self.add_doc_to_folder_signal.emit(dropped_docid, newparent.data(1,0))
+                self.add_doc_to_folder_signal.emit(dropped_docid, newparent.data(1,0))
 
             return
 
@@ -164,23 +165,17 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
             parentidx=self.indexFromItem(newparent)
             indicatorpos=self.dropIndicatorPosition()
 
-            print('# <dropEvent>: parentidx.row()=%s. newparent=.data(0,0=%s.'\
+            print('# <dropEvent>: parentidx.row()=%s. newparent.data(0,0)=%s'\
                     %(parentidx.row(), newparent.data(0,0)))
-            LOGGER.info('parentidx.row()=%s. newparent=.data(0,0=%s.'\
+            LOGGER.info('parentidx.row()=%s. newparent=data(0,0)=%s'\
                     %(parentidx.row(), newparent.data(0,0)))
+
 
             print('# <dropEvent>: dropIndicatorPosition=%s' %indicatorpos)
             LOGGER.info('dropIndicatorPosition=%s' %indicatorpos)
 
             # on item
             if indicatorpos==0:
-
-                # get children
-                children=[newparent.child(ii) for ii in range(newparent.childCount())]
-                children_names=[ii.data(0,0) for ii in children]
-
-                print('# <dropEvent>: Got children=%s' %children_names)
-                LOGGER.info('Got children=%s' %children_names)
 
                 if newparent.data(0,0) in ['All', 'Needs Review']:
                     event.ignore()
@@ -193,9 +188,16 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
                     LOGGER.info('Trashing folder.')
 
                     self.folder_del_signal.emit(self._move_item,newparent,True)
-                    return 
+                    return
 
-                # change folder parent
+                # get children
+                children=[newparent.child(ii) for ii in range(newparent.childCount())]
+                children_names=[ii.data(0,0) for ii in children]
+
+                print('# <dropEvent>: Got children=%s' %children_names)
+                LOGGER.info('Got children=%s' %children_names)
+
+                # check name conflict
                 if self._move_item.data(0,0) in children_names:
 
                     print('# <dropEvent>: Name conflict.')
@@ -210,6 +212,7 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
                     msg.exec_()
                     return
                 else:
+                    # change folder parent
                     event.setDropAction(Qt.MoveAction)
                     self.folder_move_signal.emit(self._move_item.data(1,0),\
                             newparent.data(1,0))
@@ -221,13 +224,37 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
                 if parentidx.row()<=3:
                     event.ignore()
                     return
+                else:
+                    grandparent=newparent.parent()
+                    if grandparent is None:
+                        grandparentid='-1'
+                    else:
+                        grandparentid=grandparent.data(1,0)
+                    print('# <dropEvent>: grandparent id=', grandparentid)
+                    event.setDropAction(Qt.MoveAction)
+                    self.folder_move_signal.emit(self._move_item.data(1,0),\
+                            grandparentid)
+                    super(MyTreeWidget,self).dropEvent(event)
+                    return
 
             # below item
             elif indicatorpos==2:
                 if parentidx.row()<=2:
                     event.ignore()
                     return
+                else:
+                    grandparent=newparent.parent()
+                    if grandparent is None:
+                        grandparentid='-1'
+                    else:
+                        grandparentid=grandparent.data(1,0)
+                    print('# <dropEvent>: grandparent id=', grandparentid)
+                    event.setDropAction(Qt.MoveAction)
+                    self.folder_move_signal.emit(self._move_item.data(1,0),\
+                            grandparentid)
+                    super(MyTreeWidget,self).dropEvent(event)
+                    return
 
-            super(MyTreeWidget,self).dropEvent(event)
+            #super(MyTreeWidget,self).dropEvent(event)
 
 

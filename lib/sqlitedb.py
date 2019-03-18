@@ -358,6 +358,7 @@ def getTrashedFolders(folder_dict):
     return results
 
 
+
 def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
 
     if docids is None:
@@ -721,6 +722,12 @@ def renameFile(fname,meta_dict,replace_space=False):
         year='unknown'
     title=meta_dict.get('title',basename)
 
+    # crop length
+    fname2='%s_%s_%s%s' %(author,year,title,ext)
+    len1=len(dirjj)+1+len(fname2)
+    if len1>255-6:
+        title=title[:255-6-len1]
+
     #---------Handle multiple files for a doc---------
     if len(meta_dict['files_l'])==1:
         fname2='%s_%s_%s%s' %(author,year,title,ext)
@@ -733,6 +740,7 @@ def renameFile(fname,meta_dict,replace_space=False):
 
     fname2=re.sub(r'[<>:"|?*]','_',fname2)
     print('# <renameFile>: Old file name=',fname,'New file name=',fname2)
+
 
     return fname2
 

@@ -165,7 +165,7 @@ class MainFrameOtherSlots:
         else:
             self.status_bar.setVisible(True)
             if 'Toggle Status bar' not in show_widgets:
-                show_widgets.append('Toggle status bar')
+                show_widgets.append('Toggle Status bar')
 
         self.setting_thread=SettingsThread(self.settings,
                 'view/show_widgets', show_widgets)

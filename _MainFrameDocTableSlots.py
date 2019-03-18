@@ -333,7 +333,7 @@ class MainFrameDocTableSlots:
         # check orphan
         orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,docids,
                 self._trashed_folder_ids)
-        self._orphan_doc_ids.extend(orphan_docs)
+        #self._orphan_doc_ids.extend(orphan_docs)
 
         for idii in orphan_docs:
             self.meta_dict[idii]['deletionPending']='true'
@@ -377,8 +377,8 @@ class MainFrameDocTableSlots:
                 #self.logger.info('docid %s in meta_dict?: %s'\
                         #%(idii, idii in self.meta_dict))
 
-                if idii not in self._orphan_doc_ids:
-                    self._orphan_doc_ids.append(idii)
+                #if idii not in self._orphan_doc_ids:
+                    #self._orphan_doc_ids.append(idii)
 
                 self.folder_data['-3'].append(idii)
                 self.meta_dict[idii]['deletionPending']='true'
@@ -436,7 +436,7 @@ class MainFrameDocTableSlots:
 
                 #del self.meta_dict[idii]
 
-                # TODO: need to del this from sqlite
+                # NOTE: need to del this from sqlite
                 self.changed_doc_ids.append(idii)
                 self.meta_dict[idii]={}
                 #self.meta_dict[idii]['folders_l']=[]

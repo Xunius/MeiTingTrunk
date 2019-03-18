@@ -85,7 +85,7 @@ class MainFrameLibTreeSlots:
             if item==self.trash_folder or folderid in self._trashed_folder_ids:
                 menu=QtWidgets.QMenu()
                 restore_action=menu.addAction('Restore Folder(s)')
-                clear_action=menu.addAction('Clear Folder(s) From Trash')
+                clear_action=menu.addAction('Delete From Trash')
                 menu_type='trash'
             else:
                 menu=QtWidgets.QMenu()
@@ -134,9 +134,9 @@ class MainFrameLibTreeSlots:
 
                 if menu_type=='trash':
                     if action==restore_action:
-                        pass
+                        self.restoreFromTrash()
                     elif action==clear_action:
-                        pass
+                        self.delFromTrash()
                 else:
                     if action==add_action:
                         self.addFolderButtonClicked(add_action)
@@ -155,6 +155,15 @@ class MainFrameLibTreeSlots:
 
         folder_name=self.folder_dict[move_folder_id][0]
 
+        #------------------Restoring docs------------------
+        print('# <changeFolderParent>: move_folder id=',move_folder_id)
+        print('# <changeFolderParent>: trashed_folders=',self._trashed_folder_ids)
+        if move_folder_id in self._trashed_folder_ids:
+            for docid in self.folder_data[move_folder_id]:
+                print('# <changeFolderParent>: restoring docii=',docid)
+                if self.meta_dict[docid]['deletionPending']=='true':
+                    self.meta_dict[docid]['deletionPending']=='false'
+
         print('# <changeFolderParent>: folder_dict[id] before change=%s'\
                 %str(self.folder_dict[move_folder_id]))
         self.logger.info('folder_dict[id] before change=%s'\
@@ -168,8 +177,11 @@ class MainFrameLibTreeSlots:
                 %str(self.folder_dict[move_folder_id]))
 
         self.changed_folder_ids.append(move_folder_id)
+
         #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
                 #self.settings.value('saving/storage_folder'))
+
+
         return
 
 
@@ -227,7 +239,7 @@ class MainFrameLibTreeSlots:
         print('# <postTrashFolder>: Orphan docs=%s' %orphan_docs)
         self.logger.info('Orphan docs=%s' %orphan_docs)
 
-        self._orphan_doc_ids.extend(orphan_docs)
+        #self._orphan_doc_ids.extend(orphan_docs)
 
         for idii in orphan_docs:
             self.meta_dict[idii]['deletionPending']='true'
@@ -248,6 +260,49 @@ class MainFrameLibTreeSlots:
             #print(fii,'in folder_dict?',fii in self.folder_dict)
 
         return
+
+
+
+
+    def restoreFromTrash(self):
+        msg=QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setWindowTitle('Restore')
+        msg.setText('Not implemented yet.')
+        msg.setInformativeText('You can drag/drop trashed folders/documents to restore them.')
+        msg.exec_()
+
+        return
+
+    def delFromTrash(self):
+
+        choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
+            'Deleting folder(s) and document within permanently?',
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        if choice==QtWidgets.QMessageBox.No:
+            return
+
+        foldername,folderid=self._current_folder
+        print('# <delFromTrash>: current_folder',foldername,folderid)
+
+        #-------------------Empty trash-------------------
+        if folderid=='-3':
+            #-----------------Get orphan docs-----------------
+            for docii in self.folder_data['-3']:
+                print('# <delFromTrash>: orphan doc=',docii)
+
+            for fii in self._trashed_folder_ids:
+                print('# <delFromTrash>: trashed_folder=',fii)
+                for docii in self.folder_data[fii]:
+                    print('# <delFromTrash>: doc in trashed folder=',docii)
+
+        else:
+            for fii in self._trashed_folder_ids:
+                if fii==folderid:
+                    print('# <delFromTrash>: trashed_folder=',fii)
+                    for docii in self.folder_data[fii]:
+                        print('# <delFromTrash>: doc in trashed folder=',docii)
+
 
 
 

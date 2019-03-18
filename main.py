@@ -99,6 +99,7 @@ LOG_CONFIG={
 # add search result caching
 # save to sqlite before calling search
 # crop file path within 255?
+# show number of docs and number of selected rows in status bar
 
 
 if __name__=='__main__':
@@ -111,7 +112,7 @@ if __name__=='__main__':
     print('# <__init__>: splash_pic', splash_pic)
     splash=QtWidgets.QSplashScreen(splash_pic, Qt.WindowStaysOnTopHint)
     splash.show()
-    #splash.showMessage('YOLO')
+    splash.showMessage(__version__)
 
     QTimer.singleShot(1984, splash.close)
 

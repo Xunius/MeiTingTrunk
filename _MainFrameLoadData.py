@@ -115,6 +115,10 @@ class MainFrameLoadData:
             #return self.libtree._trashed_folder_ids
             return sqlitedb.getTrashedFolders(self.folder_dict)
 
+    @property
+    def _orphan_doc_ids(self):
+        if hasattr(self,'meta_dict'):
+            return [kk for kk in self.meta_dict if self.meta_dict[kk]['deletionPending']=='true']
 
 
     def loadLibTree(self,db,meta_dict,folder_data,folder_dict):
@@ -165,16 +169,19 @@ class MainFrameLoadData:
         #self.libtree._trashed_folder_ids=sqlitedb.getTrashedFolders(self.folder_dict)
         #self.libtree._trashed_folder_ids=[kk for kk,vv in self.folder_dict.items()\
                 #if vv[1]=='-3']
-        trashed_folders=[(self.folder_dict[kk][0], kk) for kk in \
-                self._trashed_folder_ids]
-        print('# <loadLibTree>: trashed_folder_ids',self._trashed_folder_ids)
+        #trashed_folders=[(self.folder_dict[kk][0], kk) for kk in \
+                #self._trashed_folder_ids]
+
+        trashed_folders=[(vv[0],kk) for kk,vv in self.folder_dict.items() if vv[1]=='-3']
+
+        #print('# <loadLibTree>: trashed_folder_ids',self._trashed_folder_ids)
         print('# <loadLibTree>: trashed_folders',trashed_folders)
 
         for fnameii,idii in trashed_folders:
             addFolder(self.trash_folder,idii,self.folder_dict)
 
-        orphan_docs=sqlitedb.findOrphanDocs2(self.db)
-        self._orphan_doc_ids=orphan_docs
+        #orphan_docs=sqlitedb.findOrphanDocs2(self.db)
+        #self._orphan_doc_ids=orphan_docs
 
         #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
         self.libtree.itemDoubleClicked.connect(self.renameFolder)
