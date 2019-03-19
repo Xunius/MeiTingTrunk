@@ -285,26 +285,39 @@ class MainFrameLibTreeSlots:
         foldername,folderid=self._current_folder
         print('# <delFromTrash>: current_folder',foldername,folderid)
 
+        changed_folders=[]
+        changed_docs=[]
+
+        # Not sure, may need to stop the timer
+        self.auto_save_timer.stop()
+
         #-------------------Empty trash-------------------
         if folderid=='-3':
             #-----------------Get orphan docs-----------------
             for docii in self.folder_data['-3']:
                 print('# <delFromTrash>: orphan doc=',docii)
+                changed_docs.append(docii)
 
             for fii in self._trashed_folder_ids:
                 print('# <delFromTrash>: trashed_folder=',fii)
+                changed_folders.append(fii)
                 for docii in self.folder_data[fii]:
                     print('# <delFromTrash>: doc in trashed folder=',docii)
+                    changed_docs.append(docii)
 
         else:
-            for fii in self._trashed_folder_ids:
-                if fii==folderid:
-                    print('# <delFromTrash>: trashed_folder=',fii)
-                    for docii in self.folder_data[fii]:
-                        print('# <delFromTrash>: doc in trashed folder=',docii)
+            trash_folders, trash_docs=sqlitedb.walkFolderTree(self.folder_dict,
+                    self.folder_data, folderid)
+            print('# <delFromTrash>: trash_folders=',trash_folders)
+            print('# <delFromTrash>: trash_docs=',trash_docs)
 
+            for docii in trash_docs:
+                changed_docs.append(docii)
 
-
+            for fii in trash_folders:
+                # setting folder_dict value to () to signal a deletion in sqlite
+                self.folder_dict[fii]=()
+                changed_folders.append(fii)
 
 
 

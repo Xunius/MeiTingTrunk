@@ -181,6 +181,7 @@ class MainFrameDataSlots:
         if len(self.changed_folder_ids)>0:
             sqlitedb.saveFoldersToDatabase(self.db,
                     self.changed_folder_ids, self.folder_dict,
+                    self.folder_data,
                     self.settings.value('saving/current_lib_folder'))
 
             self.changed_folder_ids=[]

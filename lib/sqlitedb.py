@@ -745,25 +745,38 @@ def renameFile(fname,meta_dict,replace_space=False):
     return fname2
 
 
-def saveFoldersToDatabase(db,folder_ids,folder_dict,lib_folder):
+def saveFoldersToDatabase(db,folder_ids,folder_dict,folder_data,lib_folder):
 
     cout=db.cursor()
 
     #for idii,vv in folder_dict.items():
     folder_ids=list(set(folder_ids))
     for idii in folder_ids:
-        nameii,pidii=folder_dict[idii]
-        idii=int(idii)
-        pathii=os.path.join(lib_folder,nameii)
-        pathii=os.path.abspath(pathii)
 
-        print('# <saveFoldersToDatabase>: update folder id', idii,
-                'name',nameii, 'parentid', pidii, 'path',pathii)
+        # deleting folder:
+        if folder_dict[idii]==():
+            print('# <saveFoldersToDatabase>: Deleting folder id=%s' %idii)
+            LOGGER.info('Deleting folder id=%s' %idii)
 
-        query='''INSERT OR REPLACE INTO Folders (id, name, parentId, path) \
-                 VALUES (?,?,?,?)'''
+            query='''
+            DELETE FROM Folders WHERE Folders.id=?
+            '''
+            cout.execute(query, (int(idii),))
+            del folder_dict[idii]
+            del folder_data[idii]
+        else:
+            nameii,pidii=folder_dict[idii]
+            idii=int(idii)
+            pathii=os.path.join(lib_folder,nameii)
+            pathii=os.path.abspath(pathii)
 
-        cout.execute(query, (idii, nameii, pidii, pathii))
+            print('# <saveFoldersToDatabase>: update folder id', idii,
+                    'name',nameii, 'parentid', pidii, 'path',pathii)
+
+            query='''INSERT OR REPLACE INTO Folders (id, name, parentId, path) \
+                     VALUES (?,?,?,?)'''
+
+            cout.execute(query, (idii, nameii, pidii, pathii))
 
     db.commit()
 

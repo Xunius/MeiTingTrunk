@@ -23,6 +23,11 @@ class MainFrameDocTableSlots:
 
         self.doc_table.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
+        # count selected docs
+        sel_rows=self.doc_table.selectionModel().selectedRows()
+        if len(sel_rows)>1:
+            self.status_bar.showMessage('%d rows selected' %len(sel_rows))
+
         return
 
 
@@ -113,6 +118,7 @@ class MainFrameDocTableSlots:
 
         # re-connect libtree item change signal
         #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
+
 
 
 
