@@ -336,6 +336,8 @@ class MainFrameLibTreeSlots:
 
         item=self._current_folder_item
         if item:
+            if item in self.sys_folders:
+                return
             item.setFlags(item.flags() | Qt.ItemIsEditable)
             self.libtree.scrollToItem(item)
             self.libtree.editItem(item)
