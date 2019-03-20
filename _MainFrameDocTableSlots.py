@@ -125,6 +125,7 @@ class MainFrameDocTableSlots:
     def docTableMenu(self,pos):
 
         menu=QtWidgets.QMenu()
+        current_folder_item=self._current_folder_item
 
         open_action=menu.addAction('&Open File Externally')
         open_action.setIcon(QIcon.fromTheme('document-open'))
@@ -146,7 +147,7 @@ class MainFrameDocTableSlots:
         del_from_trash_action=QtWidgets.QAction('Delete From Trash',menu)
         del_from_trash_action.setIcon(QIcon.fromTheme('edit-delete'))
 
-        if self._current_folder_item==self.trash_folder:
+        if current_folder_item==self.trash_folder:
             menu.addAction(del_from_trash_action)
         else:
             menu.addAction(del_from_lib_action)
@@ -200,10 +201,18 @@ class MainFrameDocTableSlots:
                 open_action.setDisabled(True)
                 open_folder_action.setDisabled(True)
 
-            if self._current_folder_item in self.sys_folders:
+
+            if current_folder_item in self.sys_folders:
                 del_from_folder_action.setDisabled(True)
             else:
                 del_from_folder_action.setEnabled(True)
+
+            if current_folder_item==self.needsreview_folder:
+                mark_needsreview_action.setDisabled(True)
+            else:
+                mark_needsreview_action.setEnabled(True)
+
+
 
             action=menu.exec_(QCursor.pos())
 

@@ -21,6 +21,8 @@ class MainFrameMetaTabSlots:
             tii.clear()
             tii.setReadOnly(True)
 
+        self.confirm_review_frame.setVisible(False)
+
         return
 
     def enableMetaTab(self):

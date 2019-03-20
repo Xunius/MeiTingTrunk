@@ -9,6 +9,7 @@ import sqlite3
 import shutil
 import re
 import uuid
+import time
 if sys.version_info[0]>=3:
     #---------------------Python3---------------------
     from urllib.parse import unquote
@@ -18,15 +19,15 @@ else:
     from urllib import unquote
     from urlparse import urlparse
 
-FILE_OUT_NAME='nonfts.sqlite'
+FILE_OUT_NAME='nonfts3.sqlite'
 FILE_IN_NAME='mendeley.sqlite'
 LIB_FOLDER='~/Papers2'
 FILE_FOLDER=os.path.join(LIB_FOLDER,'collections')
 
 
-DOC_ATTRS=[\
+READ_DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',
-'deduplicated', 'favourite', 'note', 'deletionPending',
+'deduplicated', 'favourite', 'note',
 'abstract', 'advisor', 'added',
 'arxivId', 'title', 'pmid',
 'publication', 'publicLawNumber', 'month',
@@ -40,8 +41,24 @@ DOC_ATTRS=[\
 'internationalUserType', 'genre',
 'institution', 'lastUpdate', 'legalStatus', 'length', 'medium', 'isbn']
 
-INT_COLUMNS=['read', 'confirmed', 'deduplicated',
-        'favourite', 'month', 'year', 'day']
+WRITE_DOC_ATTRS=[\
+'issn', 'issue', 'language', 'read', 'type', 'confirmed',
+'deduplicated', 'favourite', 'note',
+'abstract', 'advisor', 'added',
+'arxivId', 'title', 'pmid',
+'publication', 'publicLawNumber', 'month',
+'pages', 'sections', 'seriesEditor', 'series', 'seriesNumber',
+'publisher', 'reprintEdition', 'reviewedArticle', 'revisionNumber',
+'userType', 'volume', 'year', 'session', 'shortTitle', 'sourceType',
+'code', 'codeNumber', 'codeSection', 'codeVolume', 'chapter',
+'citationKey', 'city', 'day', 'department', 'doi', 'edition',
+'committee', 'counsel', 'country', 'dateAccessed',
+'internationalAuthor', 'internationalNumber', 'internationalTitle',
+'internationalUserType', 'genre',
+'institution', 'lastUpdate', 'legalStatus', 'length', 'medium', 'isbn',
+'deletionPending']
+
+INT_COLUMNS=['month', 'year', 'day']
 
 
 
@@ -70,14 +87,14 @@ def converturl2abspath(url):
     '''
 
     #--------------------For linux--------------------
-    path = unquote(str(urlparse(url).path)).decode("utf8") 
+    path = unquote(str(urlparse(url).path)).decode("utf8")
     path=os.path.abspath(path)
 
     if os.path.exists(path):
         return path
     else:
         #-------------------For windowes-------------------
-        if url[5:8]==u'///':   
+        if url[5:8]==u'///':
             url=u'file://'+url[8:]
             path=urlparse(url)
             path=os.path.join(path.netloc,path.path)
@@ -112,7 +129,7 @@ if __name__=='__main__':
     id INTEGER PRIMARY KEY,
     %s)'''
     columns=[]
-    for kii in DOC_ATTRS:
+    for kii in WRITE_DOC_ATTRS:
         if kii in INT_COLUMNS:
             columns.append('%s INT' %kii)
         else:
@@ -143,7 +160,7 @@ if __name__=='__main__':
 
     cout.execute(query)
     dbout.commit()
-    
+
     #----------Create DocumentKeywords table----------
     query='''CREATE TABLE IF NOT EXISTS DocumentKeywords (
     did INT,
@@ -172,7 +189,7 @@ if __name__=='__main__':
 
     cout.execute(query)
     dbout.commit()
-    
+
 
     #--------Create DocumentContributors table--------
     query='''CREATE TABLE IF NOT EXISTS DocumentContributors (
@@ -219,11 +236,23 @@ if __name__=='__main__':
 
     ret=cin.execute(query).fetchall()
 
+    #------------If Default in folder list------------
+    folders=[]
+    for fid, fname, pid in ret:
+        if fname=='Default' and pid==-1:
+            fname='Default_Mendeley'
+        if pid==0:
+            pid=-1
+        folders.append((fid, fname, pid))
+
     query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
     VALUES (?,?,?,?)'''
 
-    for fii in ret:
+    for fii in folders:
         cout.execute(query, (fii[0], fii[1], fii[2], os.path.join(LIB_FOLDER,fii[1])))
+
+    #---------------Add default folder---------------
+    cout.execute(query, (0, 'Default', -1, os.path.join(LIB_FOLDER,'Default')))
 
     #----------------Loop through docs----------------
     def selByDocid(cursor, table, column, docid):
@@ -248,39 +277,91 @@ if __name__=='__main__':
 
         ii+=1
         print('\n# <createsqlite>: Copying doc ', ii)
-        
-        meta_query='''SELECT %s from Documents
-        WHERE Documents.id = ?''' %', '.join(DOC_ATTRS)
 
+        #---------------Get Documents fields---------------
+        #meta_query='''SELECT %s from Documents
+        #WHERE Documents.id = ?''' %', '.join(READ_DOC_ATTRS)
+        meta_query='''SELECT %s from Documents
+        WHERE Documents.id = ?'''
+
+        metaii=[]
+        for jj in WRITE_DOC_ATTRS:
+            if jj in READ_DOC_ATTRS:
+                fjj=cin.execute(meta_query %jj, (docii,)).fetchall()[0][0]
+                if jj in INT_COLUMNS and fjj is not None:
+                    fjj=int(fjj)
+
+                if jj=='added' and fjj is None:
+                    __import__('pdb').set_trace()
+                    fjj=str(int(time.time()))
+            else:
+                if jj in ['deletionPending']:
+                    fjj='false'
+                else:
+                    fjj=None
+
+            metaii.append(fjj)
+
+        '''
         ret=cin.execute(meta_query, (docii,))
         metaii=ret.fetchall()[0]
 
+        metaii2=[]
+        for jj,fjj in zip(READ_DOC_ATTRS,metaii):
+            if jj in INT_COLUMNS and fjj is not None:
+                fjj=int(fjj)
+                print 'jj=',jj,'fjj=',fjj
+            metaii2.append(fjj)
+
+        metaii=tuple(metaii2)
+
+        # set deletionPending to false, in_trash to false
+        metaii=metaii+('false', 'false')
+        '''
+
+        #-----------------Get DocumentTags-----------------
         tags=selByDocid(cin, 'DocumentTags', 'tag', docii)
+
+        #------------------Get FileNotes------------------
         #notes=selByDocid(cin, 'DocumentNotes', 'text', docii)
         notes=selByDocid(cin, 'FileNotes', ['note', 'modifiedTime', 'createdTime'], docii)
+
+        #---------------Get DocumentKeywords---------------
         keywords=selByDocid(cin, 'DocumentKeywords', 'keyword', docii)
-        folderid=selByDocid(cin, 'DocumentFolders', 'folderId', docii)
+
+        #-----------------Get DocumentUrls-----------------
         urls=selByDocid(cin, 'DocumentUrls', 'url', docii)
         urls=[str(bjj) for bjj in urls]   # convert blob to str
 
-        # get folder
+        #---------------Get DocumentFolders---------------
         query='''SELECT Folders.id, Folders.name, Folders.parentId
         FROM Folders
         LEFT JOIN DocumentFolders ON DocumentFolders.folderId = Folders.id
         WHERE DocumentFolders.documentId = ?'''
 
-        ret=cin.execute(query, (docii,))
-        folder_info=ret.fetchall()
+        ret=cin.execute(query, (docii,)).fetchall()
 
-        # get authors
+        # if name conflict with Default
+        folder_info=[]
+        for fid, fname, pid in ret:
+            if fname=='Default' and pid==-1:
+                fname='Default_Mendeley'
+            if pid==0:
+                pid=-1
+            folder_info.append((fid, fname, pid))
+
+        # if not in any folder, put to Default
+        if len(folder_info)==0:
+            folder_info.append((0, 'Default', -1))
+
+        #-------------Get DocumentContributors-------------
         authors=selByDocid(cin, 'DocumentContributors',
         ['contribution', 'firstNames', 'Lastname'], docii)
 
-        # insert to table
-        #uuidstr=str(uuid.uuid4())
+        #------------Insert to output database------------
         query='''INSERT INTO Documents (
         %s )
-        VALUES (%s)''' %(', '.join(DOC_ATTRS), ', '.join(['?']*len(DOC_ATTRS)))
+        VALUES (%s)''' %(', '.join(WRITE_DOC_ATTRS), ', '.join(['?']*len(WRITE_DOC_ATTRS)))
 
         cout.execute(query, metaii)
 
@@ -354,19 +435,4 @@ if __name__=='__main__':
 
 
         dbout.commit()
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
 

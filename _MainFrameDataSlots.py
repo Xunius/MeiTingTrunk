@@ -41,7 +41,10 @@ class MainFrameDataSlots:
 
         if docid is None:
 
-            newid=max(self.meta_dict.keys())+1
+            if len(self.meta_dict)==0:
+                newid=1
+            else:
+                newid=max(self.meta_dict.keys())+1
 
             # update folder_data
             foldername,folderid=self._current_folder
@@ -59,9 +62,14 @@ class MainFrameDataSlots:
             docid=newid
 
             self.meta_dict[newid]=meta_dict
-            self.loadDocTable(docids=self._current_docids+[newid,],sel_row=None)
+            self.folder_data['-2'].append(newid)
             self.doc_table.scrollToBottom()
-            self.doc_table.selectRow(self.doc_table.model().rowCount(None)-1)
+            xx=self.doc_table.model().rowCount(None)
+            self.loadDocTable(docids=self._current_docids+[newid,],sel_row=xx)
+            # NOTE that the below method won't work when table was empty before
+            # adding, as I connected doc_table.currentChanged to selDoc.
+            # When table was empty, the index for previous current is None
+            #self.doc_table.selectRow(self.doc_table.model().rowCount(None)-1)
 
         else:
             if docid in self.meta_dict:

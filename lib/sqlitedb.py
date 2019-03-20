@@ -23,7 +23,7 @@ except:
 
 DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',
-'deduplicated', 'deletionPending', 'favourite', 'note',
+'deduplicated', 'favourite', 'note',
 'abstract', 'advisor', 'added',
 'arxivId', 'title', 'pmid',
 'publication', 'publicLawNumber', 'month',
@@ -35,10 +35,10 @@ DOC_ATTRS=[\
 'committee', 'counsel', 'country', 'dateAccessed',
 'internationalAuthor', 'internationalNumber', 'internationalTitle',
 'internationalUserType', 'genre',
-'institution', 'lastUpdate', 'legalStatus', 'length', 'medium', 'isbn']
+'institution', 'lastUpdate', 'legalStatus', 'length', 'medium', 'isbn',
+'deletionPending']
 
-INT_COLUMNS=['read', 'confirmed', 'deduplicated', 'deletionPending',
-        'favourite', 'month', 'year', 'day']
+INT_COLUMNS=['month', 'year', 'day']
 
 LOGGER=logging.getLogger('default_logger')
 
@@ -123,6 +123,8 @@ def readSqlite(dbin):
     #-------------------Get folders-------------------
     folder_dict=getFolders(dbin)
 
+    trashed_folders=getTrashedFolders(folder_dict)
+
     #-------------------Get metadata-------------------
     cursor=dbin.execute('SELECT * FROM Documents')
     names=list(map(lambda x:x[0], cursor.description))
@@ -149,7 +151,8 @@ def readSqlite(dbin):
 
         if metaii['confirmed'] is None or metaii['confirmed']=='false':
             folder_data['-2'].append(idii)
-        if metaii['deletionPending']=='true':
+        #if metaii['deletionPending']=='true':
+        if metaii['deletionPending']=='true' and len(metaii['folders_l'])==0:
             folder_data['-3'].append(idii)
 
         # note: convert folder id to str, why?
@@ -309,9 +312,9 @@ def getMetaData(db, did):
     result['tags_l']=fetchField(db,query_tags,(did,),1,'list')
     result['urls_l']=fetchField(db,query_urls,(did,),1,'list')
 
-    folders=result['folders_l']
+    #folders=result['folders_l']
     # if no folder name, add to Default
-    result['folders_l']=folders or [(0, 'Default')]
+    #result['folders_l']=folders or [(0, 'Default')]
 
     return result
 
@@ -783,7 +786,7 @@ def saveFoldersToDatabase(db,folder_ids,folder_dict,folder_data,lib_folder):
     return 0
 
 
-def createNewDatabase(file_path,lib_folder,rename_files):
+def createNewDatabase(file_path,lib_folder):
 
     dbfout=os.path.abspath(file_path)
 
@@ -796,14 +799,15 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     cout=dbout.cursor()
 
     #--------------Create documents table--------------
-    query='''CREATE VIRTUAL TABLE IF NOT EXISTS Documents USING fts5(
+    query='''CREATE TABLE IF NOT EXISTS Documents (
+    id INTEGER PRIMARY KEY,
     %s)'''
     columns=[]
     for kii in DOC_ATTRS:
         if kii in INT_COLUMNS:
-            columns.append('%s' %kii)
+            columns.append('%s INT' %kii)
         else:
-            columns.append('%s' %kii)
+            columns.append('%s TEXT' %kii)
 
     columns=', '.join(columns)
     query=query %columns
@@ -813,34 +817,35 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     #dbout.commit()
 
     #------------Create DocumentTags table------------
-    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentTags USING fts5(
-    docid, tag)'''
+    query='''CREATE TABLE IF NOT EXISTS DocumentTags (
+    did INT,
+    tag TEXT)'''
 
     cout.execute(query)
     #dbout.commit()
 
     #------------Create DocumentNotes table------------
-    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentNotes USING fts5(
-    docid,
-    note,
-    modifiedTime,
-    createdTime
+    query='''CREATE TABLE IF NOT EXISTS DocumentNotes (
+    did INT,
+    note TEXT,
+    modifiedTime TEXT,
+    createdTime TEXT
     )'''
 
     cout.execute(query)
     #dbout.commit()
 
     #----------Create DocumentKeywords table----------
-    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentKeywords USING fts5(
-    docid,
-    text)'''
+    query='''CREATE TABLE IF NOT EXISTS DocumentKeywords (
+    did INT,
+    text TEXT)'''
 
     cout.execute(query)
     #dbout.commit()
 
     #-----------Create DocumentFolders table-----------
     query='''CREATE TABLE IF NOT EXISTS DocumentFolders (
-    docid INT,
+    did INT,
     folderid INT
     )'''
 
@@ -859,12 +864,13 @@ def createNewDatabase(file_path,lib_folder,rename_files):
     cout.execute(query)
     #dbout.commit()
 
+
     #--------Create DocumentContributors table--------
-    query='''CREATE VIRTUAL TABLE IF NOT EXISTS DocumentContributors USING fts5(
-    docid,
-    contribution,
-    firstNames,
-    lastName
+    query='''CREATE TABLE IF NOT EXISTS DocumentContributors (
+    did INT,
+    contribution TEXT,
+    firstNames TEXT,
+    lastName TEXT
     )'''
 
     cout.execute(query)
@@ -872,7 +878,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
 
     #------------Create DocumentFiles table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentFiles (
-    docid INT,
+    did INT,
     abspath TEXT
     )'''
 
@@ -881,7 +887,7 @@ def createNewDatabase(file_path,lib_folder,rename_files):
 
     #------------Create DocumentUrls table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentUrls (
-    docid INT,
+    did INT,
     url TEXT
     )'''
 

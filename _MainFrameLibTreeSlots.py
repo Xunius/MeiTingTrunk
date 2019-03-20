@@ -158,11 +158,13 @@ class MainFrameLibTreeSlots:
         #------------------Restoring docs------------------
         print('# <changeFolderParent>: move_folder id=',move_folder_id)
         print('# <changeFolderParent>: trashed_folders=',self._trashed_folder_ids)
-        if move_folder_id in self._trashed_folder_ids:
+        trashed_folder_ids=self._trashed_folder_ids
+        if move_folder_id in trashed_folder_ids and new_parent_id \
+                not in trashed_folder_ids:
             for docid in self.folder_data[move_folder_id]:
                 print('# <changeFolderParent>: restoring docii=',docid)
-                if self.meta_dict[docid]['deletionPending']=='true':
-                    self.meta_dict[docid]['deletionPending']=='false'
+                self.meta_dict[docid]['deletionPending']=='false'
+                #self.meta_dict[docid]['in_trash']=='false'
 
         print('# <changeFolderParent>: folder_dict[id] before change=%s'\
                 %str(self.folder_dict[move_folder_id]))
