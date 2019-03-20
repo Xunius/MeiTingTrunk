@@ -3,6 +3,23 @@ from PyQt5 import QtWidgets
 from PyQt5.QtGui import QCursor, QBrush, QColor, QIcon
 from lib import sqlitedb
 
+def addFolder(parent,folderid,folder_dict):
+
+    foldername,parentid=folder_dict[folderid]
+    fitem=QtWidgets.QTreeWidgetItem([foldername,str(folderid)])
+    style=QtWidgets.QApplication.style()
+    diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+    fitem.setIcon(0,diropen_icon)
+    sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
+    if parentid=='-1':
+        parent.addTopLevelItem(fitem)
+    else:
+        parent.addChild(fitem)
+    if len(sub_ids)>0:
+        for sii in sub_ids:
+            addFolder(fitem,sii,folder_dict)
+
+    return
 
 class MainFrameLibTreeSlots:
 
@@ -82,13 +99,13 @@ class MainFrameLibTreeSlots:
         folderid=item.data(1,0)
 
         if item:
+            menu=QtWidgets.QMenu()
             if item==self.trash_folder or folderid in self._trashed_folder_ids:
-                menu=QtWidgets.QMenu()
+                menu_type='trash'
                 restore_action=menu.addAction('Restore Folder(s)')
                 clear_action=menu.addAction('Delete From Trash')
-                menu_type='trash'
             else:
-                menu=QtWidgets.QMenu()
+                menu_type='default'
                 add_action=menu.addAction('&Create Folder')
                 add_action.setIcon(self.style().standardIcon(
                     QtWidgets.QStyle.SP_DirOpenIcon))
@@ -108,22 +125,15 @@ class MainFrameLibTreeSlots:
                 rename_action.setIcon(QIcon.fromTheme('edit-select-all'))
                 rename_action.setShortcut('R')
 
-                menu_type='default'
-
-            if menu_type=='trash':
-                restore_action.setEnabled(True)
-                clear_action.setEnabled(True)
-            else:
-                if item in [self.all_folder, self.needsreview_folder]:
-                    add_action.setDisabled(True)
-                    addsub_action.setDisabled(True)
-                    del_action.setDisabled(True)
-                    rename_action.setDisabled(True)
-                else:
-                    add_action.setEnabled(True)
-                    addsub_action.setEnabled(True)
-                    del_action.setEnabled(True)
-                    rename_action.setEnabled(True)
+                if item==self.needsreview_folder:
+                    add_action.setEnabled(False)
+                    addsub_action.setEnabled(False)
+                    del_action.setEnabled(False)
+                    rename_action.setEnabled(False)
+                elif item==self.all_folder:
+                    addsub_action.setEnabled(False)
+                    del_action.setEnabled(False)
+                    rename_action.setEnabled(False)
 
             action=menu.exec_(QCursor.pos())
 
@@ -134,9 +144,9 @@ class MainFrameLibTreeSlots:
 
                 if menu_type=='trash':
                     if action==restore_action:
-                        self.restoreFromTrash()
+                        self.restoreFolderFromTrash()
                     elif action==clear_action:
-                        self.delFromTrash()
+                        self.delFolderFromTrash(item)
                 else:
                     if action==add_action:
                         self.addFolderButtonClicked(add_action)
@@ -164,7 +174,7 @@ class MainFrameLibTreeSlots:
             for docid in self.folder_data[move_folder_id]:
                 print('# <changeFolderParent>: restoring docii=',docid)
                 self.meta_dict[docid]['deletionPending']=='false'
-                #self.meta_dict[docid]['in_trash']=='false'
+                self.changed_doc_ids.append(docid)
 
         print('# <changeFolderParent>: folder_dict[id] before change=%s'\
                 %str(self.folder_dict[move_folder_id]))
@@ -180,16 +190,16 @@ class MainFrameLibTreeSlots:
 
         self.changed_folder_ids.append(move_folder_id)
 
-        #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
-                #self.settings.value('saving/storage_folder'))
-
-
         return
 
 
 
     @pyqtSlot(QtWidgets.QTreeWidgetItem,QtWidgets.QTreeWidgetItem,bool)
     def trashFolder(self,item,newparent=None,ask=True):
+
+        if newparent is not None:
+            if newparent.data(1,0) in self._trashed_folder_ids+['-3']:
+                ask=False
 
         if ask:
             choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
@@ -198,10 +208,6 @@ class MainFrameLibTreeSlots:
 
 
         if not ask or (ask and choice==QtWidgets.QMessageBox.Yes):
-
-            #self.libtree._trashed_folder_ids.append(item.data(1,0))
-            #print('# <trashFolder>: Add folder id to _trashed_folders. _trashed_folders=%s' %self.libtree._trashed_folder_ids)
-            #self.logger.info('Add folder id to _trashed_folders. _trashed_folders=%s' %self.libtree._trashed_folder_ids)
 
             root=self.libtree.invisibleRootItem()
             (item.parent() or root).removeChild(item)
@@ -224,7 +230,6 @@ class MainFrameLibTreeSlots:
     def postTrashFolder(self,item):
 
         folderid=item.data(1,0)
-
 
         delfolderids,deldocids=sqlitedb.walkFolderTree(self.folder_dict,
                 self.folder_data,folderid)
@@ -253,20 +258,12 @@ class MainFrameLibTreeSlots:
 
         self.changed_doc_ids.extend(orphan_docs)
 
-        for fii in delfolderids:
-            #print('del folder',fii,self.folder_dict[fii])
-            #del self.folder_data[fii]
-            #del self.folder_dict[fii]
-            pass
-            #print(fii,'in folder_data?',fii in self.folder_data)
-            #print(fii,'in folder_dict?',fii in self.folder_dict)
-
         return
 
 
 
 
-    def restoreFromTrash(self):
+    def restoreFolderFromTrash(self):
         msg=QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setWindowTitle('Restore')
@@ -276,7 +273,7 @@ class MainFrameLibTreeSlots:
 
         return
 
-    def delFromTrash(self):
+    def delFolderFromTrash(self, item):
 
         choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
             'Deleting folder(s) and document within permanently?',
@@ -284,43 +281,55 @@ class MainFrameLibTreeSlots:
         if choice==QtWidgets.QMessageBox.No:
             return
 
-        foldername,folderid=self._current_folder
-        print('# <delFromTrash>: current_folder',foldername,folderid)
-
-        changed_folders=[]
-        changed_docs=[]
+        foldername=item.data(0,0)
+        folderid=item.data(1,0)
+        item_parent=item.parent()
+        print('# <delFolderFromTrash>: current_folder',foldername,folderid)
 
         # Not sure, may need to stop the timer
         self.auto_save_timer.stop()
 
         #-------------------Empty trash-------------------
         if folderid=='-3':
-            #-----------------Get orphan docs-----------------
+            changed_folders=self._trashed_folder_ids
+
+            #-----------------Get orphan docs in Trash-----------------
             for docii in self.folder_data['-3']:
-                print('# <delFromTrash>: orphan doc=',docii)
-                changed_docs.append(docii)
+                print('# <delFolderFromTrash>: orphan doc=',docii)
+                #self.meta_dict[docii]={}
+                del self.meta_dict[docii]
+                self.folder_data['-3'].remove(docii)
+                self.changed_doc_ids.append(docii)
 
-            for fii in self._trashed_folder_ids:
-                print('# <delFromTrash>: trashed_folder=',fii)
-                changed_folders.append(fii)
-                for docii in self.folder_data[fii]:
-                    print('# <delFromTrash>: doc in trashed folder=',docii)
-                    changed_docs.append(docii)
-
+        #-------------------Empty folders in trash-------------------
         else:
-            trash_folders, trash_docs=sqlitedb.walkFolderTree(self.folder_dict,
+            changed_folders, _=sqlitedb.walkFolderTree(self.folder_dict,
                     self.folder_data, folderid)
-            print('# <delFromTrash>: trash_folders=',trash_folders)
-            print('# <delFromTrash>: trash_docs=',trash_docs)
 
-            for docii in trash_docs:
-                changed_docs.append(docii)
+        for fii in changed_folders:
+            print('# <delFolderFromTrash>: trashed_folder=',fii)
+            #self.changed_doc_ids.extend(self.folder_data[fii])
+            self.destroyDoc(self.folder_data[fii], fii, False, False)
 
-            for fii in trash_folders:
-                # setting folder_dict value to () to signal a deletion in sqlite
-                self.folder_dict[fii]=()
-                changed_folders.append(fii)
+        # del folders after all docs are destroyed
+        for fii in changed_folders:
+            del self.folder_dict[fii]
+            del self.folder_data[fii]
 
+            itemii=self.libtree.findItems(fii, Qt.MatchExactly | Qt.MatchRecursive,
+                    column=1)
+            if len(itemii)>0:
+                itemii=itemii[0]
+                itemii.parent().removeChild(itemii)
+
+        self.changed_folder_ids.extend(changed_folders)
+
+        self.libtree.setCurrentItem(item_parent)
+
+        self.auto_save_timer.start()
+        print('# <delFolderFromTrash>: Restart auto save timer.')
+
+        return
 
 
     def renameFolder(self):

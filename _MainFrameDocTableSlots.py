@@ -26,7 +26,8 @@ class MainFrameDocTableSlots:
         # count selected docs
         sel_rows=self.doc_table.selectionModel().selectedRows()
         if len(sel_rows)>1:
-            self.status_bar.showMessage('%d rows selected' %len(sel_rows))
+            self.status_bar.showMessage('%d rows selected. %d rows in total'\
+                    %(len(sel_rows), self.doc_table.model().rowCount(None)))
 
         return
 
@@ -91,15 +92,8 @@ class MainFrameDocTableSlots:
 
         #------------Remove highlights for all------------
         self.removeFolderHighlights()
-        #ori_color=QBrush(QColor(255,255,255))
 
-        #root=self.libtree.invisibleRootItem()
-        # disconnect libtree item change signal
-        #self.libtree.itemChanged.disconnect()
-        #for item in iterItems(self.libtree, root):
-            #item.setBackground(0, ori_color)
-
-        #------------Search folders in libtree------------
+        #---------Highlight folders contaning doc---------
         hi_color=self.settings.value('display/folder/highlight_color_br',
                 QBrush)
         for fii in folders:
@@ -115,9 +109,7 @@ class MainFrameDocTableSlots:
         else:
             self.confirm_review_frame.setVisible(False)
 
-
-        # re-connect libtree item change signal
-        #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
+        return
 
 
 
@@ -125,7 +117,8 @@ class MainFrameDocTableSlots:
     def docTableMenu(self,pos):
 
         menu=QtWidgets.QMenu()
-        current_folder_item=self._current_folder_item
+        current_folderid=self._current_folder_item.data(1,0)
+        trashed_folder_ids=self._trashed_folder_ids+['-3']
 
         open_action=menu.addAction('&Open File Externally')
         open_action.setIcon(QIcon.fromTheme('document-open'))
@@ -137,7 +130,9 @@ class MainFrameDocTableSlots:
             QtWidgets.QStyle.SP_DirIcon))
         open_folder_action.setShortcut('F')
 
-        del_from_folder_action=menu.addAction('&Delete From Current Folder')
+        #-----------------Deletion actions-----------------
+        del_from_folder_action=QtWidgets.QAction('&Delete From Current Folder',
+                menu)
         del_from_folder_action.setIcon(QIcon.fromTheme('user-trash'))
         del_from_folder_action.setShortcut('D')
 
@@ -147,15 +142,23 @@ class MainFrameDocTableSlots:
         del_from_trash_action=QtWidgets.QAction('Delete From Trash',menu)
         del_from_trash_action.setIcon(QIcon.fromTheme('edit-delete'))
 
-        if current_folder_item==self.trash_folder:
+        if current_folderid=='-1':
+            menu.addAction(del_from_lib_action)
+        elif current_folderid=='-2':
+            pass
+        elif current_folderid in trashed_folder_ids:
             menu.addAction(del_from_trash_action)
         else:
+            menu.addAction(del_from_folder_action)
             menu.addAction(del_from_lib_action)
 
-        mark_needsreview_action=menu.addAction('&Mark document as Needs Review')
+        mark_needsreview_action=QtWidgets.QAction('&Mark document as Needs Review',menu)
         mark_needsreview_action.setIcon(self.style().standardIcon(
             QtWidgets.QStyle.SP_MessageBoxInformation))
         mark_needsreview_action.setShortcut('M')
+
+        if current_folderid!='-2':
+            menu.addAction(mark_needsreview_action)
 
         check_duplicate_folder_action=menu.addAction('Check Du&plicates Within Folder')
         check_duplicate_folder_action.setIcon(QIcon.fromTheme('edit-find'))
@@ -201,19 +204,6 @@ class MainFrameDocTableSlots:
                 open_action.setDisabled(True)
                 open_folder_action.setDisabled(True)
 
-
-            if current_folder_item in self.sys_folders:
-                del_from_folder_action.setDisabled(True)
-            else:
-                del_from_folder_action.setEnabled(True)
-
-            if current_folder_item==self.needsreview_folder:
-                mark_needsreview_action.setDisabled(True)
-            else:
-                mark_needsreview_action.setEnabled(True)
-
-
-
             action=menu.exec_(QCursor.pos())
 
             if action:
@@ -244,7 +234,7 @@ class MainFrameDocTableSlots:
                     self.delDoc(docids,True)
 
                 elif action==del_from_trash_action:
-                    self.destroyDoc(docids,True)
+                    self.destroyDoc(docids,current_folderid,True,True)
 
                 elif action==mark_needsreview_action:
                     self.markDocNeedsReview(docids)
@@ -375,6 +365,7 @@ class MainFrameDocTableSlots:
 
             for idii in docids:
                 # remove from all folders
+
                 for kk,vv in self.folder_data.items():
                     if idii in vv:
                         vv.remove(idii)
@@ -427,18 +418,35 @@ class MainFrameDocTableSlots:
 
         return
 
-    def destroyDoc(self,docids,reload_table):
+    def destroyDoc(self,docids,current_folderid,ask,reload_table):
 
         print('# <destroyDoc>: docids=%s' %docids)
         self.logger.info('docids=%s' %docids)
 
-        choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
-                'Confirm deleting a document permanently?',
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        if ask:
+            choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
+                    'Confirm deleting a document permanently?',
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
-        if choice==QtWidgets.QMessageBox.Yes:
+        if not ask or (ask and choice==QtWidgets.QMessageBox.Yes):
+
+            current_foldername=self.folder_dict[current_folderid][0]
 
             for idii in docids:
+
+                # NOTE!!: if doc still exists in some other folder outside Trash,
+                # (which can be tell by deletionPending=='false'), don't del,
+                # only remove from current folder.
+
+                if self.meta_dict[idii]['deletionPending']=='false':
+                    print('# <delDoc>: doc still relevant. Only delete from folder.')
+
+                    if idii in self.folder_data[current_folderid]:
+                        self.folder_data[current_folderid].remove(idii)
+                        self.meta_dict[idii]['folders_l'].remove(
+                                (int(current_folderid), current_foldername))
+                    continue
+
                 # remove from all folders
                 for kk,vv in self.folder_data.items():
                     if idii in vv:
@@ -449,28 +457,10 @@ class MainFrameDocTableSlots:
                         self.logger.info('docid %s in folder_data[%s]?: %s'\
                                 %(idii, kk, idii in self.folder_data[kk]))
 
-                #del self.meta_dict[idii]
-
-                # NOTE: need to del this from sqlite
+                # NOTE: del this from sqlite
                 self.changed_doc_ids.append(idii)
-                self.meta_dict[idii]={}
-                #self.meta_dict[idii]['folders_l']=[]
-
-                #print('# <destroyDoc>: docid %s in meta_dict?: %s'\
-                        #%(idii, idii in self.meta_dict))
-                #self.logger.info('docid %s in meta_dict?: %s'\
-                        #%(idii, idii in self.meta_dict))
-
-                #if idii not in self._orphan_doc_ids:
-                    #self._orphan_doc_ids.append(idii)
-
-                #self.folder_data['-3'].append(idii)
-                #self.meta_dict[idii]['deletionPending']='true'
-
-                #print('# <destroyDoc>: docid %s in _trashed_doc_ids?: %s'\
-                        #%(idii, idii in self.libtree._trashed_doc_ids))
-                #self.logger.info('docid %s in _trashed_doc_ids?: %s'\
-                        #%(idii, idii in self.libtree._trashed_doc_ids))
+                #self.meta_dict[idii]={}
+                del self.meta_dict[idii]
 
             if reload_table:
                 self.loadDocTable(folder=self._current_folder,sel_row=None)

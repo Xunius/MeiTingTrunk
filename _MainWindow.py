@@ -382,7 +382,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.db=db
         meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
         self.main_frame.loadLibTree(db,meta_dict,folder_data,folder_dict)
-        self.main_frame.status_bar.clearMessage()
+        #self.main_frame.status_bar.clearMessage()
         self.main_frame.progressbar.setVisible(False)
 
         self.is_loaded=True

@@ -5,7 +5,7 @@ from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 
 import _MainFrameLoadData, _MainFrameDataSlots, _MainFrameToolBarSlots,\
         _MainFrameLibTreeSlots, _MainFrameFilterListSlots, _MainFrameDocTableSlots,\
-        _MainFrameMetaTabSlots, _MainFrameOtherSlots
+        _MainFrameMetaTabSlots, _MainFrameOtherSlots, _MainFrameProperties
 from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy, \
         getXExpandYMinSizePolicy, getXExpandYExpandSizePolicy, getHLine
 from lib.widgets import TreeWidgetDelegate, MyTreeWidget, TableModel,\
@@ -21,7 +21,9 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         _MainFrameFilterListSlots.MainFrameFilterListSlots,
         _MainFrameDocTableSlots.MainFrameDocTableSlots,
         _MainFrameMetaTabSlots.MainFrameMetaTabSlots,
-        _MainFrameOtherSlots.MainFrameOtherSlots):
+        _MainFrameOtherSlots.MainFrameOtherSlots,
+        _MainFrameProperties.MainFrameProperties
+        ):
 
     def __init__(self,settings):
         super(MainFrame,self).__init__()
@@ -334,6 +336,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         libtree.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
         libtree.folder_move_signal.connect(self.changeFolderParent)
         libtree.folder_del_signal.connect(self.trashFolder)
+        libtree.itemDoubleClicked.connect(self.renameFolder)
+        libtree.add_doc_to_folder_signal.connect(self.addDocToFolder)
 
         return libtree
 

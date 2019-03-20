@@ -141,12 +141,11 @@ class MainFrameDataSlots:
         #-------------Restoring a trashed doc-------------
         current_folderid=self._current_folder[1]
         trashed_folders=self._trashed_folder_ids+['-3']
-        if current_folderid in trashed_folders:
-            if self.meta_dict[docid]['deletionPending']=='true':
-                self.meta_dict[docid]['deletionPending']=='false'
-                if docid in self.folder_data[current_folderid]:
-                    self.folder_data[current_folderid].remove(docid)
-                    self.loadDocTable(folder=self._current_folder,sel_row=None,sortidx=4)
+        if current_folderid in trashed_folders and folderid not in trashed_folders:
+            self.meta_dict[docid]['deletionPending']=='false'
+            if docid in self.folder_data[current_folderid]:
+                self.folder_data[current_folderid].remove(docid)
+                self.loadDocTable(folder=self._current_folder,sel_row=None,sortidx=4)
 
         print('# <addDocToFolder>: Updated meta_dict["folders_l"]=%s' %self.meta_dict[docid]['folders_l'])
         self.logger.info('Updated meta_dict["folders_l"]=%s' %self.meta_dict[docid]['folders_l'])
@@ -185,6 +184,9 @@ class MainFrameDataSlots:
         self.progressbar.setVisible(True)
         self.progressbar.setMaximum(0)
 
+        self.changed_folder_ids=list(set(self.changed_folder_ids))
+        self.changed_doc_ids=list(set(self.changed_doc_ids))
+
         #----------------Save folders first----------------
         if len(self.changed_folder_ids)>0:
             sqlitedb.saveFoldersToDatabase(self.db,
@@ -200,9 +202,14 @@ class MainFrameDataSlots:
         for docid in self.changed_doc_ids:
             print('# <saveToDatabase>: Save doc %s' %docid)
             self.logger.info('Save doc %s' %docid)
-            sqlitedb.metaDictToDatabase(self.db,docid,self.meta_dict[docid],
+            sqlitedb.metaDictToDatabase(self.db,docid,
+                    self.meta_dict.get(docid),
                     self.settings.value('saving/current_lib_folder'),
                     self.settings.value('saving/rename_files'))
+
+            #if self.meta_dict[docid]=={}:
+                #print('# <saveToDatabase>: Delete docid from meta_dict', docid)
+                #del self.meta_dict[docid]
 
         self.changed_doc_ids=[]
         self.settings.sync()

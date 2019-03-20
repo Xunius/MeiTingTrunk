@@ -757,7 +757,9 @@ def saveFoldersToDatabase(db,folder_ids,folder_dict,folder_data,lib_folder):
     for idii in folder_ids:
 
         # deleting folder:
-        if folder_dict[idii]==():
+        folder=folder_dict.get(idii)
+        #if folder_dict[idii]==():
+        if folder is None:
             print('# <saveFoldersToDatabase>: Deleting folder id=%s' %idii)
             LOGGER.info('Deleting folder id=%s' %idii)
 
@@ -765,8 +767,8 @@ def saveFoldersToDatabase(db,folder_ids,folder_dict,folder_data,lib_folder):
             DELETE FROM Folders WHERE Folders.id=?
             '''
             cout.execute(query, (int(idii),))
-            del folder_dict[idii]
-            del folder_data[idii]
+            #del folder_dict[idii]
+            #del folder_data[idii]
         else:
             nameii,pidii=folder_dict[idii]
             idii=int(idii)
@@ -929,8 +931,8 @@ def metaDictToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
     if docid in docids:
 
-        if meta_dict=={}:
-            print('# <metaDictToDatabase>: docid %s in database. New meta={}. Deleting...' %docid)
+        if meta_dict is None:
+            print('# <metaDictToDatabase>: docid %s in database. New meta=None. Deleting...' %docid)
             LOGGER.info('docid %s in database. New meta={}. Deleting...' %docid)
 
             rec=delDocFromDatabase(db,docid,lib_folder)
@@ -941,8 +943,8 @@ def metaDictToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
             rec=updateToDatabase(db,docid,meta_dict,lib_folder,rename_files)
     else:
-        if meta_dict=={}:
-            print('# <metaDictToDatabase>: docid %s not in database. New meta={}. Ignored.' %docid)
+        if meta_dict is None:
+            print('# <metaDictToDatabase>: docid %s not in database. New meta=None. Ignored.' %docid)
             LOGGER.info('docid %s not in database. New meta={}. Ignored.' %docid)
             rec=0
 
