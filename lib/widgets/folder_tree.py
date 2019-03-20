@@ -82,10 +82,19 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
         self._move_item=move_item
         # TODO: abort if item is system folders?
+        if move_item.data(1,0) in ['-1','-2','-3']:
+            return
 
         super(MyTreeWidget,self).startDrag(actions)
 
     def dragEnterEvent(self,event):
+
+        #--------Deny dragging to all, needs review--------
+        pos=event.pos()
+        newparent=self.itemAt(pos)
+        if newparent is not None and newparent.data(1,0) in ['-2','-1']:
+            event.ignore()
+            return
 
         mime_data=event.mimeData()
 
@@ -93,11 +102,28 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
                 'formats', mime_data.formats())
 
         if mime_data.hasFormat('doc_table_item'):
-            event.setDropAction(Qt.CopyAction)
-            event.accept()
+            trashed_folders=self.parent._trashed_folder_ids
+            current_item=self.selectedItems()
+            if current_item:
+                current_item=current_item[0]
+
+            print('############### <dragMoveEvent>: current_item folder=',current_item.data(1,0))
+            print('############### <dragMoveEvent>: newparent folder=',newparent.data(1,0))
+
+            if newparent is not None and current_item is not None and\
+                    newparent.data(1,0) not in trashed_folders and\
+                    current_item.data(1,0) in trashed_folders:
+                event.setDropAction(Qt.MoveAction)
+                print('############### <dragMoveEvent>: MOVE!')
+            else:
+                event.setDropAction(Qt.CopyAction)
+                print('############### <dragMoveEvent>: COPY!')
+            #event.accept()
+            event.acceptProposedAction()
         elif mime_data.hasFormat('application/x-qabstractitemmodeldatalist'):
             event.setDropAction(Qt.MoveAction)
-            event.accept()
+            #event.accept()
+            event.acceptProposedAction()
         else:
             event.ignore()
 
@@ -105,10 +131,33 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
     def dragMoveEvent(self,event):
 
+        #--------Deny dragging to all, needs review--------
+        pos=event.pos()
+        newparent=self.itemAt(pos)
+        if newparent is not None and newparent.data(1,0) in ['-2','-1']:
+            event.ignore()
+            return
+
         mime_data=event.mimeData()
 
         if mime_data.hasFormat('doc_table_item'):
-            event.setDropAction(Qt.CopyAction)
+            trashed_folders=self.parent._trashed_folder_ids
+            current_item=self.selectedItems()
+            if current_item:
+                current_item=current_item[0]
+
+            print('############### <dragMoveEvent>: current_item folder=',current_item.data(1,0))
+            print('############### <dragMoveEvent>: newparent folder=',newparent.data(1,0))
+
+            if newparent is not None and current_item is not None and\
+                    newparent.data(1,0) not in trashed_folders and\
+                    current_item.data(1,0) in trashed_folders:
+                event.setDropAction(Qt.MoveAction)
+                print('############### <dragMoveEvent>: MOVE!')
+            else:
+                event.setDropAction(Qt.CopyAction)
+                print('############### <dragMoveEvent>: COPY!')
+
             event.acceptProposedAction()
         elif mime_data.hasFormat('application/x-qabstractitemmodeldatalist'):
 
@@ -147,7 +196,7 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
             print('# <dropEvent>: doc id=',dropped_docid,'parentid=',
                     newparent.data(1,0))
-            if newparent.data(1,0)!='':
+            if newparent.data(1,0) not in ['', '-2', '-1']:
 
                 self.add_doc_to_folder_signal.emit(dropped_docid, newparent.data(1,0))
 
