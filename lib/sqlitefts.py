@@ -188,20 +188,67 @@ def searchMultiple(db, text, field_list, folderid):
 
     return ret
 
+def getFolders(db):
+
+    #-----------------Get all folders-----------------
+    query='''SELECT id, name, parentId
+    FROM Folders
+    '''
+    ret=db.execute(query)
+    data=ret.fetchall()
+
+    # dict, key: folderid, value: (folder_name, parent_id)
+    # note: convert id to str
+    df=dict([(str(ii[0]), (ii[1], str(ii[2]))) for ii in data])
+
+    # add Default
+    #df['0']=('Default', '-1')
+
+    return df
+
+
+def getSubFolders(folder_dict, folderid):
+
+    results=[kk for kk,vv in folder_dict.items() if vv[1]==folderid]
+
+    subs=[]
+    for fii in results:
+        subids=getSubFolders(folder_dict,fii)
+        subs.extend(subids)
+
+    results.extend(subs)
+
+    return results
+
 
 #######################################################################
 #                             LIKE search                             #
 #######################################################################
 
-def searchTitleLike(db, text):
+def searchTitleLike(db, text, folderid, desend=False):
 
     cin=db.cursor()
+
     query='''SELECT Documents.id, Documents.title
     FROM Documents
-    WHERE (Documents.title LIKE ?)
+    LEFT JOIN DocumentFolders
+    ON DocumentFolders.did=Documents.id
+    WHERE (Documents.title LIKE ?) AND
+    %s
     ORDER BY Documents.title
     '''
-    ret=cin.execute(query,('%%%s%%' %text,))
+
+    if desend:
+        folder_dict=getFolders(db)
+        subfolderids=getSubFolders(folder_dict, folderid)+[folderid,]
+        print('# <searchTitleLike>: subfolderids=',subfolderids)
+        folder_str='(DocumentFolders.folderid IN (%s))' %','.join(['?']*len(subfolderids))
+        folder_value=tuple(subfolderids)
+    else:
+        folder_str='(DocumentFolders.folderid = ?)'
+        folder_value=(folderid,)
+
+    ret=cin.execute(query %folder_str,('%%%s%%' %text,) + folder_value)
     ret=ret.fetchall()
 
     return ret
@@ -263,7 +310,7 @@ def searchNotesLike(db, text):
     return ret
 
 
-def searchMultipleLike(db, text, field_list, folderid):
+def searchMultipleLike(db, text, field_list, folderid, desend=False):
 
     cin=db.cursor()
 
@@ -287,8 +334,7 @@ def searchMultipleLike(db, text, field_list, folderid):
         if kk=='Authors':
             qkk='''SELECT did, ("firstNames" || " " || "lastName") as name, 'authors'
             FROM DocumentContributors
-            WHERE name LIKE ?
-            '''
+            WHERE name LIKE ?'''
         elif kk=='Title':
             qkk='''SELECT id, Documents.title, 'title'
             FROM Documents
@@ -372,11 +418,105 @@ def searchMultipleLike(db, text, field_list, folderid):
 
     return ret
 
+def searchMultipleLike2(db, text, field_list, folderid, desend=False):
+
+    cin=db.cursor()
+
+    #-------------Append % to search term-------------
+    text='%%%s%%' %text
+
+    #----------------Create temp table----------------
+    query='''
+    DROP TABLE IF EXISTS temp.search_res'''
+    cin.execute(query)
+
+    query='''
+    CREATE TABLE temp.search_res (
+    did, text, field)
+    '''
+    cin.execute(query)
+
+    #---------------Compose search query---------------
+    queries=[]
+    for kk in field_list:
+        if kk=='Authors':
+            qkk='''SELECT did, ("firstNames" || " " || "lastName") as name, 'authors'
+            FROM DocumentContributors
+            WHERE name LIKE ?'''
+        elif kk=='Title':
+            qkk='''SELECT id, Documents.title, 'title'
+            FROM Documents
+            WHERE Documents.title LIKE ?'''
+        elif kk=='Keywords':
+            qkk='''SELECT did, text, 'keywords'
+            FROM DocumentKeywords
+            WHERE DocumentKeywords.text LIKE ?'''
+        elif kk=='Tags':
+            qkk='''SELECT did, tag, 'tag'
+            FROM DocumentTags
+            WHERE DocumentTags.tag LIKE ?'''
+        elif kk=='Notes':
+            qkk='''SELECT did, note, 'note'
+            FROM DocumentNotes
+            WHERE DocumentNotes.note LIKE ?'''
+        elif kk=='Publication':
+            qkk='''SELECT id, Documents.publication, 'publication'
+            FROM Documents
+            WHERE Documents.publication LIKE ?'''
+        elif kk=='Abstract':
+            qkk='''SELECT id, Documents.abstract, 'abstract'
+            FROM Documents
+            WHERE Documents.abstract LIKE ?'''
+        else:
+            continue
+
+        queries.append(qkk)
+
+    query='''INSERT INTO temp.search_res (did, text, field)
+    %s
+    ''' %('UNION ALL\n'.join(queries))
+
+    ret=cin.execute(query, (text,)*len(queries))
+
+    #---------Get results and filter by folder---------
+    query='''SELECT search_res.did,
+    group_concat(search_res.field, ',')
+    FROM search_res
+    %s
+    GROUP BY search_res.did
+    '''
+
+    #---------Compose folder filtering string---------
+    if folderid=='-1':
+        query=query %''
+        ret=cin.execute(query)
+    elif folderid=='-2':
+        query=query %'''
+        LEFT JOIN Documents ON Documents.id=search_res.did
+        WHERE Documents.confirmed='false'
+        '''
+        ret=cin.execute(query)
+    else:
+        if desend:
+            folder_dict=getFolders(db)
+            subfolderids=getSubFolders(folder_dict, folderid)+[folderid,]
+        else:
+            subfolderids=[folderid,]
+        print('# <searchTitleLike>: subfolderids=',subfolderids)
+
+        query=query %'''
+        LEFT JOIN DocumentFolders ON DocumentFolders.did=search_res.did
+        WHERE (DocumentFolders.folderid IN (%s))
+        ''' %','.join(['?']*len(subfolderids))
+        ret=cin.execute(query, subfolderids)
+
+    ret=ret.fetchall()
+
+    return ret
 
 if __name__=='__main__':
 
-    dbfile='../new7.sqlite'
-    dbfile='../nonfts.sqlite'
+    dbfile='../nonfts3.sqlite'
 
     db = sqlite3.connect(dbfile)
     #cin=db.cursor()
@@ -390,4 +530,12 @@ if __name__=='__main__':
 
     field_list=['Authors', 'Title', 'Keywords', 'Tag', \
             'Abstract', 'Publication', 'Notes']
-    aa=searchMultipleLike(db, 'ENSO', field_list, '-1')
+    #aa=searchMultipleLike2(db, 'ENSO', field_list, '16')
+    aa=searchMultipleLike2(db, 'ENSO', ['Title',' Keywords', 'Abstract'], '16', True)
+    bb=searchTitleLike(db, 'ENSO', '16', True)
+    for ii in bb:
+        print(ii)
+
+    #folder_dict=getFolders(db)
+    #ff=getSubFolders(folder_dict,'16')
+

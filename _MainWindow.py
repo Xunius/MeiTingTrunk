@@ -96,6 +96,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             settings.setValue('search/search_fields', ['Authors', 'Title',
                 'Abstract', 'Keywords', 'Tags', 'Notes', 'Publication'])
+            settings.setValue('search/desend_folder', True)
 
             settings.setValue('view/show_widgets', ['Toggle Filter List',
                 'Toggle Tab Pane', 'Toggle Meta Tab', 'Toggle Notes Tab',

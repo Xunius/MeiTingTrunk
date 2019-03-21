@@ -390,14 +390,15 @@ class SearchResFrame(QtWidgets.QScrollArea):
                     wii.setStyleSheet('')
 
 
-    def search(self,db,text,field_list,folderid,meta_dict):
+    def search(self,db,text,field_list,folderid,meta_dict,desend):
 
         self.tree.clear()
         self.setVisible(True)
         self.meta_dict=meta_dict
         self.search_text=text
+        self.desend=desend
 
-        search_res=sqlitefts.searchMultipleLike(db, text, field_list, folderid)
+        search_res=sqlitefts.searchMultipleLike2(db, text, field_list, folderid, desend)
         self.label.setText('%d searches results related to "%s"'\
                 %(len(search_res),text))
         self.addResultToTree(text, search_res)

@@ -372,10 +372,15 @@ class MainFrameToolBarSlots:
         for actii in actions:
             wii=actii.defaultWidget()
             print('# <searchBarClicked>: actii',actii.text(),wii.isChecked())
-            if wii.isChecked():
-                new_search_fields.append(actii.text())
+            if actii.text()=='Include sub-folders':
+                desend=wii.isChecked()
+            else:
+                print('# <searchBarClicked>: actii',actii.text(),wii.isChecked())
+                if wii.isChecked():
+                    new_search_fields.append(actii.text())
 
         self.settings.setValue('search/search_fields',new_search_fields)
+        self.settings.setValue('search/desend_folder',desend)
 
         if len(new_search_fields)==0:
             msg=QtWidgets.QMessageBox()
@@ -396,7 +401,7 @@ class MainFrameToolBarSlots:
         self.status_bar.showMessage('Searching ...')
         self.doc_table.setVisible(False)
         self.search_res_frame.search(self.db, text, new_search_fields,
-                current_folder[1], self.meta_dict)
+                current_folder[1], self.meta_dict, desend)
 
         return
 

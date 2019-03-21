@@ -123,7 +123,7 @@ def readSqlite(dbin):
     #-------------------Get folders-------------------
     folder_dict=getFolders(dbin)
 
-    trashed_folders=getTrashedFolders(folder_dict)
+    #trashed_folders=getTrashedFolders(folder_dict)
 
     #-------------------Get metadata-------------------
     cursor=dbin.execute('SELECT * FROM Documents')
@@ -339,8 +339,21 @@ def zipAuthors(firstnames,lastnames):
     return authors
 
 
+def getSubFolders(folder_dict, folderid):
+
+    results=[kk for kk,vv in folder_dict.items() if vv[1]==folderid]
+
+    subs=[]
+    for fii in results:
+        subids=getSubFolders(folder_dict,fii)
+        subs.extend(subids)
+
+    results.extend(subs)
+
+    return results
 
 def getTrashedFolders(folder_dict):
+    '''
     results=[kk for kk,vv in folder_dict.items() if vv[1]=='-3']
     print('# <getTrashedFolders>: results=',results)
 
@@ -359,6 +372,8 @@ def getTrashedFolders(folder_dict):
         results.extend(subids)
 
     return results
+    '''
+    return getSubFolders(folder_dict, '-3')
 
 
 
@@ -626,32 +641,6 @@ def getChildFolders(df,folderid,verbose=True):
     results.sort()
     return results
 
-#-------------------Get subfolders of a given folder-------------------
-def getSubFolders(df,folderid,verbose=True):
-    '''Get subfolders of a given folder
-
-    <df>: dict, key: folderid, value: (folder_name, parent_id).
-    <folderid>: int, folder id
-    '''
-
-    getParentId=lambda df,id: df[id][1]
-    results=[]
-
-    for idii in df:
-        fii,pii=df[idii]
-        cid=idii
-        while True:
-            pid=getParentId(df,cid)
-            if pid==-1 or pid==0:
-                break
-            if pid==folderid:
-                results.append(idii)
-                break
-            else:
-                cid=pid
-
-    results.sort()
-    return results
 
 #-------------Get folder tree structure of a given folder-------------
 def getFolderTree(df,folderid,verbose=True):

@@ -301,6 +301,16 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
             aii.setText(fieldii)
             menu.addAction(aii)
 
+        menu.addSeparator()
+
+        cbii=QtWidgets.QCheckBox('Include sub-folders', menu)
+        if self.settings.value('search/desend_folder',bool):
+            cbii.setChecked(True)
+        aii=QtWidgets.QWidgetAction(menu)
+        cbii.stateChanged.connect(aii.trigger)
+        aii.setDefaultWidget(cbii)
+        aii.setText('Include sub-folders')
+        menu.addAction(aii)
 
         button.setIcon(QIcon.fromTheme('edit-find'))
         button.setMenu(menu)
