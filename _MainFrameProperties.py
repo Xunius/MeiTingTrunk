@@ -19,8 +19,7 @@ class MainFrameProperties:
                 docid=self._tabledata[current_row][0]
                 return docid
             else:
-                print('_current_doc: current_row > row number',current_row,\
-                        len(self._tabledata))
+                self.logger.critical('_current_doc: current row > row number. current_row = %s, len(self._tabledata) = %d' %(current_row, len(self._tabledata)))
                 return None
         else:
             return None

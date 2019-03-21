@@ -13,7 +13,6 @@ class SettingsThread(QThread):
 
     def run(self):
         self.setting.setValue(self.key,self.value)
-        print('# <SettingsThread>: Settings saved.')
         return
 
 
@@ -23,11 +22,11 @@ class MainFrameOtherSlots:
 
     view_change_sig=pyqtSignal(str,bool)
 
-
     #######################################################################
     #                             Other slots                             #
     #######################################################################
 
+    @pyqtSlot()
     def foldFilterButtonClicked(self):
 
         show_widgets=self.settings.value('view/show_widgets',[],str)
@@ -61,6 +60,8 @@ class MainFrameOtherSlots:
         if isinstance(show_widgets,str) and show_widgets=='':
             show_widgets=[]
 
+        self.logger.debug('Before show_widgets = %s' %show_widgets)
+
         if self.tab_pane.isVisible():
             self.tab_pane.setVisible(False)
             self.fold_tab_button.setArrowType(Qt.LeftArrow)
@@ -76,14 +77,17 @@ class MainFrameOtherSlots:
             if 'Toggle Tab Pane' not in show_widgets:
                 show_widgets.append('Toggle Tab Pane')
 
+            # check if any tab page still visible
             has_tab=False
 
             for kk, vv in self.tab_dict.items():
                 tabii, tabnameii=vv
                 idx=self.tabs.indexOf(tabii)
                 if idx!=-1:
+                    # -1 idx means not there
                     has_tab=True
 
+            # if no tab page is still visible, remove tab pane as well.
             if not has_tab:
                 for kk, vv in self.tab_dict.items():
                     tabii, tabnameii=vv
@@ -101,14 +105,18 @@ class MainFrameOtherSlots:
                 'view/show_widgets', show_widgets)
         self.setting_thread.start()
 
+        self.logger.debug('After show_widgets = %s' %show_widgets)
+
         return
 
-    @pyqtSlot()
+
     def metaTabViewChange(self, view_name='Toggle Tab Pane'):
 
         show_widgets=self.settings.value('view/show_widgets',[],str)
         if isinstance(show_widgets,str) and show_widgets=='':
             show_widgets=[]
+
+        self.logger.debug('Before show_widgets = %s' %show_widgets)
 
         has_tab=False
         for kk, vv in self.tab_dict.items():
@@ -133,7 +141,8 @@ class MainFrameOtherSlots:
                 else:
                     has_tab=True
 
-        print('# <metaTabViewChange>: has_tab:',has_tab)
+        self.logger.debug('has_tab = %s' %has_tab)
+
         if not has_tab:
             self.tab_pane.setVisible(False)
             self.fold_tab_button.setArrowType(Qt.LeftArrow)
@@ -151,9 +160,13 @@ class MainFrameOtherSlots:
                 'view/show_widgets', show_widgets)
         self.setting_thread.start()
 
+        self.logger.debug('After show_widgets = %s' %show_widgets)
+
         return
 
+
     def statusbarViewChange(self):
+
         show_widgets=self.settings.value('view/show_widgets',[],str)
         if isinstance(show_widgets,str) and show_widgets=='':
             show_widgets=[]
@@ -174,6 +187,7 @@ class MainFrameOtherSlots:
         return
 
 
+    @pyqtSlot()
     def clearFilterButtonClicked(self):
 
         if self.clear_filter_frame.isVisible():
@@ -191,11 +205,12 @@ class MainFrameOtherSlots:
                 self.loadDocTable(None,sortidx=4,sel_row=0)
             else:
                 self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
-            self.doc_table.selectRow(0)
-
+            #self.doc_table.selectRow(0)
 
         return
 
+
+    @pyqtSlot()
     def clearDuplicateButtonClicked(self):
 
         if self.duplicate_result_frame.isVisible():
@@ -213,10 +228,12 @@ class MainFrameOtherSlots:
                     self.loadDocTable(None,sortidx=4,sel_row=0)
                 else:
                     self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
-                self.doc_table.selectRow(0)
+                #self.doc_table.selectRow(0)
 
         return
 
+
+    @pyqtSlot()
     def clearSearchResButtonClicked(self):
 
         if self.search_res_frame.isVisible():
@@ -234,15 +251,17 @@ class MainFrameOtherSlots:
                     self.loadDocTable(None,sortidx=4,sel_row=0)
                 else:
                     self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
-                self.doc_table.selectRow(0)
+                #self.doc_table.selectRow(0)
 
         return
 
 
-
+    @pyqtSlot()
     def copyBibButtonClicked(self):
         self.bib_textedit.selectAll()
         self.bib_textedit.copy()
+
+        return
 
 
     def clearData(self):
@@ -257,5 +276,6 @@ class MainFrameOtherSlots:
         self.add_folder_button.setEnabled(False)
         self.duplicate_check_button.setEnabled(False)
 
-        print('# <clearData>: Data cleared.')
         self.logger.info('Data cleared.')
+
+        return

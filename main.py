@@ -15,22 +15,21 @@ LOG_CONFIG={
         'disable_existing_loggers': False,
         'formatters': {
             'standard': {
-                'format': '<%(filename)s-%(funcName)s()>: %(asctime)s,%(levelname)s: %(message)s'},
+                #'format': '<%(filename)s-%(funcName)s()>: %(asctime)s,%(levelname)s: %(message)s'},
+                'format': '<%(filename)s-%(funcName)s()>: %(levelname)s: %(message)s'},
             },
         'handlers': {
             'default': {
-                'level': 'INFO',
+                'level': 'DEBUG',
                 'class': 'logging.FileHandler',
                 'formatter': 'standard',
                 'filename': 'MTT.log',
                 },
             },
-        'loggers': {
-            'default_logger': {
+        'root' : {
                 'handlers': ['default'],
-                'level': 'INFO',
+                'level': 'DEBUG',
                 'propagate': True
-                }
             }
         }
 
@@ -109,7 +108,6 @@ if __name__=='__main__':
     app=QtWidgets.QApplication(sys.argv)
 
     splash_pic=QPixmap(':/logo.jpg')
-    print('# <__init__>: splash_pic', splash_pic)
     splash=QtWidgets.QSplashScreen(splash_pic, Qt.WindowStaysOnTopHint)
     splash.show()
     splash.showMessage(__version__)

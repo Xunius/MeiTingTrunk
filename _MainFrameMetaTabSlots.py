@@ -1,5 +1,4 @@
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5 import QtWidgets
+from PyQt5.QtCore import pyqtSlot
 
 
 class MainFrameMetaTabSlots:
@@ -9,9 +8,9 @@ class MainFrameMetaTabSlots:
     #######################################################################
 
     def clearMetaTab(self):
+
         for kk,vv in self._current_meta_dict.items():
             if kk=='files_l':
-                #vv=[]
                 self.t_meta.delFileField()
             else:
                 vv.clear()
@@ -23,9 +22,13 @@ class MainFrameMetaTabSlots:
 
         self.confirm_review_frame.setVisible(False)
 
+        self.logger.debug('Meta tab cleared.')
+
         return
 
+
     def enableMetaTab(self):
+
         for kk,vv in self._current_meta_dict.items():
             if kk!='files_l':
                 vv.setReadOnly(False)
@@ -35,14 +38,16 @@ class MainFrameMetaTabSlots:
 
         return
 
-    def confirmReviewButtonClicked(self):
-        docid=self._current_doc
 
-        print('# <confirmReviewButtonClicked>: Before: self.meta_dict[docid]["confirmed"]', self.meta_dict[docid]['confirmed'])
+    @pyqtSlot()
+    def confirmReviewButtonClicked(self):
+
+        docid=self._current_doc
 
         self.meta_dict[docid]['confirmed']='true'
 
-        print('# <confirmReviewButtonClicked>: After: self.meta_dict[docid]["confirmed"]', self.meta_dict[docid]['confirmed'])
+        self.logger.debug("doc id = %s. meta_dict[docid]['confirmed'] = %s"\
+                %(docid, self.meta_dict[docid]['confirmed']))
 
         self.confirm_review_frame.setVisible(False)
         idx=self.doc_table.currentIndex()
@@ -54,5 +59,6 @@ class MainFrameMetaTabSlots:
 
         self.loadDocTable(folder=self._current_folder,sortidx=4,sel_row=idx.row())
 
+        return
 
 

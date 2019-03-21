@@ -2,24 +2,9 @@ from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QCursor, QBrush, QColor, QIcon
 from lib import sqlitedb
+from lib.tools import iterItems
 
-def addFolder(parent,folderid,folder_dict):
 
-    foldername,parentid=folder_dict[folderid]
-    fitem=QtWidgets.QTreeWidgetItem([foldername,str(folderid)])
-    style=QtWidgets.QApplication.style()
-    diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
-    fitem.setIcon(0,diropen_icon)
-    sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
-    if parentid=='-1':
-        parent.addTopLevelItem(fitem)
-    else:
-        parent.addChild(fitem)
-    if len(sub_ids)>0:
-        for sii in sub_ids:
-            addFolder(fitem,sii,folder_dict)
-
-    return
 
 class MainFrameLibTreeSlots:
 
@@ -28,15 +13,12 @@ class MainFrameLibTreeSlots:
     #######################################################################
 
 
-
     def clickSelFolder(self,item,column):
         '''Select folder by clicking'''
         folder=item.data(0,0)
         folderid=item.data(1,0)
 
-        print('# <clickSelFolder>: Select folder %s. folderid=%s' \
-                %(folder, folderid))
-        self.logger.info('Select folder %s. folderid=%s' \
+        self.logger.info('Selected folder = %s. folderid = %s' \
                 %(folder, folderid))
 
         if item==self.all_folder:
@@ -59,7 +41,6 @@ class MainFrameLibTreeSlots:
             self.add_button.setDisabled(True)
             self.add_folder_button.setDisabled(True)
             self.search_button.setEnabled(True)
-            #self.create_subfolder_action.setDisabled(True)
         else:
             if folderid in self._trashed_folder_ids:
                 self.add_button.setDisabled(True)
@@ -85,12 +66,9 @@ class MainFrameLibTreeSlots:
         item=self._current_folder_item
         if item:
             column=0
-            print('# <selFolder>: Selected item.data(0,0)=%s, item.data(1,0)=%s' \
-                    %(item.data(0,0), item.data(1,0)))
-            self.logger.info('Selected item.data(0,0)=%s, item.data(1,0)=%s' \
-                    %(item.data(0,0), item.data(1,0)))
-
             self.clickSelFolder(item,column)
+
+        return
 
 
     def libTreeMenu(self,pos):
@@ -139,8 +117,7 @@ class MainFrameLibTreeSlots:
 
             if action:
 
-                print('# <libTreeMenu>: action.text()=%s' %action.text())
-                self.logger.info('action.text()=%s' %action.text())
+                self.logger.info('action.text() = %s' %action.text())
 
                 if menu_type=='trash':
                     if action==restore_action:
@@ -166,32 +143,26 @@ class MainFrameLibTreeSlots:
         folder_name=self.folder_dict[move_folder_id][0]
 
         #------------------Restoring docs------------------
-        print('# <changeFolderParent>: move_folder id=',move_folder_id)
-        print('# <changeFolderParent>: trashed_folders=',self._trashed_folder_ids)
+        self.logger.info('Moving folder (id = %s) out from Trash. Restoring docs within.'\
+                %move_folder_id)
+
         trashed_folder_ids=self._trashed_folder_ids
         if move_folder_id in trashed_folder_ids and new_parent_id \
                 not in trashed_folder_ids:
             for docid in self.folder_data[move_folder_id]:
-                print('# <changeFolderParent>: restoring docii=',docid)
                 self.meta_dict[docid]['deletionPending']=='false'
                 self.changed_doc_ids.append(docid)
 
-        print('# <changeFolderParent>: folder_dict[id] before change=%s'\
-                %str(self.folder_dict[move_folder_id]))
-        self.logger.info('folder_dict[id] before change=%s'\
-                %str(self.folder_dict[move_folder_id]))
+                self.logger.debug("Restoring doc %d. meta_dict[docid]['deletionPending'] = %s" %(docid, self.meta_dict[docid]['deletionPending']))
 
         self.folder_dict[move_folder_id]=(folder_name, new_parent_id)
 
-        print('# <changeFolderParent>: folder_dict[id] after change=%s'\
-                %str(self.folder_dict[move_folder_id]))
-        self.logger.info('folder_dict[id] after change=%s'\
+        self.logger.debug('folder_dict[move_folder_id] = %s'\
                 %str(self.folder_dict[move_folder_id]))
 
         self.changed_folder_ids.append(move_folder_id)
 
         return
-
 
 
     @pyqtSlot(QtWidgets.QTreeWidgetItem,QtWidgets.QTreeWidgetItem,bool)
@@ -200,6 +171,9 @@ class MainFrameLibTreeSlots:
         if newparent is not None:
             if newparent.data(1,0) in self._trashed_folder_ids+['-3']:
                 ask=False
+
+                self.logger.debug('newparent id = %s in _trashed_folder_ids. Skip ask.'\
+                        %newparent.data(1,0))
 
         if ask:
             choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
@@ -214,17 +188,20 @@ class MainFrameLibTreeSlots:
 
             folderid=item.data(1,0)
             if newparent is None:
+                self.logger.info('Put folder %s to Trash' %folderid)
+
                 self.trash_folder.addChild(item)
                 self.changeFolderParent(folderid,'-3')
             else:
+                self.logger.info('Put folder %s to trashed folder'\
+                        %(folderid, newparent.data(1,0)))
+
                 newparent.addChild(item)
                 self.changeFolderParent(folderid,newparent.data(1,0))
 
             self.postTrashFolder(item)
 
         return
-
-
 
 
     def postTrashFolder(self,item):
@@ -237,23 +214,14 @@ class MainFrameLibTreeSlots:
         orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,deldocids,
                 self._trashed_folder_ids)
 
-        print('# <postTrashFolder>: delfolderids=%s' %delfolderids)
-        self.logger.info('delfolderids=%s' %delfolderids)
-
-        print('# <postTrashFolder>: Docs to del=%s' %deldocids)
-        self.logger.info('Docs to del=%s' %deldocids)
-
-        print('# <postTrashFolder>: Orphan docs=%s' %orphan_docs)
-        self.logger.info('Orphan docs=%s' %orphan_docs)
-
-        #self._orphan_doc_ids.extend(orphan_docs)
+        self.logger.info('Ids of folders to trash = %s' %delfolderids)
+        self.logger.info('Ids of docs within = %s' %deldocids)
+        self.logger.info('Orphan docs = %s' %orphan_docs)
 
         for idii in orphan_docs:
             self.meta_dict[idii]['deletionPending']='true'
 
-            print('# <postTrashFolder>: Set deletionPending to orphan doc %s %s' \
-                    %(idii, self.meta_dict[idii]['deletionPending']))
-            self.logger.info('Set deletionPending to orphan doc %s %s' \
+            self.logger.debug('Set deletionPending to orphan doc %s %s' \
                     %(idii, self.meta_dict[idii]['deletionPending']))
 
         self.changed_doc_ids.extend(orphan_docs)
@@ -261,9 +229,8 @@ class MainFrameLibTreeSlots:
         return
 
 
-
-
     def restoreFolderFromTrash(self):
+
         msg=QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setWindowTitle('Restore')
@@ -272,6 +239,7 @@ class MainFrameLibTreeSlots:
         msg.exec_()
 
         return
+
 
     def delFolderFromTrash(self, item):
 
@@ -284,10 +252,13 @@ class MainFrameLibTreeSlots:
         foldername=item.data(0,0)
         folderid=item.data(1,0)
         item_parent=item.parent()
-        print('# <delFolderFromTrash>: current_folder',foldername,folderid)
+
+        self.logger.info('current folder name = %s. folder id = %s.' \
+                %(foldername, folderid))
 
         # Not sure, may need to stop the timer
         self.auto_save_timer.stop()
+        self.logger.info('Stoped auto save timer.')
 
         #-------------------Empty trash-------------------
         if folderid=='-3':
@@ -295,9 +266,10 @@ class MainFrameLibTreeSlots:
 
             #-----------------Get orphan docs in Trash-----------------
             for docii in self.folder_data['-3']:
-                print('# <delFolderFromTrash>: orphan doc=',docii)
-                #self.meta_dict[docii]={}
+
+                self.logger.warning('Deleting orphan doc %s from meta_dict' %docii)
                 del self.meta_dict[docii]
+                self.logger.warning('Deleting orphan doc %s from folder_data[-3]' %docii)
                 self.folder_data['-3'].remove(docii)
                 self.changed_doc_ids.append(docii)
 
@@ -306,13 +278,15 @@ class MainFrameLibTreeSlots:
             changed_folders, _=sqlitedb.walkFolderTree(self.folder_dict,
                     self.folder_data, folderid)
 
+        self.logger.info('Ids of folders to clear from trash = %s' %changed_folders)
+
         for fii in changed_folders:
-            print('# <delFolderFromTrash>: trashed_folder=',fii)
-            #self.changed_doc_ids.extend(self.folder_data[fii])
+            self.logger.info('Destroying docs in folder %s' %fii)
             self.destroyDoc(self.folder_data[fii], fii, False, False)
 
         # del folders after all docs are destroyed
         for fii in changed_folders:
+            self.logger.warning('Deleting folder %s from folder_dict, folder_data' %fii)
             del self.folder_dict[fii]
             del self.folder_data[fii]
 
@@ -327,7 +301,7 @@ class MainFrameLibTreeSlots:
         self.libtree.setCurrentItem(item_parent)
 
         self.auto_save_timer.start()
-        print('# <delFolderFromTrash>: Restart auto save timer.')
+        self.logger.info('Restarted auto save timer.')
 
         return
 
@@ -342,21 +316,11 @@ class MainFrameLibTreeSlots:
             self.libtree.scrollToItem(item)
             self.libtree.editItem(item)
 
+        return
+
 
     def removeFolderHighlights(self):
 
-        def iterItems(treewidget, root):
-            if root is not None:
-                stack = [root]
-                while stack:
-                    parent = stack.pop(0)
-                    for row in range(parent.childCount()):
-                        child = parent.child(row)
-                        yield child
-                        if child.childCount()>0:
-                            stack.append(child)
-
-        #------------Remove highlights for all------------
         ori_color=QBrush(QColor(255,255,255))
         root=self.libtree.invisibleRootItem()
         for item in iterItems(self.libtree, root):

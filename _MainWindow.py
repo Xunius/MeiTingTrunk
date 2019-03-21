@@ -33,7 +33,7 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow,self).__init__()
 
         self.logger=logging.getLogger('default_logger')
-        self.settings=self.loadSettings()
+        self.settings=self.initSettings()
         self.is_loaded=False
 
         self.main_frame=_MainFrame.MainFrame(self.settings)
@@ -110,24 +110,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
         #---------------Make sure output folder exists---------------
         storage_folder=settings.value('saving/storage_folder')
-        print('# <loadSettings>: storage_folder=%s' %storage_folder)
         self.logger.info('storage_folder=%s' %storage_folder)
 
         storage_folder=os.path.expanduser(storage_folder)
         if not os.path.exists(storage_folder):
             os.makedirs(storage_folder)
 
-            print('# <loadSettings>: Create folder %s' %storage_folder)
             self.logger.info('Create folder %s' %storage_folder)
-
-
-        return settings
-
-    def loadSettings(self):
-        settings=self.initSettings()
-
-        print('# <loadSettings>: settings.fielName()=%s' %settings.fileName())
-        self.logger.info('settings.fielName()=%s' %settings.fileName())
 
         return settings
 
@@ -170,7 +159,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if isinstance(recent,str) and recent=='':
             recent=[]
         recent_num=self.settings.value('file/recent_open_num',type=int)
-        print('# <initUI>: recent=',recent,type(recent))
 
         if recent and recent_num>0:
             for rii in recent:
@@ -198,6 +186,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if tii is None:
                 self.view_menu.addSeparator()
             elif tii=='Toggle Status bar':
+                # Status bar is kind of necessary
                 continue
             else:
                 tii_view_action=self.view_menu.addAction(tii)
@@ -240,13 +229,18 @@ class MainWindow(QtWidgets.QMainWindow):
         quit_action.triggered.connect(self.close)
         self.view_menu.triggered.connect(self.viewChangeTriggered)
 
+        self.logger.info('Main window UI inited.')
+
         self.show()
 
+        return
+
+
     def closeEvent(self,event):
-        print('# <closeEvent>: settings.sync()')
         self.logger.info('settings.sync()')
         self.settings.sync()
 
+        return
 
 
     #######################################################################
@@ -275,12 +269,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 filename='%s.sqlite' %lib_name
                 fname=os.path.join(dirname,filename)
 
-            print('createDatabaseTriggered: database file:',fname)
             lib_folder=os.path.join(storage_folder,lib_name)
             if not os.path.exists(lib_folder):
                 os.makedirs(lib_folder)
 
-            print('# <loadSettings>: Create folder %s' %lib_folder)
             self.logger.info('Create folder %s' %lib_folder)
 
             def func(jobid,fname,storage_folder,rename_files):
@@ -323,19 +315,19 @@ class MainWindow(QtWidgets.QMainWindow):
      '',"sqlite files (*.sqlite);; All files (*)")[0]
 
         if fname:
-            self._openDatabase(fname)
-            '''
             try:
                 self._openDatabase(fname)
-            except:
+            except Exception as e:
+                self.logger.exception('Exception in _openDatabase(): %s' %e)
+
                 msg=QtWidgets.QMessageBox()
                 msg.setIcon(QtWidgets.QMessageBox.Warning)
                 msg.setWindowTitle('Error')
                 msg.setText("Oopsi.")
                 msg.setInformativeText("Failed to open database file\n    %s" %fname)
                 msg.exec_()
-            '''
             return
+
 
     def _openDatabase(self,fname):
 
@@ -346,6 +338,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 return
 
         if not os.path.exists(fname):
+            self.logger.info('Cant find database file %s' %fname)
+
             msg=QtWidgets.QMessageBox()
             msg.setIcon(QtWidgets.QMessageBox.Warning)
             msg.setWindowTitle('Can not find file')
@@ -359,9 +353,10 @@ class MainWindow(QtWidgets.QMainWindow):
             if isinstance(recent,str) and recent=='':
                 recent=[]
             if fname in recent:
-                print('# <_openDatabase>: fname in recent')
                 recent.remove(fname)
                 self.settings.setValue('file/recent_open', recent)
+
+                self.logger.info('Remove non-exist database file from recent list: %s' %fname)
 
                 for actionii in self.recent_open_menu.findChildren(
                         QtWidgets.QAction):
@@ -377,44 +372,43 @@ class MainWindow(QtWidgets.QMainWindow):
         #self.main_frame.progressbar.setMaximum(0)
         db = sqlite3.connect(fname)
 
-        print('# <openDatabaseTriggered>: Connected to database: %s' %fname)
         self.logger.info('Connected to database: %s' %fname)
 
         self.db=db
         meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
         self.main_frame.loadLibTree(db,meta_dict,folder_data,folder_dict)
-        #self.main_frame.status_bar.clearMessage()
         self.main_frame.progressbar.setVisible(False)
 
         self.is_loaded=True
 
-        # store folder name
+        # get library name
         lib_name=os.path.splitext(os.path.split(fname)[1])[0]
         storage_folder=self.settings.value('saving/storage_folder')
         self.current_lib=lib_name
         self.current_lib_folder=os.path.join(storage_folder,lib_name)
         self.settings.setValue('saving/current_lib_folder', self.current_lib_folder)
 
+        self.logger.info('Get current_lib = %s' %lib_name)
+        self.logger.info('Get current_lib_folder = %s' %self.current_lib_folder)
+
         #-----------Make sure lib folder exists-----------
         if not os.path.exists(self.current_lib_folder):
             os.makedirs(self.current_lib_folder)
-            print('# <_openDatabase>: Create lib folder: %s' %self.current_lib_folder)
             self.logger.info('Create lib folder: %s' %self.current_lib_folder)
 
         lib_collection_folder=os.path.join(self.current_lib_folder,'_collections')
         if not os.path.exists(lib_collection_folder):
             os.makedirs(lib_collection_folder)
-
-        print('# <_openDatabase>: current_lib=',self.current_lib)
-        print('# <_openDatabase>: current_lib_folder=',self.current_lib_folder)
+            self.logger.info('Create lib collection folder: %s' %lib_collection_folder)
 
         self.main_frame.auto_save_timer.start()
-        print('# <openDatabaseTriggered>: Start auto save timer.')
+
         self.logger.info('Start auto save timer.')
 
         self.import_action.setEnabled(True)
         self.export_action.setEnabled(True)
 
+        # add to recent list
         recent=self.settings.value('file/recent_open',[],str)
         if isinstance(recent,str) and recent=='':
             recent=[]
@@ -423,6 +417,7 @@ class MainWindow(QtWidgets.QMainWindow):
             recentii=self.recent_open_menu.addAction(fname)
             recentii.triggered.connect(lambda x,t=fname: self._openDatabase(t))
 
+        # pop 1st from recent list if exceeding limit
         recent_open_num=self.settings.value('file/recent_open_num',type=int)
         if len(recent)>recent_open_num:
             recent.pop(0)
@@ -431,9 +426,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         return
 
+
     def saveDatabaseTriggered(self):
         self.main_frame.saveToDatabase()
         return
+
 
     def closeDatabaseTriggered(self):
 
@@ -442,7 +439,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
         if choice==QtWidgets.QMessageBox.Yes:
-            #self.main_frame.saveToDatabase()
             self.main_frame.clearData()
             self.is_loaded=False
 
@@ -453,8 +449,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.current_lib_folder=None
             self.settings.setValue('saving/current_lib_folder','')
             self.main_frame.auto_save_timer.stop()
-            print('# <closeDatabaseTriggered>: Stop auto save timer.')
+
             self.logger.info('Stop auto save timer.')
+            self.logger.info('Database closed.')
 
             return True
         else:
@@ -463,7 +460,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def helpMenuTriggered(self,action):
-        print('# <helpMenuTriggered>: action=%s, action.text()=%s' %(action,action.text()))
         self.logger.info('action=%s, action.text()=%s' %(action,action.text()))
         return
 
@@ -472,17 +468,21 @@ class MainWindow(QtWidgets.QMainWindow):
         diag=PreferenceDialog(self.settings,parent=self)
         diag.exec_()
 
+
     def importTriggered(self):
         return
+
 
     def exportTriggered(self):
         diag=ExportDialog(self.settings,parent=self)
         diag.exec_()
         return
 
+
     def viewChangeTriggered(self,action):
         action_text=action.text()
-        print('# <viewChangeTriggered>: action=',action_text)
+
+        self.logger.info('View change action = %s' %action_text)
 
         if action_text=='Toggle Filter List':
             self.main_frame.foldFilterButtonClicked()

@@ -326,12 +326,12 @@ def autoRename(abpath):
     '''Auto rename a file to avoid overwriting an existing file
 
     <abpath>: str, absolute path to a folder or a file to rename.
-    
+
     Return <newname>: str, new file path.
     If no conflict found, return <abpath>;
     If conflict with existing file, return renamed file path,
     by appending "_(n)".
-    E.g. 
+    E.g.
         n1='~/codes/tools/send2ever.py'
         n2='~/codes/tools/send2ever_(4).py'
     will be renamed to
@@ -371,7 +371,18 @@ def autoRename(abpath):
                 newname='%s%s' %(newname,ext)
             else:
                 raise Exception("Exception")
-                
+
     newname=os.path.join(folder,newname)
     return newname
 
+
+def iterItems(treewidget, root):
+    if root is not None:
+        stack = [root]
+        while stack:
+            parent = stack.pop(0)
+            for row in range(parent.childCount()):
+                child = parent.child(row)
+                yield child
+                if child.childCount()>0:
+                    stack.append(child)

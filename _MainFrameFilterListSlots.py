@@ -1,4 +1,5 @@
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import pyqtSlot
 from lib import sqlitedb
 
 
@@ -8,10 +9,10 @@ class MainFrameFilterListSlots:
     #                          Filter list slots                          #
     #######################################################################
 
+    @pyqtSlot(QtWidgets.QListWidgetItem)
     def filterItemClicked(self,item):
 
-        print('# <filterItemClicked>: Clicked item.text()=%s' %item.text())
-        self.logger.info('Clicked item.text()=%s' %item.text())
+        self.logger.info('Clicked filter item.text() = %s' %item.text())
 
         filter_type=self.filter_type_combbox.currentText()
         filter_text=item.text()
@@ -24,7 +25,6 @@ class MainFrameFilterListSlots:
 
             if len(filter_docids)>0:
                 self.loadDocTable(None,filter_docids,sortidx=4,sel_row=0)
-                #self.doc_table.selectRow(0)
 
             sel=self.filter_type_combbox.currentText()
 
@@ -45,6 +45,7 @@ class MainFrameFilterListSlots:
 
         return
 
+
     def filterTypeCombboxChange(self,item):
         # clear current filtering first
         self.clearFilterButtonClicked()
@@ -58,16 +59,11 @@ class MainFrameFilterListSlots:
         sel=self.filter_type_combbox.currentText()
         current_folder=self._current_folder
 
-        print('# <filterTypeCombboxChange>: Filter type combobox select=%s'\
-                %sel)
-        self.logger.info('Filter type combobox select=%s'\
-                %sel)
+        self.logger.info('Filter type combobox select = %s' %sel)
 
         if current_folder:
 
-            print('# <filterTypeCombboxChange>: current_folder=%s, folderid_d=%s'\
-                    %(current_folder[0], current_folder[1]))
-            self.logger.info('current_folder=%s, folderid_d=%s'\
+            self.logger.info('current_folder = %s, folderid_d = %s'\
                     %(current_folder[0], current_folder[1]))
 
             #---------------Get items in folder---------------

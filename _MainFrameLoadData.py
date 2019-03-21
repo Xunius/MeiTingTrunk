@@ -6,7 +6,6 @@ from lib.tools import getHLine
 
 
 
-
 def addFolder(parent,folderid,folder_dict):
 
     foldername,parentid=folder_dict[folderid]
@@ -54,6 +53,10 @@ def prepareDocs(meta_dict,docids):
 class MainFrameLoadData:
 
 
+    #######################################################################
+    #                       Load data into widgets                        #
+    #######################################################################
+
 
     def loadLibTree(self,db,meta_dict,folder_data,folder_dict):
 
@@ -61,7 +64,7 @@ class MainFrameLoadData:
         self.meta_dict=meta_dict
         self.folder_data=folder_data
         self.folder_dict=folder_dict
-        self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
+        #self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
 
         style=QtWidgets.QApplication.style()
         diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
@@ -88,6 +91,8 @@ class MainFrameLoadData:
                 vv[1] in ['-1',]]
         folders1.sort()
 
+        self.logger.debug('Level 1 folder ids = %s' %folders1)
+
         #------------------Add separator------------------
         separator=QtWidgets.QTreeWidgetItem([' ',None])
         separator.setFlags(Qt.NoItemFlags)
@@ -100,24 +105,12 @@ class MainFrameLoadData:
             addFolder(self.libtree,idii,self.folder_dict)
 
         #---------------Add folders in trash---------------
-        #self.libtree._trashed_folder_ids=sqlitedb.getTrashedFolders(self.folder_dict)
-        #self.libtree._trashed_folder_ids=[kk for kk,vv in self.folder_dict.items()\
-                #if vv[1]=='-3']
-        #trashed_folders=[(self.folder_dict[kk][0], kk) for kk in \
-                #self._trashed_folder_ids]
-
         trashed_folders=[(vv[0],kk) for kk,vv in self.folder_dict.items() if vv[1]=='-3']
 
-        #print('# <loadLibTree>: trashed_folder_ids',self._trashed_folder_ids)
-        print('# <loadLibTree>: trashed_folders',trashed_folders)
+        self.logger.debug('Ids of folders in Trash = %s' %trashed_folders)
 
         for fnameii,idii in trashed_folders:
             addFolder(self.trash_folder,idii,self.folder_dict)
-
-        #orphan_docs=sqlitedb.findOrphanDocs2(self.db)
-        #self._orphan_doc_ids=orphan_docs
-
-        #self.libtree.itemChanged.connect(self.addNewFolderToDict, Qt.QueuedConnection)
 
         self.sortFolders()
         self.libtree.setCurrentItem(self.all_folder)
@@ -128,87 +121,73 @@ class MainFrameLoadData:
         return
 
 
-
     def loadDocTable(self,folder=None,docids=None,sortidx=None,sel_row=None):
         '''Load doc table given folder'''
 
         tablemodel=self.doc_table.model()
-
         hh=self.doc_table.horizontalHeader()
 
-        print('# <loadDocTable>: load table %s. sort indicator section=%s. sort order=%s'\
-                %(folder, hh.sortIndicatorSection(), hh.sortIndicatorOrder()))
-        self.logger.info('load table %s. sort indicator section=%s. sort order=%s'\
+        self.logger.debug('Load folder = %s. sort indicator section = %s. sort order = %s'\
                 %(folder, hh.sortIndicatorSection(), hh.sortIndicatorOrder()))
 
         #-----------Get list of doc ids to load-----------
         if docids is None:
 
             # load All folder
-            if folder is None:
+            if folder is None or folder[1]=='-1':
                 docids=self.meta_dict.keys()
 
-                print('# <loadDocTable>: NO before difference orphan docs: %d'\
-                        %len(docids))
-                self.logger.info('NO before difference orphan docs: %d'\
+                self.logger.debug('NO. before subtracting orphan docs: %d'\
                         %len(docids))
 
                 docids=list(set(docids).difference(self._orphan_doc_ids))
 
-                print('# <loadDocTable>: NO after difference orphan docs: %d'\
-                        %len(docids))
-                self.logger.info('NO after difference orphan docs: %d'\
+                self.logger.info('NO. after subtracting orphan docs: %d'\
                         %len(docids))
 
-            elif folder is not None and folder[0]=='All' and folder[1]=='-1':
-                docids=self.meta_dict.keys()
+            # load any other folder
             else:
-                folderid=folder[1]
-                print('# <loadDocTable>: folderid=',folderid, len(self.folder_data[folderid]))
-                docids=self.folder_data[folderid]
+                docids=self.folder_data[folder[1]]
+                self.logger.info('NO. in folder %s = %d' %(folder[1], len(docids)))
 
+        #-------------Format data to table row-------------
         data=prepareDocs(self.meta_dict,docids)
         tablemodel.arraydata=data
 
         if sortidx is not None and sortidx in range(tablemodel.columnCount(None)):
-            print('# <loadDocTable>: sort idx=%s' %sortidx)
-            self.logger.info('sort idx=%s' %sortidx)
+            self.logger.info('sort idx = %s' %sortidx)
 
             tablemodel.sort(sortidx,Qt.AscendingOrder)
 
-        print('# <loadDocTable>: len(data)=%d' %len(data))
-        self.logger.info('len(data)=%d' %len(data))
-
-        #------------Load meta data on 1st row------------
         if len(data)>0:
             self.enableMetaTab()
+
+            #-------------------Select a given row-------------------
             if sel_row is not None:
-                #self.doc_table.selectRow(0)
-            #else:
                 self.doc_table.selectRow(sel_row)
                 current_row=self.doc_table.currentIndex().row()
                 docid=self._current_doc
 
-                print('# <loadDocTable>: current_row=%s, docid=%s'\
-                        %(current_row, docid))
-                self.logger.info('current_row=%s, docid=%s'\
+                self.logger.info('Selected row = %s, docid = %s'\
                         %(current_row, docid))
                 self.selDoc(self.doc_table.currentIndex(),None)
 
             self.status_bar.showMessage('%d rows' %len(data))
         else:
             # clear meta tab
+            self.logger.info('No data to be loaded. Clear meta tab.')
             self.removeFolderHighlights()
             self.clearMetaTab()
 
         #self.doc_table.viewport().update()
         tablemodel.layoutChanged.emit()
 
+        return
+
 
     def loadMetaTab(self,docid=None):
 
-        print('# <loadMetaTab>: docid=%s' %docid)
-        self.logger.info('docid=%s' %docid)
+        self.logger.info('docid = %s' %docid)
 
         if docid is None:
             return
@@ -243,15 +222,12 @@ class MainFrameLoadData:
                 if self.t_meta.fold_dict[fii]:
                     self._current_meta_dict[fii].foldText()
 
-
         return
 
 
-
-
     def loadBibTab(self,docid=None):
-        print('# <loadBibTab>: docid=%s' %docid)
-        self.logger.info('docid=%s' %docid)
+
+        self.logger.info('docid = %s' %docid)
         if docid is None:
             return
 
@@ -260,25 +236,23 @@ class MainFrameLoadData:
         if isinstance(omit_keys,str) and omit_keys=='':
             omit_keys=[]
         text=bibparse.metaDictToBib(0,metaii,omit_keys)[2]
-
         self.bib_textedit.setText(text)
 
         return
 
 
     def loadNoteTab(self,docid=None):
-        print('# <loadNoteTab>: docid=%s' %docid)
-        self.logger.info('docid=%s' %docid)
+
+        self.logger.info('docid = %s' %docid)
         if docid is None:
             return
 
         noteii=self.meta_dict[docid]['notes']
 
-        print('# <loadNoteTab>: noteii=%s' %noteii)
-        self.logger.info('noteii=%s' %noteii)
-
+        self.logger.debug('noteii = %s' %noteii)
         self.note_textedit.clear()
         self.note_textedit.setText(noteii)
+
         return
 
 

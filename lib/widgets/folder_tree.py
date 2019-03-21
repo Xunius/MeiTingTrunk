@@ -57,6 +57,22 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
         #self._trashed_doc_ids=[]
         self.setDropIndicatorShown(True)
+        self.setHeaderHidden(True)
+        # column1: folder name, column2: folder id
+        self.setColumnCount(2)
+        self.hideColumn(1)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        #self.itemClicked.connect(self.clickSelFolder)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        # make horziontal scroll bar appear
+        self.header().setStretchLastSection(False)
+        self.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
+
+        delegate=TreeWidgetDelegate()
+        self.setItemDelegate(delegate)
 
     def commitData(self,widget):
         print('# <commitData>: widget',widget)

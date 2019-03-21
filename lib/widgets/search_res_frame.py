@@ -7,6 +7,7 @@ from PyQt5.QtGui import QBrush, QColor, QIcon, QCursor, QFont, \
 from PyQt5.QtWidgets import QDialogButtonBox
 import resources
 from .. import sqlitefts
+from ..tools import iterItems
 
 
 LOGGER=logging.getLogger('default_logger')
@@ -356,17 +357,6 @@ class SearchResFrame(QtWidgets.QScrollArea):
         return
 
     def changeBGColor(self):
-
-        def iterItems(treewidget, root):
-            if root is not None:
-                stack = [root]
-                while stack:
-                    parent = stack.pop(0)
-                    for row in range(parent.childCount()):
-                        child = parent.child(row)
-                        yield child
-                        if child.childCount()>0:
-                            stack.append(child)
 
         #------------Remove highlights for all------------
         sel_rows=self.tree.selectedItems()

@@ -8,7 +8,7 @@ import _MainFrameLoadData, _MainFrameDataSlots, _MainFrameToolBarSlots,\
         _MainFrameMetaTabSlots, _MainFrameOtherSlots, _MainFrameProperties
 from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy, \
         getXExpandYMinSizePolicy, getXExpandYExpandSizePolicy, getHLine
-from lib.widgets import TreeWidgetDelegate, MyTreeWidget, TableModel,\
+from lib.widgets import MyTreeWidget, TableModel,\
         MyHeaderView, MetaTabScroll, CheckDuplicateFrame, NoteTextEdit,\
         SearchResFrame
 
@@ -29,7 +29,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         super(MainFrame,self).__init__()
 
         self.settings=settings
-        #self.main_window=main_window
         self.logger=logging.getLogger('default_logger')
         self.initUI()
         self.auto_save_timer=QTimer(self)
@@ -185,6 +184,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         h_split.setCollapsible(2,True)
         h_split.setSizes([w*0.15,w*0.6,w*0.25])
 
+        self.logger.info('Main frame UI inited.')
 
         self.show()
 
@@ -251,6 +251,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         return button
 
+
     def createAddFolderButton(self):
 
         button=QtWidgets.QToolButton(self)
@@ -271,6 +272,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         return button
 
+
     def createDuplicateCheckButton(self):
 
         button=QtWidgets.QToolButton(self)
@@ -280,6 +282,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         button.clicked.connect(self.checkDuplicateClicked)
 
         return button
+
 
     def createSearchButton(self):
 
@@ -303,6 +306,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         menu.addSeparator()
 
+        # add desend into subfolders option
         cbii=QtWidgets.QCheckBox('Include sub-folders', menu)
         if self.settings.value('search/desend_folder',bool):
             cbii.setChecked(True)
@@ -320,42 +324,25 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         return button
 
 
-
     def createLibTree(self):
 
-        #libtree=QtWidgets.QTreeWidget()
         libtree=MyTreeWidget(self)
-        libtree.setHeaderHidden(True)
-        # column1: folder name, column2: folder id
-        libtree.setColumnCount(2)
-        libtree.hideColumn(1)
-        libtree.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-        #libtree.itemClicked.connect(self.clickSelFolder)
-        libtree.selectionModel().selectionChanged.connect(self.selFolder)
-        libtree.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        libtree.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
-        # make horziontal scroll bar appear
-        libtree.header().setStretchLastSection(False)
-        libtree.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
-        libtree.setContextMenuPolicy(Qt.CustomContextMenu)
         libtree.customContextMenuRequested.connect(self.libTreeMenu)
-        delegate=TreeWidgetDelegate()
-        libtree.setItemDelegate(delegate)
-
-        libtree.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
         libtree.folder_move_signal.connect(self.changeFolderParent)
         libtree.folder_del_signal.connect(self.trashFolder)
         libtree.itemDoubleClicked.connect(self.renameFolder)
         libtree.add_doc_to_folder_signal.connect(self.addDocToFolder)
+        libtree.selectionModel().selectionChanged.connect(self.selFolder)
 
         return libtree
 
+
     def createFoldFilterButton(self):
+
         button=QtWidgets.QToolButton(self)
         button.setArrowType(Qt.DownArrow)
         button.clicked.connect(self.foldFilterButtonClicked)
-        #button.setFixedWidth(50)
         button.setSizePolicy(getXExpandYMinSizePolicy())
         button.setFixedHeight(10)
         #button.setStyleSheet(
@@ -366,6 +353,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
 
     def createFilterList(self):
+
         frame=QtWidgets.QFrame()
         scroll=QtWidgets.QScrollArea(self)
         scroll.setWidgetResizable(True)
@@ -402,6 +390,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
 
     def createDuplicateResultFrame(self):
+
         frame=CheckDuplicateFrame(self.settings,self)
         frame.tree.currentItemChanged.connect(self.duplicateResultCurrentChange)
         frame.del_doc_from_folder_signal.connect(self.delFromFolder)
@@ -409,15 +398,18 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         frame.clear_duplicate_button.clicked.connect(
                 self.clearDuplicateButtonClicked)
         frame.setVisible(False)
+
         return frame
 
     def createSearchResultFrame(self):
+
         frame=SearchResFrame(self.settings,self)
         frame.tree.currentItemChanged.connect(self.searchResultCurrentChange)
         frame.clear_searchres_button.clicked.connect(self.clearSearchResButtonClicked)
         frame.create_folder_sig.connect(self.createFolderFromSearch)
         #frame.hide_doc_sig.connect(self.hideDocTable)
         frame.setVisible(False)
+
         return frame
 
 
@@ -437,8 +429,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         h_la.addWidget(self.clear_filter_button)
 
         frame.setLayout(h_la)
-
-        # Start up as hidden
         frame.setVisible(False)
 
         return frame
@@ -460,7 +450,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         h_la.addWidget(self.confirm_review_button)
 
         frame.setLayout(h_la)
-        # Start up as hidden
         frame.setVisible(False)
 
         return frame
@@ -471,11 +460,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         tv=QtWidgets.QTableView(self)
 
         hh=MyHeaderView(self)
-        #hh.setSectionsClickable(True)
-        #hh.setHighlightSections(True)
-        #hh.sectionResized.connect(hh.myresize)
-        #hh.setStretchLastSection(False)
-        #hh.setSectionsMovable(True)
 
         tv.setHorizontalHeader(hh)
         tv.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -507,13 +491,12 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         tv.setStyleSheet('''alternate-background-color: rgb(230,230,249);
                 background-color: none''')
-                #return QBrush(QColor(230,230,249))
 
         return tv
 
 
-
     def createFoldTabButton(self):
+
         button=QtWidgets.QToolButton(self)
         button.setArrowType(Qt.RightArrow)
         button.clicked.connect(self.foldTabButtonClicked)
@@ -530,19 +513,14 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         tabs=QtWidgets.QTabWidget()
         #tabs.setMinimumWidth(250)
+
         self.t_notes=self.createNoteTab()
         self.t_bib=self.createBiBTab()
         self.t_scratchpad=self.createScratchTab()
         self.t_meta=MetaTabScroll(self.settings,self)
-        #self.t_meta.meta_edited.connect(lambda: self.updateTabelData(
-            #self._current_doc,self.t_meta._meta_dict))
         self.t_meta.meta_edited.connect(lambda field_list: self.updateTabelData(\
             self._current_doc,self.t_meta._meta_dict,field_list))
         self.t_meta.update_by_doi_signal.connect(self.updateByDOI)
-
-        show_widgets=self.settings.value('view/show_widgets',[],str)
-        if isinstance(show_widgets,str) and show_widgets=='':
-            show_widgets=[]
 
         self.tab_dict={'Toggle Meta Tab': [self.t_meta, 'Meta Data'],
                 'Toggle Notes Tab': [self.t_notes, 'Notes'],
@@ -550,24 +528,17 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
                 'Toggle Scratch Pad Tab': [self.t_scratchpad, 'Scratch Pad']
                 }
 
-        print('# <createTabs>: show widgets=',show_widgets)
+        show_widgets=self.settings.value('view/show_widgets',[],str)
+        if isinstance(show_widgets,str) and show_widgets=='':
+            show_widgets=[]
+
+        # add tabs that are toggled on in view menu
         for tii in show_widgets:
             if tii in self.tab_dict:
                 tabs.addTab(*self.tab_dict[tii])
 
         for tii in list(set(self.tab_dict.keys()).difference(show_widgets)):
             self.tab_dict[tii][0].setVisible(False)
-
-        '''
-        if 'Toggle Meta Tab' in show_widgets:
-            tabs.addTab(self.t_meta,'Meta Data')
-        if 'Toggle Notes Tab' in show_widgets:
-            tabs.addTab(self.t_notes,'Notes')
-        if 'Toggle BibTex Tab' in show_widgets:
-            tabs.addTab(self.t_bib,'Bibtex')
-        if 'Toggle Scratch Tab' in show_widgets:
-            tabs.addTab(self.t_scratchpad,'Scratch Pad')
-        '''
 
         return tabs
 
@@ -598,7 +569,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         v_layout=QtWidgets.QVBoxLayout()
 
         self.scratchpad_textedit=QtWidgets.QTextEdit(self)
-        #self.scratchpad_textedit.setFont(self.font_dict['meta_keywords'])
         self.scratchpad_textedit.setFont(self.settings.value(
             '/display/fonts/scratch_pad',QFont))
         self.scratchpad_textedit.setSizePolicy(getXExpandYExpandSizePolicy())
@@ -608,7 +578,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         scroll.setWidget(frame)
 
         return scroll
-
 
 
     def createBiBTab(self):
@@ -632,7 +601,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         self.bib_textedit=QtWidgets.QTextEdit(self)
         self.bib_textedit.setReadOnly(True)
-        #self.bib_textedit.setFont(self.font_dict['meta_keywords'])
         self.bib_textedit.setFont(self.settings.value('/display/fonts/bibtex',QFont))
         v_layout.addLayout(h_layout)
         v_layout.addWidget(self.bib_textedit)
