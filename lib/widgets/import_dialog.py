@@ -1,18 +1,13 @@
 import os
-import shutil
 import logging
 from collections import OrderedDict
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt,\
-        pyqtSignal,\
-        pyqtSlot
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QRegExp
+from PyQt5.QtGui import QFont, QRegExpValidator
 from PyQt5.QtWidgets import QDialogButtonBox
 import resources
 from .. import sqlitedb
-from .. import bibparse
-from .. import risparse
-from ..tools import getHLine, createFolderTree, iterTreeWidgetItems, autoRename
+from ..tools import getHLine
 from .threadrun_dialog import ThreadRunDialog
 from .fail_dialog import FailDialog
 
@@ -127,25 +122,73 @@ class ImportDialog(QtWidgets.QDialog):
         scroll,va=self.createFrame('Import From Mendeley')
         self.current_task='mendeley'
 
-        #---------------Folder choice section---------------
-        label=QtWidgets.QLabel('''
-        Choose folders to export documents. <br/>
-        This will copy documents (e.g. PDFs) from the
-        <span style="font:bold;">"_collections"</span>
-        folder to a separate folder under <span style="font:bold;">"%s/"</span>
-        ''' %self.settings.value('saving/current_lib_folder',str))
-        label.setTextFormat(Qt.RichText)
+        label=QtWidgets.QLabel('(Notice: Only Mendeley version < 1.9 can be imported. Later version of Mendeley encrypts the database file.)')
+        label.setStyleSheet('Font: bold')
         label.setWordWrap(True)
         va.addWidget(label)
 
-        #if self.folder_tree:
-            #self.clearFolderTreeState()
-            #va.addWidget(self.folder_tree)
-        #else:
-            #va.addWidget(QtWidgets.QLabel('Library empty'))
-            #self.export_button.setEnabled(False)
+        #---------------------Lib name---------------------
+        label=QtWidgets.QLabel('Name your library')
+        va.addWidget(label)
+
+        self.lib_name_le=QtWidgets.QLineEdit()
+        regex=QRegExp("[a-z-A-Z_\d]+")
+        validator = QRegExpValidator(regex)
+        self.lib_name_le.setValidator(validator)
+
+        ha=QtWidgets.QHBoxLayout()
+        ha.addWidget(self.lib_name_le)
+
+        label=QtWidgets.QLabel('(Only alphanumeric characters and "-", "_" are allowed)')
+        ha.addWidget(label)
+        va.addLayout(ha)
+
+        va.addWidget(getHLine())
+
+        #-----------------Sqlite file sel-----------------
+        label=QtWidgets.QLabel('''Select the sqlite database file <br/>
+        Default location: <br/>
+        <br/>
+        * Linux: ~/.local/share/data/Mendeley Ltd./Mendeley Desktop/<your_email@www.mendeley.com.sqlite. <br/>
+        '''
+        )
+        label.setTextFormat(Qt.RichText)
+        va.addWidget(label)
+
+        ha=QtWidgets.QHBoxLayout()
+
+        self.mendeley_file_le=QtWidgets.QLineEdit()
+
+        button=QtWidgets.QPushButton(self)
+        button.setText('Open')
+        button.clicked.connect(lambda: self.fileChooseButtonClicked(
+            self.mendeley_file_le))
+
+        ha.addWidget(self.mendeley_file_le)
+        ha.addWidget(button)
+
+        va.addLayout(ha)
+
+        #----------------------Notice----------------------
+
+        va.addStretch()
 
         return scroll
+
+
+    @pyqtSlot(QtWidgets.QLineEdit)
+    def fileChooseButtonClicked(self, le):
+
+        fname = QtWidgets.QFileDialog.getOpenFileName(self,
+                'Select your Mendeley sqlite database file',
+                '',
+                "sqlite Files (*.sqlite);; All files (*)")[0]
+
+        if fname:
+            LOGGER.info('Choose file name %s' %fname)
+            le.setText(fname)
+
+        return
 
 
     def loadImportZotero(self):
