@@ -32,7 +32,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(MainWindow,self).__init__()
 
-        self.logger=logging.getLogger('default_logger')
+        self.logger=logging.getLogger(__name__)
+        self.logger.info('''
+##############################################
+New session started
+##############################################
+        ''')
         self.settings=self.initSettings()
         self.is_loaded=False
 
@@ -46,6 +51,9 @@ class MainWindow(QtWidgets.QMainWindow):
         recent=self.settings.value('file/recent_open',[],str)
         if isinstance(recent,str) and recent=='':
             recent=[]
+
+        self.logger.debug('Recent open list = %s' %recent)
+
         if self.settings.value('file/auto_open_last',type=int) and len(recent)>0:
             # add a delay, otherwise splash won't show
             QTimer.singleShot(100, lambda: self._openDatabase(recent[-1]))
@@ -275,16 +283,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.logger.info('Create folder %s' %lib_folder)
 
-            def func(jobid,fname,storage_folder,rename_files):
+            def func(jobid,fname,storage_folder):
                 try:
-                    result=sqlitedb.createNewDatabase(fname, lib_folder,
-                            rename_files)
+                    result=sqlitedb.createNewDatabase(fname, lib_folder)
                     return 0,jobid,result
-                except:
+                except Exception:
+                    self.logger.exception('Failed to create new database file')
                     return 1,jobid,None
 
             ThreadRunDialog(func,
-                [(0,fname,storage_folder,self.settings.value('saving/rename_files'))],
+                [(0,fname,storage_folder)],
                 show_message='Creating new database...',
                 max_threads=1,
                 get_results=False,
@@ -352,11 +360,12 @@ class MainWindow(QtWidgets.QMainWindow):
             recent=self.settings.value('file/recent_open',[],str)
             if isinstance(recent,str) and recent=='':
                 recent=[]
+
             if fname in recent:
                 recent.remove(fname)
                 self.settings.setValue('file/recent_open', recent)
 
-                self.logger.info('Remove non-exist database file from recent list: %s' %fname)
+                self.logger.warninng('Remove non-exist database file from recent list: %s' %fname)
 
                 for actionii in self.recent_open_menu.findChildren(
                         QtWidgets.QAction):
@@ -412,10 +421,13 @@ class MainWindow(QtWidgets.QMainWindow):
         recent=self.settings.value('file/recent_open',[],str)
         if isinstance(recent,str) and recent=='':
             recent=[]
-        if fname not in recent:
-            recent.append(fname)
-            recentii=self.recent_open_menu.addAction(fname)
-            recentii.triggered.connect(lambda x,t=fname: self._openDatabase(t))
+
+        if fname in recent:
+            recent.remove(fname)
+
+        recent.append(fname)
+        recentii=self.recent_open_menu.addAction(fname)
+        recentii.triggered.connect(lambda x,t=fname: self._openDatabase(t))
 
         # pop 1st from recent list if exceeding limit
         recent_open_num=self.settings.value('file/recent_open_num',type=int)

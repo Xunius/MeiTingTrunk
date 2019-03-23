@@ -10,7 +10,7 @@ from .. import sqlitefts
 from ..tools import iterItems
 
 
-LOGGER=logging.getLogger('default_logger')
+LOGGER=logging.getLogger(__name__)
 
 
 
@@ -23,6 +23,7 @@ class DummyWidget(QtWidgets.QWidget):
     def resizeEvent(self,e):
         super(DummyWidget,self).resizeEvent(e)
         self.resize_sig.emit(self.sizeHint())
+
 
 
 class HighLighter(QSyntaxHighlighter):
@@ -38,6 +39,7 @@ class HighLighter(QSyntaxHighlighter):
         self.highlightingRules = [(QRegExp(key), keyword) for key in match_words]
 
     def highlightBlock(self, text):
+
         for pattern, tformat in self.highlightingRules:
             expression=QRegExp(pattern)
             index=expression.indexIn(text)
@@ -48,7 +50,6 @@ class HighLighter(QSyntaxHighlighter):
               index = expression.indexIn(text, index + length)
 
         self.setCurrentBlockState(0)
-
 
 
 
@@ -64,25 +65,34 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
         self.document().documentLayout().documentSizeChanged.connect(
                 self.resizeTextEdit)
 
+
     def resizeTextEdit(self):
 
         docheight=self.document().size().height()
         margin=self.document().documentMargin()
         self.setMinimumHeight(docheight+2*margin)
         self.setMaximumHeight(docheight+2*margin)
+
         return
 
+
     def resizeEvent(self,e):
+
         super(AdjustableTextEdit,self).resizeEvent(e)
         self.td_size_sig.emit(QSize(self.sizeHint().width(),
             self.maximumHeight()))
+
         return
 
+
     def setHighlightText(self, text_list):
+
         if not isinstance(text_list, (tuple, list)):
             text_list=[text_list,]
         HighLighter(text_list, self)
+
         return
+
 
 class AdjustableTextEditWithFold(AdjustableTextEdit):
 
@@ -114,6 +124,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
         )
 
     def getNumberOfLines(self):
+
         fm=self.fontMetrics()
         doc=self.document()
         docheight=doc.size().height()
@@ -122,7 +133,9 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
         return nlines
 
+
     def resizeTextEdit(self):
+
         if self.getNumberOfLines()<self.fold_above_nl:
             self.fold_button.setVisible(False)
         else:
@@ -134,13 +147,18 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
         return
 
+
     def toggleFold(self):
+
         self.unfoldText() if self.is_fold else self.foldText()
         self.fold_size_sig.emit(QSize(self.sizeHint().width(),
             self.maximumHeight()))
+
         return
 
+
     def foldText(self):
+
         nlines=self.getNumberOfLines()
         if nlines>=self.fold_above_nl:
             fontheight=self.fontMetrics().height()
@@ -152,13 +170,16 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
         return
 
+
     def unfoldText(self):
+
         docheight=self.document().size().height()
         margin=self.document().documentMargin()
         self.setMinimumHeight(docheight+2*margin)
         self.setMaximumHeight(docheight+2*margin)
         self.is_fold=False
         self.fold_button.setArrowType(Qt.DownArrow)
+
         return
 
 
@@ -204,7 +225,6 @@ class BorderItemDelegate(QtWidgets.QStyledItemDelegate):
             painter.setPen(pen)
             painter.drawRect(rect)
             painter.restore()
-
 
 
 
@@ -270,6 +290,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
         frame.setLayout(va)
 
+
     def createClearSearchFrame(self):
 
         frame=QtWidgets.QFrame()
@@ -297,7 +318,6 @@ class SearchResFrame(QtWidgets.QScrollArea):
         ha.addWidget(self.clear_searchres_button)
 
         frame.setLayout(ha)
-
 
         return frame
 
@@ -331,7 +351,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
             elif fii=='note':
                 textii=meta['notes']
             else:
-                print('# <createEntry>: fii',fii)
+                LOGGER.warning('Wrong field given %s' %fii)
                 raise Exception("Exception")
 
             labelii=QtWidgets.QLabel('%s: ' %fii)
@@ -353,8 +373,8 @@ class SearchResFrame(QtWidgets.QScrollArea):
         frame.resize_sig.connect(lambda size: (item.setSizeHint(0,size),
             self.tree.model().layoutChanged.emit()))
 
-
         return
+
 
     def changeBGColor(self):
 
@@ -379,6 +399,8 @@ class SearchResFrame(QtWidgets.QScrollArea):
                 else:
                     wii.setStyleSheet('')
 
+        return
+
 
     def search(self,db,text,field_list,folderid,meta_dict,desend):
 
@@ -387,6 +409,8 @@ class SearchResFrame(QtWidgets.QScrollArea):
         self.meta_dict=meta_dict
         self.search_text=text
         self.desend=desend
+
+        LOGGER.info('search text = %s. is desend = %s' %(text, desend))
 
         search_res=sqlitefts.searchMultipleLike2(db, text, field_list, folderid, desend)
         self.label.setText('%d searches results related to "%s"'\
@@ -397,7 +421,6 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
 
     def addResultToTree(self, search_text, search_res):
-
 
         def createEntry(docid, gid):
 
@@ -414,6 +437,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
         if len(search_res)==0:
             self.noMatchLabel.setVisible(True)
+            LOGGER.info('Not result found.')
             return
 
         self.noMatchLabel.setVisible(False)
@@ -443,29 +467,20 @@ class SearchResFrame(QtWidgets.QScrollArea):
         ''' %hi_color)
 
         self.search_done_sig.emit()
-        header=self.tree.header()
-        header2=self.tree.headerItem()
-        print('# <addFieldRows>: header=',header,type(header),header2)
-        print('# <createEntry>: child count=',header2.childCount(),
-                'columncount=',header2.columnCount())
-
-        for ii in range(6):
-            print(header2.data(ii,0))
 
         return
 
 
     @pyqtSlot()
     def createFolder(self):
+
         sel_rows=self.tree.selectedItems()
         if len(sel_rows)>0:
-
             docids=[]
             for ii in sel_rows:
                 docids.append(int(ii.data(5,0)))
-
             docids=list(set(docids))
-            print('# <createFolder>: Selected docids=%s.' %docids)
+
             LOGGER.info('Selected docids=%s.' %docids)
 
         self.create_folder_sig.emit(self.search_text, docids)
@@ -475,11 +490,11 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
     @pyqtSlot(int)
     def headerSectionClicked(self,idx):
-        print('# <headerSectionClicked>: section=',idx)
-        if idx==0:
 
+        if idx==0:
             if self.is_all_fold:
-                print('# <headerSectionClicked>: fold all')
+                LOGGER.debug('fold all')
+
                 for ii in range(self.tree.topLevelItemCount()):
                     itemii=self.tree.topLevelItem(ii)
                     self.tree.expandItem(itemii)
@@ -487,10 +502,12 @@ class SearchResFrame(QtWidgets.QScrollArea):
                 self.tree.setHeaderLabels(['Fold all', 'Authors', 'Title',
                     'Publication', 'Year', 'id'])
             else:
-                print('# <headerSectionClicked>: expand all')
+                LOGGER.debug('expand all')
+
                 for ii in range(self.tree.topLevelItemCount()):
                     itemii=self.tree.topLevelItem(ii)
                     self.tree.collapseItem(itemii)
                 self.is_all_fold=True
                 self.tree.setHeaderLabels(['Unfold all', 'Authors', 'Title',
                     'Publication', 'Year', 'id'])
+

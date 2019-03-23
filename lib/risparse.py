@@ -1,5 +1,6 @@
 import os
 import re
+import logging
 from pprint import pprint
 from RISparser import readris
 from RISparser.config import LIST_TYPE_TAGS, TAG_KEY_MAPPING
@@ -7,10 +8,8 @@ try:
     from . import sqlitedb
 except:
     import sqlitedb
-try:
-    from .tools import parseAuthors
-except:
-    from tools import parseAuthors
+
+LOGGER=logging.getLogger(__name__)
 
 ALT_KEYS={
         'keywords': 'keywords_l',
@@ -92,7 +91,6 @@ def splitNames(entry):
     return entry
 
 
-
 def readRISFile(filename):
 
     filename=os.path.abspath(filename)
@@ -101,7 +99,11 @@ def readRISFile(filename):
 
     results=[]
     with open(filename,'r') as fin:
+
         entries=readris(fin)
+
+        LOGGER.info('Read in RIS file: %s' %filename)
+
         for eii in entries:
 
             #eii=altKeys(eii,ALT_KEYS)
@@ -123,6 +125,8 @@ def readRISFile(filename):
                 eii['authors']=authors
             eii=splitNames(eii)
 
+            LOGGER.debug('authors = %s' %eii['authors'])
+
             # title
             title=eii.get('title')
             if not title:
@@ -132,10 +136,14 @@ def readRISFile(filename):
                         eii['title']=eii[tii]
                         break
 
+            LOGGER.debug('title = %s' %eii['title'])
+
             # citationkey
             citationkey=eii.get('id')
             if citationkey:
                 eii['citationkey']=citationkey
+
+            LOGGER.debug('citationkey = %s' %eii['citationkey'])
 
             # date
             if 'date' in eii:
@@ -143,6 +151,8 @@ def readRISFile(filename):
                 eii['year']=year
                 eii['month']=month
                 eii['day']=day
+
+            LOGGER.debug('year = %s. month = %s. day = %s' %(year,month,day))
 
             # pages
             sp=eii.get('start_page', 'n/a')
@@ -152,6 +162,8 @@ def readRISFile(filename):
             # publication
             if 'journal_name' in eii and 'publication' not in eii:
                 eii['publication']=eii['journal_name']
+
+            LOGGER.debug('publication = %s' %eii['publication'])
 
             # keywords
             kw=eii.get('keywords')
@@ -181,49 +193,14 @@ def readRISFile(filename):
     return results
 
 
-def toOrdinaryDict(metadict,alt_dict,omit_keys):
-
-    result={}
-
-    for kk,vv in metadict.items():
-        if kk in omit_keys:
-            continue
-
-        if vv is None:
-            continue
-
-        if kk in alt_dict:
-            if isinstance(vv,(tuple,list)):
-                if len(vv)==0:
-                    continue
-                print('# <toOrdinaryDict>: kk=',kk,'vv=',vv)
-                if kk in ['folders_l',]:
-                    vv=[vii[1] for vii in vv]
-                vv='; '.join(vv)
-            result[alt_dict[kk]]=vv
-        else:
-            result[kk]=str(vv)
-
-    authors=parseAuthors(metadict['authors_l'])[2]
-    authors=' and '.join(authors)
-    result['author']=authors
-
-    doctype=metadict['type']
-    if doctype is None or doctype.lower()=='journalarticle':
-        doctype='article'
-    result['ENTRYTYPE']=doctype
-
-    result['ID']=metadict['citationkey'].replace('(','').replace(')','')
-
-    return result
-
-
 def metaDictToRIS(jobid,metadict):
 
     try:
         text=parseMeta(metadict)
         return 0,jobid,text,metadict['id']
-    except:
+    except Exception as e:
+        LOGGER.exception('Failed to write to RIS format. Jobid = %s. Doc id = %s'\
+                %(str(jobid), metadict['id']))
         return 1,jobid,'',metadict['id']
 
 
@@ -239,19 +216,24 @@ def parseMeta(metadict):
     #--------------------Get type--------------------
     doctype=getField(metadict,'type','article')
     doctype=TYPE_DICT[doctype]
-
     entries=['TY - %s' %doctype,]
+
+    LOGGER.debug('doctype (TY) = %s' %doctype)
 
     #-------------------Get authors-------------------
     authors=sqlitedb.zipAuthors(metadict['firstNames_l'], metadict['lastName_l'])
     for aii in authors:
         entries.append('AU - %s' %aii)
+
+        LOGGER.debug('authors (AU) = %s' %aii)
     #authors=latexencode.utf8tolatex(authors)
-    
+
     #----------------------Get id----------------------
     citationkey=metadict['citationkey']
     if citationkey:
         entries.append('ID - %s' %citationkey)
+
+        LOGGER.debug('citationkey (ID) = %s' %citationkey)
 
     #---------------------Get time---------------------
     year=getField(metadict,'year','')
@@ -271,18 +253,22 @@ def parseMeta(metadict):
     entries.append('DA - %s' %time)
     entries.append('Y1 - %s' %time)
 
+    LOGGER.debug('time (PY, DA, Y1) = %s' %time)
+
     #--------------------Get pages--------------------
     pages=getField(metadict,'pages','')
     if pages!='':
         pmatch=page_re.match(pages)
         if pmatch is None:
             entries.append('SP - %s' %str(pages))
-            #entries.append('SP - %s' %tools.deu(pages))
+            LOGGER.debug('pages (SP) = %s' %(str(pages)))
         else:
             entries.append('SP - %s' %str(pmatch.group(1)))
             entries.append('EP - %s' %str(pmatch.group(2)))
-            #entries.append('SP - %s' %tools.deu(pmatch.group(1)))
-            #entries.append('EP - %s' %tools.deu(pmatch.group(2)))
+
+            LOGGER.debug('pages (SP) = %s' %(str(pmatch.group(1))))
+            LOGGER.debug('pages (EP) = %s' %(str(pmatch.group(2))))
+
 
     #-----------------Get city/country-----------------
     loc=''
@@ -295,12 +281,16 @@ def parseMeta(metadict):
     if len(loc)>0:
         entries.append('CY - %s' %loc)
 
+    LOGGER.debug('city (CY) = %s' %loc)
+
     #------------------Get file path------------------
     files=metadict['files_l']
     if files:
         # can only store 2 files?
         for fii in files[:2]:
             entries.append('L1 - %s' %fii)
+
+            LOGGER.debug('file (L1) = %s' %fii)
 
     #--------------Populate other fields--------------
     for kk,vv in metadict.items():
@@ -314,6 +304,8 @@ def parseMeta(metadict):
             for kii in vv:
                 entries.append('KW - %s' %kii)
 
+                LOGGER.debug('keywords (KW) = %s' %kii)
+
 	#-----------Specifiy issn and isbn-----------------
         if kk.lower()=='issn':
             vv='issn %s' %vv
@@ -326,10 +318,16 @@ def parseMeta(metadict):
             continue
             entries.append('%s - %s' %(kk,vv))
 
+            LOGGER.debug('other key (%s) = %s' %(kk,vv))
+
     entries.append('ER -\n')
     string='\n'.join(entries)
 
+    LOGGER.info('Done writing to RIS format')
+
     return string
+
+
 
 
 if __name__=='__main__':

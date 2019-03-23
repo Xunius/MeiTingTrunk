@@ -40,7 +40,7 @@ DOC_ATTRS=[\
 
 INT_COLUMNS=['month', 'year', 'day']
 
-LOGGER=logging.getLogger('default_logger')
+LOGGER=logging.getLogger(__name__)
 
 
 class DocMeta(MutableMapping):
@@ -123,7 +123,7 @@ def readSqlite(dbin):
     #-------------------Get folders-------------------
     folder_dict=getFolders(dbin)
 
-    #trashed_folders=getTrashedFolders(folder_dict)
+    LOGGER.debug('Got %d folders from database.' %len(folder_dict))
 
     #-------------------Get metadata-------------------
     cursor=dbin.execute('SELECT * FROM Documents')
@@ -131,6 +131,8 @@ def readSqlite(dbin):
 
     meta={}
 
+    # this is when I tried fts5 tables in sqlite where 'rowid' was hardwared
+    # by sqlite, and eventually switched back to normal table.
     query='''SELECT DISTINCT %s
     FROM Documents
     ''' %('id' if 'id' in names else 'rowid')
@@ -141,22 +143,22 @@ def readSqlite(dbin):
 
     folder_data={}
     folder_data['-2']=[] # needs review folder
-    folder_data['-3']=[] # trash can
+    folder_data['-3']=[] # trash can folder
 
     for idii in docids:
+
         metaii=getMetaData(dbin,idii)
         meta[idii]=metaii
 
-        folderii=metaii['folders_l']
-
         if metaii['confirmed'] is None or metaii['confirmed']=='false':
             folder_data['-2'].append(idii)
-        #if metaii['deletionPending']=='true':
         if metaii['deletionPending']=='true' and len(metaii['folders_l'])==0:
             folder_data['-3'].append(idii)
 
-        # note: convert folder id to str, why?
-        # TODO: convert back to int when writing to sqlite
+        folderii=metaii['folders_l'] # (folderid, foldername)
+
+        # convert folder id to str, as QListWidgetItem request str. very annoying
+        # remember to convert back to int when writing to sqlite
         folderids=[str(ff[0]) for ff in folderii]
         for fii in folderids:
             if fii in folder_data:
@@ -168,6 +170,10 @@ def readSqlite(dbin):
     empty_folderids=list(set(folder_dict.keys()).difference(folder_data.keys()))
     for fii in empty_folderids:
         folder_data[fii]=[]
+
+    LOGGER.info('Done reading in sqlite database.')
+    LOGGER.info('len(meta) = %d. len(folder_dict) = %d'\
+            %(len(meta), len(folder_dict)))
 
     return meta, folder_data, folder_dict
 
@@ -274,14 +280,12 @@ def getMetaData(db, did):
     '''
 
     #------------------Get file meta data------------------
-    #NOTE: rowid here is required by sqlite fts5 virtual table
     fields=['citationkey','title','issue','pages',\
             'publication','volume','year','doi','abstract',\
             'arxivId','chapter','city','country','edition','institution',\
             'isbn','issn','month','day','publisher','series','type',\
             'read','favourite','pmid','added','confirmed', 'deletionPending']
 
-    #result={}
     result=DocMeta()
 
     if 'id' in names:
@@ -294,10 +298,6 @@ def getMetaData(db, did):
     # query single-worded fields, e.g. year, city
     for kii in fields:
         vii=fetchField(db,query_base %(kii), (did,))
-        #if kii=='rowid':
-            # fts5 in sqlite no longer has docid alias
-            #result['id']=vii
-        #else:
         result[kii]=vii
 
     # query notes
@@ -312,19 +312,18 @@ def getMetaData(db, did):
     result['tags_l']=fetchField(db,query_tags,(did,),1,'list')
     result['urls_l']=fetchField(db,query_urls,(did,),1,'list')
 
-    #folders=result['folders_l']
-    # if no folder name, add to Default
-    #result['folders_l']=folders or [(0, 'Default')]
+    LOGGER.debug('Done fetching meta data for doc %s' %str(did))
 
     return result
 
 
 def zipAuthors(firstnames,lastnames):
+
     if len(firstnames)!=len(lastnames):
-        print('zipAuthors')
-        print('firstnames',firstnames)
-        print('lastnames',lastnames)
-        raise Exception("Exception")
+        LOGGER.error('Length of firstname and lastname dont match.')
+        LOGGER.error('firstnames = %s' %firstnames)
+        LOGGER.error('lastnames = %s' %lastnames)
+        raise Exception("Length of firstname and lastname dont match.")
     authors=[]
     for ii in range(len(firstnames)):
         fii=firstnames[ii]
@@ -352,10 +351,10 @@ def getSubFolders(folder_dict, folderid):
 
     return results
 
+
 def getTrashedFolders(folder_dict):
     '''
     results=[kk for kk,vv in folder_dict.items() if vv[1]=='-3']
-    print('# <getTrashedFolders>: results=',results)
 
 
     def _getChildFolder(folder_dict,folderid,results=None):
@@ -373,8 +372,9 @@ def getTrashedFolders(folder_dict):
 
     return results
     '''
-    return getSubFolders(folder_dict, '-3')
-
+    results = getSubFolders(folder_dict, '-3')
+    LOGGER.debug('Ids of trashed folders = %s' %results)
+    return results
 
 
 def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
@@ -388,7 +388,6 @@ def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
     folderids.append(folderid)
 
     subfolderids=getChildFolders(folder_dict,folderid)
-    print('# <walkFolderTree>: subfolderids',subfolderids)
     for sii in subfolderids:
         folderids,docids=walkFolderTree(folder_dict,folder_data,sii,
                 docids,folderids)
@@ -408,11 +407,8 @@ def findOrphanDocs(folder_data,docids,trashed_folder_ids):
 
     result=[idii for idii in docids if idii not in idsinfolders]
 
-    print('# <findOrphanDocs>: excluded folders= ["-1","-2","-3"]+%s' %trashed_folder_ids)
-    LOGGER.info('excluded folders= ["-1","-2","-3"]+%s' %trashed_folder_ids)
-
-    print('# <findOrphanDocs>: Orphan docs=%s' %result)
-    LOGGER.info('Orphan docs=%s' %result)
+    LOGGER.debug('excluded folders = ["-1","-2","-3"]+%s' %trashed_folder_ids)
+    LOGGER.debug('Orphan docs = %s' %result)
 
     return result
 
@@ -426,9 +422,10 @@ def findOrphanDocs2(db):
 
     ret=cin.execute(query)
     ret=[ii[0] for ii in ret]
-    print('# <findOrphanDocs2>: orphans=',ret)
-    return ret
 
+    LOGGER.debug('Orphan docs = %s' %ret)
+
+    return ret
 
 
 def getFolders(db):
@@ -444,10 +441,8 @@ def getFolders(db):
     # note: convert id to str
     df=dict([(str(ii[0]), (ii[1], str(ii[2]))) for ii in data])
 
-    # add Default
-    #df['0']=('Default', '-1')
-
     return df
+
 
 def fetchMetaData(meta_dict,key,docids,unique,sort):
     if not isinstance(docids, (tuple,list)):
@@ -472,7 +467,6 @@ def fetchMetaData(meta_dict,key,docids,unique,sort):
     return result
 
 
-
 def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
 
     results=[]
@@ -483,7 +477,6 @@ def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
 
     if filter_type=='Filter by authors':
         t_last,t_first=map(str.strip,filter_text.split(','))
-        #print('t_last: %s, t_first: %s, text: %s' %(t_last,t_first,filter_text))
         for kk in docids:
             authors=meta_dict[kk]['authors_l']
             if filter_text in authors:
@@ -507,124 +500,9 @@ def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
             if filter_text in keywords:
                 results.append(kk)
 
-    #print(results)
 
     return results
 
-
-
-
-
-#--------------Get folder id and name list in database----------------
-def getFolderList(db,folder,verbose=True):
-    '''Get folder id and name list in database
-
-    <folder>: select folder from database.
-              If None, select all folders/subfolders.
-              If str, select folder <folder>, and all subfolders. If folder
-              name conflicts, select the one with higher level.
-              If a tuple of (id, folder), select folder with name <folder>
-              and folder id <id>, to avoid name conflicts.
-
-    Return: <folders>: list, with elements of (id, folder_tree).
-            where <folder_tree> is a str of folder name with tree structure, e.g.
-            test/testsub/testsub2.
-
-    Update time: 2016-06-16 19:38:15.
-    '''
-
-    # get all folders with id, name, parentid
-    query=\
-    '''SELECT Folders.id,
-              Folders.name,
-              Folders.parentID
-       FROM Folders
-    '''
-    # get folder by name
-    query1=\
-    '''SELECT Folders.id,
-              Folders.name,
-              Folders.parentID
-       FROM Folders
-       WHERE (Folders.name="%s")
-    '''%folder
-
-    #-----------------Get all folders-----------------
-    ret=db.execute(query)
-    data=ret.fetchall()
-
-    # dict, key: folderid, value: (folder_name, parent_id)
-    df=dict([(ii[0],ii[1:]) for ii in data])
-
-    allfolderids=[ii[0] for ii in data]
-
-    #---------------Select target folder---------------
-    if folder is None:
-        folderids=allfolderids
-    if type(folder) is str:
-        folderids=db.execute(query1).fetchall()
-        folderids=[ii[0] for ii in folderids]
-    elif isinstance(folder, (tuple,list)):
-        # get folder from gui
-        #seldf=df[(df.folderid==folder[0]) & (df.folder==folder[1])]
-        #folderids=fetchField(seldf,'folderid')
-        folderids=[folder[0]]
-
-    #----------------Get all subfolders----------------
-    if folder is not None:
-        folderids2=[]
-        for ff in folderids:
-            folderids2.append(ff)
-            subfs=getSubFolders(df,ff)
-            folderids2.extend(subfs)
-    else:
-        folderids2=folderids
-
-    #---------------Remove empty folders---------------
-    folderids2=[ff for ff in folderids2 if not isFolderEmpty(db,ff)]
-
-    #---Get names and tree structure of all non-empty folders---
-    folders=[]
-    for ff in folderids2:
-        folders.append(getFolderTree(df,ff))
-
-    #----------------------Return----------------------
-    if folder is None:
-        return folders
-    else:
-        if len(folders)==0:
-            print("Given folder name not found in database or folder is empty.")
-            return []
-        else:
-            return folders
-
-
-#--------------------Check a folder is empty or not--------------------
-def isFolderEmpty(db,folderid,verbose=True):
-    '''Check a folder is empty or not
-    '''
-
-    query=\
-    '''SELECT Documents.title,
-              DocumentFolders.folderid,
-              Folders.name
-       FROM Documents
-       LEFT JOIN DocumentFolders
-           ON Documents.id=DocumentFolders.documentId
-       LEFT JOIN Folders
-           ON Folders.id=DocumentFolders.folderid
-    '''
-
-    fstr='(Folders.id="%s")' %folderid
-    fstr='WHERE '+fstr
-    query=query+' '+fstr
-
-    ret=db.execute(query)
-    data=ret.fetchall()
-    if len(data)==0:
-        return True
-    else:
-        return False
 
 #-------------------Get subfolders of a given folder-------------------
 def getChildFolders(df,folderid,verbose=True):
@@ -670,28 +548,6 @@ def getFolderTree(df,folderid,verbose=True):
     return folderid,folder
 
 
-#----------Get a list of docids from a folder--------------
-def getFolderDocList(db,folderid,verbose=True):
-    '''Get a list of docids from a folder
-
-    Update time: 2018-07-28 20:11:09.
-    '''
-
-    query=\
-    '''SELECT Documents.id
-       FROM Documents
-       LEFT JOIN DocumentFolders
-           ON Documents.id=DocumentFolders.documentId
-       WHERE (DocumentFolders.folderid=%s)
-    ''' %folderid
-
-    ret=db.execute(query)
-    data=ret.fetchall()
-    docids=[ii[0] for ii in data]
-    docids.sort()
-    return docids
-
-
 def renameFile(fname,meta_dict,replace_space=False):
     '''Rename file on export.
 
@@ -700,6 +556,7 @@ def renameFile(fname,meta_dict,replace_space=False):
     dirjj,filenamejj=os.path.split(fname)
     basename,ext=os.path.splitext(filenamejj)
 
+    # get first author
     author=meta_dict['lastName_l']
     if len(author)>0:
         author=author[0]
@@ -708,17 +565,23 @@ def renameFile(fname,meta_dict,replace_space=False):
     else:
         author='Unknown'
 
+    # get year
     year=meta_dict['year']
-    print('year=',year)
     if year is None:
         year='unknown'
+
+    # get title
     title=meta_dict.get('title',basename)
+
+    LOGGER.debug('author = %s, year = %s, title = %s' %(author,year,title))
 
     # crop length
     fname2='%s_%s_%s%s' %(author,year,title,ext)
     len1=len(dirjj)+1+len(fname2)
     if len1>255-6:
         title=title[:255-6-len1]
+
+        LOGGER.debug('Cropped title = %s' %title)
 
     #---------Handle multiple files for a doc---------
     if len(meta_dict['files_l'])==1:
@@ -727,12 +590,14 @@ def renameFile(fname,meta_dict,replace_space=False):
         fname2='%s_%s_%s_%d%s' %(author,year,title,\
                 meta_dict['files_l'].index(fname), ext)
 
+        LOGGER.debug('Appending idx to a mutli-file doc.')
+
     if replace_space:
         fname2=fname2.replace(' ','-')
 
     fname2=re.sub(r'[<>:"|?*]','_',fname2)
-    print('# <renameFile>: Old file name=',fname,'New file name=',fname2)
 
+    LOGGER.info('Old filename = %s. New filename = %s' %(fname,fname2))
 
     return fname2
 
@@ -740,32 +605,30 @@ def renameFile(fname,meta_dict,replace_space=False):
 def saveFoldersToDatabase(db,folder_ids,folder_dict,folder_data,lib_folder):
 
     cout=db.cursor()
-
-    #for idii,vv in folder_dict.items():
     folder_ids=list(set(folder_ids))
+
+    LOGGER.info('Saving folders with ids = %s' %folder_ids)
+
     for idii in folder_ids:
 
-        # deleting folder:
         folder=folder_dict.get(idii)
-        #if folder_dict[idii]==():
+
         if folder is None:
-            print('# <saveFoldersToDatabase>: Deleting folder id=%s' %idii)
-            LOGGER.info('Deleting folder id=%s' %idii)
+            # deleting folder
+            LOGGER.info('Deleting folder with id = %s' %idii)
 
             query='''
             DELETE FROM Folders WHERE Folders.id=?
             '''
             cout.execute(query, (int(idii),))
-            #del folder_dict[idii]
-            #del folder_data[idii]
         else:
             nameii,pidii=folder_dict[idii]
             idii=int(idii)
             pathii=os.path.join(lib_folder,nameii)
             pathii=os.path.abspath(pathii)
 
-            print('# <saveFoldersToDatabase>: update folder id', idii,
-                    'name',nameii, 'parentid', pidii, 'path',pathii)
+            LOGGER.info('Updating folder, id = %s, name = %s, pid = %s, path = %s'\
+                    %(idii, nameii, pidii, pathii))
 
             query='''INSERT OR REPLACE INTO Folders (id, name, parentId, path) \
                      VALUES (?,?,?,?)'''
@@ -773,6 +636,8 @@ def saveFoldersToDatabase(db,folder_ids,folder_dict,folder_data,lib_folder):
             cout.execute(query, (idii, nameii, pidii, pathii))
 
     db.commit()
+
+    LOGGER.info('Done saving folders')
 
     return 0
 
@@ -783,9 +648,9 @@ def createNewDatabase(file_path,lib_folder):
 
     try:
         dbout = sqlite3.connect(dbfout)
-        print('Connected to database:')
-    except:
-        print('Failed to connect to database:')
+        LOGGER.info('Connected to databaase %s' %file_path)
+    except Exception as e:
+        LOGGER.exception('Failed to connect to database %s' %file_path)
 
     cout=dbout.cursor()
 
@@ -803,7 +668,7 @@ def createNewDatabase(file_path,lib_folder):
     columns=', '.join(columns)
     query=query %columns
 
-    print('Creating empty table...')
+    LOGGER.info('Creating empty table ...')
     cout.execute(query)
     #dbout.commit()
 
@@ -855,7 +720,6 @@ def createNewDatabase(file_path,lib_folder):
     cout.execute(query)
     #dbout.commit()
 
-
     #--------Create DocumentContributors table--------
     query='''CREATE TABLE IF NOT EXISTS DocumentContributors (
     did INT,
@@ -892,6 +756,8 @@ def createNewDatabase(file_path,lib_folder):
     cout.execute(query, (0, 'Default', -1, os.path.join(lib_folder,'Default')))
     dbout.commit()
 
+    LOGGER.info('Created empty table.')
+
     #-----------------Add sample file-----------------
     #fname='./sample_bib.bib'
     #bib_entries=bibparse.readBibFile(fname)
@@ -921,32 +787,28 @@ def metaDictToDatabase(db,docid,meta_dict,lib_folder,rename_files):
     if docid in docids:
 
         if meta_dict is None:
-            print('# <metaDictToDatabase>: docid %s in database. New meta=None. Deleting...' %docid)
-            LOGGER.info('docid %s in database. New meta={}. Deleting...' %docid)
+
+            LOGGER.info('docid %s in database. New meta=None. Deleting...' %docid)
 
             rec=delDocFromDatabase(db,docid,lib_folder)
 
         else:
-            print('# <metaDictToDatabase>: docid %s in database. Updating...' %docid)
             LOGGER.info('docid %s in database. Updating...' %docid)
 
             rec=updateToDatabase(db,docid,meta_dict,lib_folder,rename_files)
     else:
         if meta_dict is None:
-            print('# <metaDictToDatabase>: docid %s not in database. New meta=None. Ignored.' %docid)
-            LOGGER.info('docid %s not in database. New meta={}. Ignored.' %docid)
+            LOGGER.info('docid %s not in database. New meta=None. Ignore.' %docid)
             rec=0
 
         else:
-            print('# <metaDictToDatabase>: docid %s not in database. Inserting...' %docid)
             LOGGER.info('docid %s not in database. Inserting...' %docid)
 
             rec=addToDatabase(db,docid,meta_dict,lib_folder,rename_files)
 
-    print('# <metaDictToDatabase>: rec=%s' %rec)
+    LOGGER.info('Done updating doc to database.')
 
     return rec
-
 
 
 def insertToDocuments(db,docid,meta_dict,action):
@@ -959,7 +821,7 @@ def insertToDocuments(db,docid,meta_dict,action):
     for kk,vv in meta_dict.items():
 
         if kk in DOC_ATTRS:
-            print('# <insertToDocuments>: kk=',kk,'vv=',vv)
+            LOGGER.debug('key = %s, value = %s' %(str(kk), str(vv)))
             key_list.append(kk)
             value_list.append(vv)
 
@@ -975,23 +837,22 @@ def insertToDocuments(db,docid,meta_dict,action):
     cout.execute(query,[docid,]+value_list)
     db.commit()
 
-    return 0
+    LOGGER.info('Done inserting doc %s to Documents table.' %docid)
 
+    return 0
 
 
 def insertToTable(db, table, columns, values):
 
     if len(values)>0:
         cout=db.cursor()
-
         query='INSERT OR IGNORE INTO %s (%s) VALUES (%s)' %\
                 (table, ','.join(columns), ','.join(['?',]*len(columns)))
-
-        print('# <insertToTable>: query:',query)
-
         for vii in values:
             cout.execute(query, vii)
         db.commit()
+
+    LOGGER.info('Done inserting to %s table.' %table)
 
     return 0
 
@@ -1000,12 +861,10 @@ def delFromTable(db, table, docid):
 
     cout=db.cursor()
     query='DELETE FROM %s WHERE (%s.did=?)' %(table,table)
-
-    print('# <delFromTable>: Delete old table rows. query=%s' %query)
-    LOGGER.info('Delete old table rows. query=%s' %query)
-
     cout.execute(query, (docid,))
     db.commit()
+
+    LOGGER.debug('Deleted old rows in table %s with docid = %s' %(table,docid))
 
     return 0
 
@@ -1035,33 +894,27 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
             cout.execute(query,(docid,newabsii))
 
             #--------------------Copy file--------------------
-            print('# <insertToDocumentFiles>: Copy',absii,'to',newabsii)
             try:
                 shutil.copy(absii, newabsii)
+                LOGGER.debug('Copied file %s to %s' %(absii,newabsii))
             except:
-                print('# <insertToDocumentFiles>: Failed to copy file %s' %absii)
-                LOGGER.info('Failed to copy file %s' %absii)
-
-            print('# <insertToDocumentFiles>: Add file: %s.' %newabsii)
-            LOGGER.info('Add file: %s.' %newabsii)
-
-            print('# <insertToDocumentFiles>: Copy file %s to %s' %(absii,newabsii))
-            LOGGER.info('Copy file %s to %s' %(absii,newabsii))
+                LOGGER.exception('Failed to copy file %s to %s' %(absii,newabsii))
 
         db.commit()
+
+    LOGGER.info('Done inserting doc %s to DocumentFiles' %docid)
 
     return 0
 
 
 def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
-    print('# <addToDatabase>: Add doc to database. docid=%s' %docid)
-    LOGGER.info('Add doc to database. docid=%s' %docid)
+    LOGGER.info('Adding doc to database. docid = %s' %docid)
 
     #--------------Update Documents table--------------
     rec=insertToDocuments(db, docid, meta_dict, 'insert')
-    print('# <addToDatabase>: rec of insertToDocuments=%s' %rec)
-    LOGGER.info('rec of insertToDocuments=%s' %rec)
+
+    LOGGER.debug('rec of insertToDocuments = %s' %rec)
 
     #------------------Update authors------------------
     firsts=meta_dict['firstNames_l']
@@ -1076,30 +929,26 @@ def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
                     firsts, lasts))
                 )
 
-        print('# <addToDatabase>: rec of insertToDocumentAuthors=%s' %rec)
-        LOGGER.info('rec of insertToDocumentAuthors=%s' %rec)
+        LOGGER.debug('rec of insertToDocumentAuthors = %s' %rec)
 
     #-------------------Update files-------------------
     rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files)
 
-    print('# <addToDatabase>: rec of insertToDocumentFiles=%s' %rec)
-    LOGGER.info('rec of insertToDocumentFiles=%s' %rec)
+    LOGGER.debug('rec of insertToDocumentFiles = %s' %rec)
 
     #------------------Update folder------------------
     rec=insertToTable(db, 'DocumentFolders',
             ('did', 'folderid'),
             [(docid,fii[0]) for fii in meta_dict['folders_l']])
 
-    print('# <addToDatabase>: rec of insertDocumentFolders=%s' %rec)
-    LOGGER.info('rec of insertDocumentFolders=%s' %rec)
+    LOGGER.debug('rec of insertDocumentFolders = %s' %rec)
 
     #-----------------Update keywords-----------------
     rec=insertToTable(db, 'DocumentKeywords',
             ('did', 'text'),
             [(docid, kii) for kii in meta_dict['keywords_l']])
 
-    print('# <addToDatabase>: rec of insertDocumentKeywords=%s' %rec)
-    LOGGER.info('rec of insertDocumentKeywords=%s' %rec)
+    LOGGER.debug('rec of insertDocumentKeywords = %s' %rec)
 
     #-------------------Update notes-------------------
     notes=meta_dict['notes']
@@ -1110,52 +959,51 @@ def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
                 [(docid, notes, ctime, ctime)]
                 )
 
-    print('# <addToDatabase>: rec of insertDocumentNotes=%s' %rec)
-    LOGGER.info('rec of insertDocumentNotes=%s' %rec)
+    LOGGER.debug('rec of insertDocumentNotes = %s' %rec)
 
     #-----------------Update tags-----------------
     rec=insertToTable(db, 'DocumentTags',
             ('did', 'tag'),
             [(docid, kii) for kii in meta_dict['tags_l']])
 
-    print('# <addToDatabase>: rec of insertDocumentTags=%s' %rec)
-    LOGGER.info('rec of insertDocumentTags=%s' %rec)
+    LOGGER.debug('rec of insertDocumentTags = %s' %rec)
 
     #-------------------Update urls-------------------
     rec=insertToTable(db, 'DocumentUrls',
             ('did', 'url'),
             [(docid, kii) for kii in meta_dict['urls_l']])
 
-    print('# <addToDatabase>: rec of insertDocumentUrls=%s' %rec)
-    LOGGER.info('rec of insertDocumentUrls=%s' %rec)
+    LOGGER.debug('rec of insertDocumentUrls = %s' %rec)
 
-    print('# <addToDatabase>: Finished adding doc to database.')
-    LOGGER.info('Finished adding doc to database.')
+    LOGGER.info('Done adding doc to database.')
 
     return 0
-
 
 
 def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
     cout=db.cursor()
 
+    LOGGER.info('Updating doc to database. docid = %s' %docid)
+
     #----------Get a meta_dict from database----------
     old_meta=getMetaData(db, docid)
 
     #------------------Update folders------------------
     folders=meta_dict['folders_l']
-    print('# <updateToDatabase>: Current folders:', folders)
-
     old_folders=old_meta['folders_l']
+
+    LOGGER.debug('previous folders = %s. current folders = %s'\
+            %(old_folders, folders))
+
     if set(old_folders) != set(folders):
 
         del_folders=list(set(old_folders).difference(folders))
         new_folders=list(set(folders).difference(old_folders))
 
-        print('# <updateToDatabase>: old_folders:',old_folders,
-                'del_folders',del_folders,
-                'new_folders',new_folders)
+        LOGGER.debug('Need to update folders.')
+        LOGGER.debug('del folders = %s. new folders = %s'\
+                %(del_folders, new_folders))
 
         for fii in del_folders:
 
@@ -1173,13 +1021,14 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
     #--------------Update Documents table--------------
     rec=insertToDocuments(db, docid, meta_dict, 'replace')
-    print('# <updateToDatabase>: rec of insertToDocuments=%s' %rec)
-    LOGGER.info('rec of insertToDocuments=%s' %rec)
+
+    LOGGER.debug('rec of insertToDocuments = %s' %rec)
 
     #------------------Update authors------------------
     if old_meta['authors_l']!=meta_dict['authors_l']:
-        # so order change is also a change
-        print('# <updateToDatabase>: need to update authors')
+        # order change is also a change
+
+        LOGGER.debug('Need to update authors.')
 
         #----------------Remove old authors----------------
         delFromTable(db, 'DocumentContributors', docid)
@@ -1197,34 +1046,35 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
                         firsts, lasts))
                     )
 
-            print('# <updateToDatabase>: rec of insertToDocumentAuthors=%s' %rec)
-            LOGGER.info('rec of insertToDocumentAuthors=%s' %rec)
+            LOGGER.debug('rec of insertToDocumentAuthors = %s' %rec)
 
     #-------------------Update files-------------------
     if set(old_meta['files_l']) != set(meta_dict['files_l']):
 
-        delFromTable(db, 'DocumentFiles', docid)
+        LOGGER.debug('Need to update files.')
 
+        delFromTable(db, 'DocumentFiles', docid)
         rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files)
 
-        print('# <updateToDatabase>: rec of insertToDocumentFiles=%s' %rec)
-        LOGGER.info('rec of insertToDocumentFiles=%s' %rec)
+        LOGGER.debug('rec of insertToDocumentFiles=%s' %rec)
 
     #-----------------Update keywords-----------------
     if set(old_meta['keywords_l']) != set(meta_dict['keywords_l']):
 
-        delFromTable(db, 'DocumentKeywords', docid)
+        LOGGER.debug('Need to update keywords.')
 
+        delFromTable(db, 'DocumentKeywords', docid)
         rec=insertToTable(db, 'DocumentKeywords',
                 ('did', 'text'),
                 [(docid, kii) for kii in meta_dict['keywords_l']])
 
-        print('# <updateToDatabase>: rec of insertDocumentKeywords=%s' %rec)
-        LOGGER.info('rec of insertDocumentKeywords=%s' %rec)
+        LOGGER.debug('rec of insertDocumentKeywords = %s' %rec)
 
     #-------------------Update notes-------------------
     notes=meta_dict['notes']
     if old_meta['notes'] != notes:
+
+        LOGGER.debug('Need to update notes.')
 
         if notes:
             mtime=datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -1236,6 +1086,7 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
             ctime=fetchField(db,query,(docid,),1,'str')
 
             if ctime is None:
+                LOGGER.debug('Old creation time not exists. Use current time.')
                 ctime=mtime
 
             delFromTable(db, 'DocumentNotes', docid)
@@ -1244,45 +1095,45 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
                     ('did', 'note', 'modifiedTime', 'createdTime'),
                     [(docid, notes, mtime, ctime)]
                     )
-            print('# <updateToDatabase>: rec of insertDocumentNotes=%s' %rec)
-            LOGGER.info('rec of insertDocumentNotes=%s' %rec)
+
+            LOGGER.debug('rec of insertDocumentNotes = %s' %rec)
         else:
             delFromTable(db, 'DocumentNotes', docid)
-
 
     #-------------------Update tags-------------------
     if set(old_meta['tags_l']) != set(meta_dict['tags_l']):
 
-        delFromTable(db, 'DocumentTags', docid)
+        LOGGER.debug('Need to update tags.')
 
+        delFromTable(db, 'DocumentTags', docid)
         rec=insertToTable(db, 'DocumentTags',
                 ('did', 'tag'),
                 [(docid, kii) for kii in meta_dict['tags_l']])
 
-        print('# <updateToDatabase>: rec of insertDocumentTags=%s' %rec)
-        LOGGER.info('rec of insertDocumentTags=%s' %rec)
-
+        LOGGER.debug('rec of insertDocumentTags = %s' %rec)
 
     #-------------------Update urls-------------------
     if set(old_meta['urls_l']) != set(meta_dict['urls_l']):
 
-        delFromTable(db, 'DocumentUrls', docid)
+        LOGGER.debug('Need to update urls.')
 
+        delFromTable(db, 'DocumentUrls', docid)
         rec=insertToTable(db, 'DocumentUrls',
                 ('did', 'url'),
                 [(docid, kii) for kii in meta_dict['urls_l']])
 
-        print('# <updateToDatabase>: rec of insertDocumentUrls=%s' %rec)
-        LOGGER.info('rec of insertDocumentUrls=%s' %rec)
+        LOGGER.debug('rec of insertDocumentUrls = %s' %rec)
 
-    print('# <updateToDatabase>: Finished updating doc to database.')
-    LOGGER.info('Finished updating doc to database.')
+    LOGGER.info('Done updating doc to database.')
 
     return 0
+
 
 def delDocFromDatabase(db,docid,lib_folder):
 
     cout=db.cursor()
+
+    LOGGER.info('Deleting doc %s from database' %docid)
 
     #--------------del Documents table--------------
     query='DELETE FROM Documents WHERE (Documents.id=?)'
@@ -1303,11 +1154,12 @@ def delDocFromDatabase(db,docid,lib_folder):
     '''
 
     old_files=fetchField(db, query_files, (docid,), 1, 'list')
-    print('# <delDocFromDatabase>: old_files=', old_files)
+
     delFromTable(db, 'DocumentFiles', docid)
 
     for fii in old_files:
         if os.path.exists(fii):
+            LOGGER.info('Deleting file from disk %s' %fii)
             os.remove(fii)
 
     #-----------------del keywords-----------------
@@ -1322,7 +1174,6 @@ def delDocFromDatabase(db,docid,lib_folder):
     #-------------------del urls-------------------
     delFromTable(db, 'DocumentUrls', docid)
 
-    print('# <delDocFromDatabase>: Finished deleting doc from database.')
-    LOGGER.info('Finished deleting doc from database.')
+    LOGGER.info('Done deleting doc from database.')
 
     return 0

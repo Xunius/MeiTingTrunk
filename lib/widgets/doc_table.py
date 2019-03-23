@@ -8,7 +8,7 @@ from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont
 import resources
 
 
-LOGGER=logging.getLogger('default_logger')
+LOGGER=logging.getLogger(__name__)
 
 
 
@@ -39,16 +39,18 @@ class TableModel(QAbstractTableModel):
     def rowCount(self,p):
         return len(self.arraydata)
 
+
     def columnCount(self,p):
         return self.ncol
+
 
     def data(self, index, role):
         if not index.isValid():
             return QVariant()
-        if role == Qt.BackgroundRole:
-            if index.row()%2==0:
+        #if role == Qt.BackgroundRole:
+            #if index.row()%2==0:
                 #return QBrush(QColor(230,230,249))
-                pass
+                #pass
         if role == Qt.FontRole:
             font=self.settings.value('display/fonts/doc_table',QFont)
             if self.arraydata[index.row()][9] in [None, 'false']:
@@ -92,6 +94,7 @@ class TableModel(QAbstractTableModel):
         if role != Qt.DisplayRole:
             return QVariant()
 
+
     def setData(self, index, value, role):
         if not index.isValid():
             return False
@@ -103,6 +106,7 @@ class TableModel(QAbstractTableModel):
 
         self.dataChanged.emit(index,index)
         return True
+
 
     def flags(self, index):
         if index.column() in self.check_sec_indices:
@@ -128,6 +132,7 @@ class TableModel(QAbstractTableModel):
                 return self.headerdata[col]
         return None
 
+
     def sort(self,col,order):
         self.layoutAboutToBeChanged.emit()
 
@@ -139,28 +144,36 @@ class TableModel(QAbstractTableModel):
             self.arraydata.reverse()
         self.layoutChanged.emit()
 
+        return
+
+
     def mimeTypes(self):
         return ['doc_table_item',]
 
+
     def mimeData(self,indices):
 
-        print('# <mimeData>: headerdata=', self.headerdata)
-        print('# <mimeData>: indices=', indices)
+        LOGGER.debug('header data = %s' %self.headerdata)
+        LOGGER.debug('indices = %s' %indices)
 
         for idii in indices:
-            print('# <mimeData>: idii',idii.row(), idii.column(), idii.data())
+            LOGGER.debug('idii.row() = %s, idii.column() = %s, idii.data() = %s'\
+                    %(idii.row(), idii.column(), idii.data()))
 
         ids=[ii for ii in indices if ii.isValid()]
-        print('# <mimeData>: ids=', ids)
+        LOGGER.debug('ids = %s' %ids)
+
         rowids=[ii.row() for ii in ids]
         rowids=list(set(rowids))
-        print('# <mimeData>: rowids=', rowids)
+        LOGGER.debug('rowids = %s' %rowids)
+
         encode_data=[str(self.arraydata[ii][0]) for ii in rowids]
         encode_data=', '.join(encode_data)
-        print('# <mimeData>: encode_data', encode_data,type(encode_data))
+        LOGGER.debug('encode_data = %s, type() = %s' %(encode_data,
+            type(encode_data)))
+
         encode_data_array=QByteArray()
         encode_data_array.append(encode_data)
-        print('# <mimeData>: encode_data_array', encode_data_array)
 
         mimedata=QMimeData()
         mimedata.setData('doc_table_item',encode_data_array)
@@ -183,9 +196,11 @@ class MyHeaderView(QtWidgets.QHeaderView):
         self.setSectionsMovable(True)
 
     def initresizeSections(self):
+
         model=self.model()
         if model is None:
             return
+
         self.setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         headers=model.headerdata
 
@@ -201,6 +216,7 @@ class MyHeaderView(QtWidgets.QHeaderView):
                 self.resizeSection(ii,wnow)
                 self.setSectionResizeMode(ii,QtWidgets.QHeaderView.Interactive)
 
+        return
 
 
     def myresize(self, *args):
@@ -224,6 +240,8 @@ class MyHeaderView(QtWidgets.QHeaderView):
                     self.setSectionResizeMode(ii,QtWidgets.QHeaderView.Stretch)
                 else:
                     pass
+
+        return
 
 
     def resizeEvent(self, event):
@@ -260,9 +278,11 @@ class MyHeaderView(QtWidgets.QHeaderView):
 
         return
 
+
     def columnFromLabel(self, label):
         headers=self.model().headerdata
         if label in headers:
             return headers.index(label)
+
         return -1
 

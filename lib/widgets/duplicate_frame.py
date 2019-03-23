@@ -8,10 +8,7 @@ from ..tools import fuzzyMatch, dfsCC
 from .threadrun_dialog import Master
 
 
-LOGGER=logging.getLogger('default_logger')
-
-
-
+LOGGER=logging.getLogger(__name__)
 
 
 
@@ -65,6 +62,7 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
         frame.setLayout(va)
 
+
     def createClearDuplicateFrame(self):
 
         frame=QtWidgets.QFrame()
@@ -93,7 +91,6 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
         frame.setLayout(ha)
 
         return frame
-
 
 
     def checkDuplicates(self,meta_dict,current_folder,docids1,docid2=None):
@@ -155,8 +152,11 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
     @pyqtSlot()
     def jobListReady(self):
+
         rec,jobid,job_list=self.master1.results[0]
-        print('# <jobListReady>: rec=',rec)
+
+        LOGGER.debug('rec from job list prepare = %s' %rec)
+
         if rec==0 and len(job_list)>0:
             self.parent.progressbar.setMaximum(0)
             self.parent.progressbar.setVisible(True)
@@ -172,12 +172,17 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
         return
 
+
     def collectResults(self):
+
         new=self.master2.results
         for recii,jobidii,(kii,vii) in new:
             self.scores_dict[kii]=vii
 
+        LOGGER.info('Duplicate search results collected.')
+
         self.addResultToTree()
+
         return
 
 
@@ -204,6 +209,7 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
         edges=[kk for kk,vv in self.scores_dict.items() if vv>=self.min_score]
         if len(edges)==0:
             self.noDupLabel.setVisible(True)
+            LOGGER.info('No duplicate found.')
             return
 
         self.noDupLabel.setVisible(False)
@@ -215,7 +221,7 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
             # get connected components
             comps=dfsCC(edges)
-            print('# <addResultToTree>: comps=',comps)
+            LOGGER.debug('connected components = %s' %comps)
 
             for ii,cii in enumerate(comps):
                 cii.sort()
@@ -274,6 +280,8 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
         background-color: %s;}
         ''' %color_str)
 
+        LOGGER.info('Duplicate search results added.')
+
         return
 
 
@@ -281,7 +289,6 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
         menu=QtWidgets.QMenu()
 
-        print('# <docTreeMenu>: current_folder=',self.current_folder)
         foldername,folderid=self.current_folder
         if folderid=='-1':
             menu.addAction('Delete From Library')
@@ -299,19 +306,21 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
     @pyqtSlot()
     def delDocs(self):
 
-        print('# <docTreeMenu>: current_folder=',self.current_folder)
+        LOGGER.debug('current_folder = %s' %self.current_folder)
+
         foldername,folderid=self.current_folder
         sel_rows=self.tree.selectedItems()
         if len(sel_rows)>0:
 
             docids=[int(ii.data(6,0)) for ii in sel_rows]
 
-            print('# <docTreeMenu>: Selected docids=%s.' %docids)
-            LOGGER.info('Selected docids=%s.' %docids)
+            LOGGER.debug('Selected docids = %s.' %docids)
 
             if folderid=='-1':
+                LOGGER.info('Emit signal for doc deletion in All')
                 self.del_doc_from_lib_signal.emit(docids,False)
             else:
+                LOGGER.info('Emit signal for doc deletion in folder %s' %foldername)
                 self.del_doc_from_folder_signal.emit(docids, foldername,
                         folderid, False)
 

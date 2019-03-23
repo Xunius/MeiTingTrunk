@@ -1,6 +1,7 @@
 import os
 import re
 from pprint import pprint
+import logging
 from pdfminer.pdftypes import resolve1
 
 try:
@@ -36,6 +37,8 @@ NS_MAP = {
 #---------Regex pattern for matching dois---------
 DOI_PATTERN=re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
         re.DOTALL|re.UNICODE)
+
+LOGGER=logging.getLogger(__name__)
 
 class XmpParser(object):
     """
@@ -101,9 +104,8 @@ def getPDFMeta_pypdf2(path):
         info = pdf.getDocumentInfo()
         number_of_pages = pdf.getNumPages()
 
-    print('info of file:')
-    pprint(info)
-    print('number of pages:',number_of_pages)
+    LOGGER.info('Read PDF file %s. NO. of pages = %d' %(path, number_of_pages))
+    LOGGER.debug('Info of PDF file: %s' %info)
 
     return info
 
@@ -114,7 +116,8 @@ def getPDFMeta_pdfminer(path):
         parser = PDFParser(fin)
         doc = PDFDocument(parser)
 
-    pprint(doc.info)        # The "Info" metadata
+    LOGGER.info('Read PDF file %s.' %path)
+    LOGGER.debug('Info of PDF file: %s' %doc.info)
 
     return doc.info
 
@@ -127,9 +130,8 @@ def getPDFMeta_xmlparse(path):
 
         if 'Metadata' in doc.catalog:
             metadata = resolve1(doc.catalog['Metadata']).get_data()
-            #pprint(metadata)  # The raw XMP metadata
             info=xmp_to_dict(metadata)
-            pprint(info)
+            #pprint(info)
 
     return info
 

@@ -11,7 +11,7 @@ from ..tools import getHLine, getXExpandYMinSizePolicy, parseAuthors,\
         getXExpandYExpandSizePolicy
 from .. import _crossref
 
-LOGGER=logging.getLogger('default_logger')
+LOGGER=logging.getLogger(__name__)
 
 
 
@@ -39,6 +39,7 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
                 self.resizeTextEdit)
         self.setTabChangesFocus(True)
 
+
     def focusInEvent(self,event):
         #self.setToolTip('tooltip')
         #print('focusInEvent: QCursor.pos()', QCursor.pos())
@@ -51,56 +52,31 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
         super(AdjustableTextEdit,self).focusInEvent(event)
 
+
     def focusOutEvent(self,event):
+
         if self.document().isModified():
             self.edited_signal.emit(self.field)
         if self.label_enabled:
             self.tooltip_label.close()
         super(AdjustableTextEdit,self).focusOutEvent(event)
 
+
     def setText(self,text):
+
         super(AdjustableTextEdit,self).setText(text)
         self.document().setModified(False)
 
+
     def resizeTextEdit(self):
-        '''
-        self.setAttribute(103)
-        self.show()
-        docheight=self.document().size().height()+3
-        print('docheight',docheight)
-        self.setFixedHeight(docheight)
-        '''
 
-        '''
-        f=self.currentFont()
-        fm=QFontMetrics(f)
-        text=self.toPlainText()
-        print('fm',fm)
-        print('text',text)
-        textsize=fm.size(0,text)
-        textw=textsize.width()+1
-        texth=textsize.height()+4
-        self.setMinimumHeight(texth)
-        '''
-        '''
-        if self.getNumberOfLines()<self.fold_above_nl:
-            self.fold_button.setVisible(False)
-            self.unfoldText()
-        else:
-            self.fold_button.setVisible(True)
-            if self.is_fold:
-                self.foldText()
-            else:
-                self.unfoldText()
-
-        '''
         docheight=self.document().size().height()
         margin=self.document().documentMargin()
         self.setMinimumHeight(docheight+2*margin)
         self.setMaximumHeight(docheight+2*margin)
 
-
         return
+
 
 
 class AdjustableTextEditWithFold(AdjustableTextEdit):
@@ -135,6 +111,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
         )
 
     def getNumberOfLines(self):
+
         fm=self.fontMetrics()
         doc=self.document()
         docheight=doc.size().height()
@@ -144,6 +121,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
         return nlines
 
     def resizeTextEdit(self):
+
         if self.getNumberOfLines()<self.fold_above_nl:
             self.fold_button.setVisible(False)
             #self.unfoldText()
@@ -156,12 +134,16 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
         return
 
+
     def toggleFold(self):
+
         self.unfoldText() if self.is_fold else self.foldText()
         self.fold_change_signal.emit(self.field,self.is_fold)
+
         return
 
     def foldText(self):
+
         nlines=self.getNumberOfLines()
         if nlines>=self.fold_above_nl:
             fontheight=self.fontMetrics().height()
@@ -173,14 +155,18 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
         return
 
+
     def unfoldText(self):
+
         docheight=self.document().size().height()
         margin=self.document().documentMargin()
         self.setMinimumHeight(docheight+2*margin)
         self.setMaximumHeight(docheight+2*margin)
         self.is_fold=False
         self.fold_button.setArrowType(Qt.DownArrow)
+
         return
+
 
 
 class FileLineEdit(QtWidgets.QLineEdit):
@@ -207,15 +193,18 @@ class FileLineEdit(QtWidgets.QLineEdit):
 
         return
 
+
     def text(self):
         #return self.full_text
         return self.fm.elidedText(self.short_text,Qt.ElideRight,self.width())
 
 
     def resizeEvent(self,event):
+
         super(QtWidgets.QLineEdit, self).resizeEvent(event)
         if hasattr(self,'full_text'):
             self.setText(self.full_text,elide=True)
+
 
 
 class MetaTabScroll(QtWidgets.QScrollArea):
@@ -292,7 +281,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             }
         QPushButton:pressed {
             border-style: inset;
-            } 
+            }
         ''')
         self.doi_search_button.clicked.connect(self.doiSearchButtonClicked)
 
@@ -305,8 +294,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         self.v_layout.addWidget(self.createLabel('Files'))
         self.file_insert_idx=self.v_layout.count()
 
-        print('# <MetaTabScroll>: NO of widgets in v_layout=%d' %self.v_layout.count())
-        LOGGER.info('NO of widgets in v_layout=%d' %self.v_layout.count())
+        LOGGER.debug('NO of widgets in v_layout=%d' %self.v_layout.count())
 
         #---------------Add add file button---------------
         add_file_button=QtWidgets.QPushButton()
@@ -320,7 +308,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         QPushButton:pressed {
             border-style: inset;
-            } 
+            }
         ''')
         add_file_button.clicked.connect(self.addFileButtonClicked)
         self.v_layout.addWidget(add_file_button)
@@ -349,20 +337,25 @@ class MetaTabScroll(QtWidgets.QScrollArea):
     @pyqtSlot(str)
     def fieldEdited(self,field):
 
-        print('# <fieldEdited>: Changed field=%s' %field)
-        LOGGER.info('Changed field=%s' %field)
+        LOGGER.debug('Changed field = %s' %field)
+        LOGGER.debug('meta_dict = %s' %self._meta_dict)
 
-        print(self._meta_dict)
         self.meta_edited.emit([field,])
 
+        return
+
+
     def createLabel(self,label):
+
         qlabel=QtWidgets.QLabel(label)
         qlabel.setStyleSheet(self.label_color)
         qlabel.setFont(self.label_font)
+
         return qlabel
 
 
     def createOneLineField(self,label,key,font_name,grid_layout):
+
         te=AdjustableTextEdit(key)
         qlabel=QtWidgets.QLabel(label)
         qlabel.setStyleSheet(self.label_color)
@@ -381,7 +374,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         return
 
+
     def createMultiLineField(self,label,key,font_name):
+
         te=AdjustableTextEditWithFold(key)
         te.setFrameStyle(QtWidgets.QFrame.NoFrame)
         self.fold_dict[key]=te.is_fold
@@ -410,6 +405,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         return te
 
+
     def createFileField(self,text=None,font_name='meta_keywords'):
 
         h_layout=QtWidgets.QHBoxLayout()
@@ -417,8 +413,6 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         le=FileLineEdit()
         le.setReadOnly(True)
 
-        #if font_name in self.font_dict:
-            #le.setFont(self.font_dict[font_name])
         le.setFont(self.settings.value('display/fonts/%s' %font_name, QFont))
 
         if text is not None:
@@ -426,7 +420,6 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         if le not in self.fields_dict['files_l']:
             self.fields_dict['files_l'].append(le)
-        #self.v_layout.addWidget(le)
 
         # create a del file button
         button=QtWidgets.QPushButton()
@@ -447,7 +440,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         QPushButton:pressed {
             border-style: inset;
-            } 
+            }
         ''' %(int(font_height/2), max(1,font_height-2))
         )
         button.clicked.connect(lambda: self.delFileButtonClicked(
@@ -457,13 +450,13 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         h_layout.addWidget(le)
         h_layout.addWidget(button)
 
-        print('# <createFileField>: Insert at %s' %self.file_insert_idx)
-        LOGGER.info('Insert at %s' %self)
+        LOGGER.debug('Insert file entry at %s' %self.file_insert_idx)
 
         self.v_layout.insertLayout(self.file_insert_idx,h_layout)
         self.file_insert_idx+=1
 
         return
+
 
     def delFileButtonClicked(self, idx=None):
 
@@ -474,6 +467,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
 
     def delFileField(self,idx=None):
+
         def delFile(le):
             self.v_layout.removeWidget(le.del_button)
             self.v_layout.removeWidget(le)
@@ -486,9 +480,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             #for ii in range(len(self.fields_dict['files'])):
             for leii in self.fields_dict['files_l']:
 
-                print('# <delFile>: Del %s. Current file_insert_idx=%s'\
-                        %(leii, self.file_insert_idx))
-                LOGGER.info('Del %s. Current file_insert_idx=%s'\
+                LOGGER.debug('Del %s. Current file_insert_idx = %s'\
                         %(leii, self.file_insert_idx))
 
                 delFile(leii)
@@ -496,7 +488,6 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             if idx in range(len(self.fields_dict['files_l'])):
                 leii=self.fields_dict['files_l'][idx]
                 delFile(leii)
-
 
         return
 
@@ -511,34 +502,40 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         if fname:
 
-            print('# <addFileButtonClicked>: New file=%s' %fname)
-            LOGGER.info('New file=%s' %fname)
+            LOGGER.info('Add new file = %s' %fname)
 
             self.createFileField(fname)
             self.fieldEdited('files_l')
 
         return
 
+
     def foldChanged(self,field,isfold):
+
         self.fold_dict[field]=isfold
 
-        print('# <foldChanged>: Field=%s. isfold=%s' %(field, isfold))
-        LOGGER.info('Field=%s. isfold=%s' %(field, isfold))
+        LOGGER.debug('Field = %s. isfold = %s' %(field, isfold))
 
         return
 
+
     def doiSearchButtonClicked(self):
+
         doi_pattern=re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
                 re.DOTALL|re.UNICODE)
 
         doi=self.fields_dict['doi'].toPlainText()
-        print('# <doiSearchButtonClicked>: doi=',doi)
+        LOGGER.info('doi = %s' %doi)
+
         if len(doi)>0:
             match=doi_pattern.match(doi)
-            print('# <doiSearchButtonClicked>: match=',match)
+            LOGGER.debug('match = %s' %match)
+
             if match:
                 rec,doi_dict=_crossref.fetchMetaByDOI(doi)
                 if rec==1:
+                    LOGGER.warning('Failed to fetch from doi.')
+
                     msg=QtWidgets.QMessageBox()
                     msg.resize(500,500)
                     msg.setIcon(QtWidgets.QMessageBox.Information)
@@ -546,18 +543,22 @@ class MetaTabScroll(QtWidgets.QScrollArea):
                     msg.setText('Oopsie.')
                     msg.setInformativeText('Failed to retrieve metadata from doi')
                     msg.exec_()
+
                     return
 
                 meta_dict=_crossref.crossRefToMetaDict(doi_dict)
-                print('# <doiSearchButtonClicked>: meta_dict',meta_dict)
-                print('# <doiSearchButtonClicked>: ciationkey=',meta_dict['citationkey'])
+
+                LOGGER.debug('Got meta_dict from doi:' %meta_dict)
+                LOGGER.debug('citationkey = %s' %meta_dict['citationkey'])
 
                 #self.update_by_doi_signal.emit(meta_dict)
                 self.exchangeMetaDict(meta_dict)
 
         return
 
+
     def exchangeMetaDict(self,new_dict):
+
         docid=self.parent._current_doc
         if docid is None:
             return
@@ -577,42 +578,11 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         if 'firstNames_l' in fields or 'lastName_l' in fields:
             fields.append('authors_l') # updateTabelData monitors this
 
-        print('# <exchangeMetaDict>: changed fields=',fields)
+        LOGGER.debug('Changed fields = %' %fields)
 
         if len(fields)==0:
             return
 
-
-        '''
-        def conv(text):
-            if isinstance(text,(str)):
-                return text
-            else:
-                return str(text)
-
-        for fii in fields:
-            tii=new_dict[fii]
-            if fii not in self.fields_dict:
-                continue
-            if tii is None:
-                self.fields_dict[fii].clear()
-                continue
-            elif fii=='files_l':
-                # show only file name
-                self.delFileField()
-                for fjj in tii:
-                    self.createFileField(fjj)
-            else:
-                if isinstance(tii,(list,tuple)):
-                    tii=u'; '.join(tii)
-                self.fields_dict[fii].setText(conv(tii))
-
-            if fii in ['authors_l','abstract','tags_l','keywords_l']:
-                if self.fold_dict[fii]:
-                    self.fields_dict[fii].foldText()
-        '''
-
-        #self.meta_edited.emit(fields)
         self.update_by_doi_signal.emit(new_dict)
 
         return
@@ -668,8 +638,8 @@ class MetaTabScroll(QtWidgets.QScrollArea):
                     values=vv.toPlainText().strip()
                     result_dict[kk]=values or None
 
-
         return result_dict
+
 
 
 class MetaDataEntryDialog(QtWidgets.QDialog):

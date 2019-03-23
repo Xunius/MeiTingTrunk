@@ -29,7 +29,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         super(MainFrame,self).__init__()
 
         self.settings=settings
-        self.logger=logging.getLogger('default_logger')
+        self.logger=logging.getLogger(__name__)
         self.initUI()
         self.auto_save_timer=QTimer(self)
         tinter=self.settings.value('saving/auto_save_min', 1, int)*60*1000

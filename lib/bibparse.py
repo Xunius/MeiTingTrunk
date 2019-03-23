@@ -1,3 +1,7 @@
+import os
+import re
+import logging
+from pprint import pprint
 import bibtexparser
 from bibtexparser.bparser import BibTexParser
 from bibtexparser.bwriter import BibTexWriter
@@ -11,9 +15,6 @@ try:
     from .tools import parseAuthors
 except:
     from tools import parseAuthors
-from pprint import pprint
-import os
-import re
 
 ALT_KEYS={
         'keyword': 'keywords_l',
@@ -30,6 +31,10 @@ OMIT_KEYS=[
         'lastName_l', 'deletionPending', 'folders_l', 'type', 'id'
         ]
 
+LOGGER=logging.getLogger(__name__)
+
+
+
 def splitFields(record, key, sep=',|;'):
     """
     Split keyword field into a list.
@@ -45,6 +50,7 @@ def splitFields(record, key, sep=',|;'):
         record[key] = [i.strip() for i in re.split(sep, record[key].replace('\n', ''))]
 
     return record
+
 
 def getPublication(record):
     '''Use journal field and publication
@@ -75,6 +81,7 @@ def customizations(record):
     record = getPublication(record)
     return record
 
+
 def splitNames(entry):
 
     firstnames=[]
@@ -89,6 +96,7 @@ def splitNames(entry):
 
     return entry
 
+
 def altKeys(entry_dict, alt_dict):
 
     for kk in alt_dict.keys():
@@ -97,7 +105,6 @@ def altKeys(entry_dict, alt_dict):
             del entry_dict[kk]
 
     return entry_dict
-
 
 
 def readBibFile(bibfile):
@@ -112,29 +119,23 @@ def readBibFile(bibfile):
         parser.customization=customizations
         bib=bibtexparser.load(fin,parser=parser)
 
+        LOGGER.info('Read in bib file: %s' %bibfile)
+
     results=[]
 
     for eii in bib.entries:
         eii=splitNames(eii)
         eii=altKeys(eii,ALT_KEYS)
-
         eii['citationkey']=eii['ID']
-        #del eii['citationkey']
 
-        # WARNING: temporary removing folders_l, as this is not supposed to
-        # be in a native bib entry
         if 'folders_l' in eii:
             del eii['folders_l']
-
-        # WARNING TEMP solution
-        #eii['urls_l']=[eii['urls_l'],]
 
         docii=sqlitedb.DocMeta()
         docii.update(eii)
         results.append(docii)
 
     return results
-
 
 
 def toOrdinaryDict(metadict,alt_dict,omit_keys):
@@ -152,13 +153,14 @@ def toOrdinaryDict(metadict,alt_dict,omit_keys):
             if isinstance(vv,(tuple,list)):
                 if len(vv)==0:
                     continue
-                print('# <toOrdinaryDict>: kk=',kk,'vv=',vv)
                 if kk in ['folders_l',]:
                     vv=[vii[1] for vii in vv]
                 vv='; '.join(vv)
             result[alt_dict[kk]]=vv
         else:
             result[kk]=str(vv)
+
+        #LOGGER.debug('key = %s, value = %s' %(str(kk), str(vv)))
 
     authors=parseAuthors(metadict['authors_l'])[2]
     authors=' and '.join(authors)
@@ -169,7 +171,12 @@ def toOrdinaryDict(metadict,alt_dict,omit_keys):
         doctype='article'
     result['ENTRYTYPE']=doctype
 
-    result['ID']=metadict['citationkey'].replace('(','').replace(')','')
+    ID=metadict['citationkey'].replace('(','').replace(')','')
+    result['ID']=ID
+
+    #LOGGER.debug('authors = %s' %authors)
+    #LOGGER.debug('ENTRYTYPE = %s' %doctype)
+    #LOGGER.debug('ID = %s' %ID)
 
     return result
 
@@ -189,8 +196,10 @@ def metaDictToBib(jobid,metadict,omit_keys):
         dbtext=writer.write(db)
 
         return 0,jobid,dbtext,metadict['id']
-        #return 1,jobid,'',metadict['id']
-    except:
+
+    except Exception as e:
+        LOGGER.exception('Failed to write to bibtex')
+
         return 1,jobid,'',metadict['id']
 
 

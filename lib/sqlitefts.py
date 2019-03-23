@@ -1,7 +1,10 @@
 import sqlite3
+import logging
+
+LOGGER=logging.getLogger(__name__)
 
 #######################################################################
-#                             fts5 search                             #
+#                             fts5 search NOT IN USE                  #
 #######################################################################
 
 
@@ -222,7 +225,7 @@ def getSubFolders(folder_dict, folderid):
 
 
 #######################################################################
-#                             LIKE search                             #
+#             LIKE search ONLY searchMultipleLike2 IN USE             #
 #######################################################################
 
 def searchTitleLike(db, text, folderid, desend=False):
@@ -502,7 +505,8 @@ def searchMultipleLike2(db, text, field_list, folderid, desend=False):
             subfolderids=getSubFolders(folder_dict, folderid)+[folderid,]
         else:
             subfolderids=[folderid,]
-        print('# <searchTitleLike>: subfolderids=',subfolderids)
+
+        LOGGER.debug('subfolder ids = %s' %subfolderids)
 
         query=query %'''
         LEFT JOIN DocumentFolders ON DocumentFolders.did=search_res.did
@@ -513,6 +517,10 @@ def searchMultipleLike2(db, text, field_list, folderid, desend=False):
     ret=ret.fetchall()
 
     return ret
+
+
+
+
 
 if __name__=='__main__':
 

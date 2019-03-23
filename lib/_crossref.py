@@ -13,7 +13,9 @@ __version__='v0.1alpha'
 ETIQUETTE=Etiquette('MeiTing-Trunk', __version__, 'github',
         'xugzhi1987@gmail.com')
 
-LOGGER=logging.getLogger('default-logger')
+LOGGER=logging.getLogger(__name__)
+
+
 
 def fetchMetaByDOI(doi):
 
@@ -28,8 +30,7 @@ def fetchMetaByDOI(doi):
     else:
         rec=0
 
-    print('# <fetchMetaByDOI>: Rec of doi query=%s' %rec)
-    LOGGER.info('Rec of doi query=%s' %rec)
+    LOGGER.info('DOI = %s. Rec of doi query = %s' %(doi, rec))
 
     return rec,data
 

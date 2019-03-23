@@ -21,7 +21,7 @@ def _addPDF(jobid,abpath):
 
 def checkFolderName(foldername,folderid,folder_dict):
 
-    logger=logging.getLogger('default_logger')
+    logger=logging.getLogger(__name__)
 
     toplevelids=[kk for kk,vv in folder_dict.items() if vv[1]=='-1']
 

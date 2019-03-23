@@ -5,7 +5,7 @@ from PyQt5.QtCore import QObject, QThread, Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialogButtonBox
 
 
-LOGGER=logging.getLogger('default_logger')
+LOGGER=logging.getLogger(__name__)
 
 
 
@@ -28,6 +28,7 @@ class Worker(QObject):
         self.outqueue=outqueue
         self.abort=False
 
+
     @pyqtSlot()
     def processJob(self):
         while self.jobqueue.qsize():
@@ -39,11 +40,11 @@ class Worker(QObject):
             jobid=args[0]
             try:
                 rec=self.func(*args)
-                print('# <Worker>: Job %d done. Remaining queue size: %d.'\
+                LOGGER.debug('Job %d done. Remaining queue size: %d.'\
                     %(jobid, self.jobqueue.qsize()))
             except:
                 rec=(1,jobid,None)
-                print('# <Worker>: Job %d failed. Remaining queue size: %d.'\
+                LOGGER.debug('Job %d failed. Remaining queue size: %d.'\
                     %(jobid, self.jobqueue.qsize()))
             self.jobqueue.task_done()
             self.outqueue.put(rec)
@@ -83,6 +84,7 @@ class Master(QObject):
 
         self.all_done_signal.connect(self.onAllJobsDone)
 
+
     def run(self):
 
         if self.progressbar:
@@ -115,7 +117,8 @@ class Master(QObject):
 
         # start worker threads
         for ii in range(n_threads):
-            print('# <run>: create thread',ii)
+            LOGGER.debug('Create thread %s' %ii)
+
             tii=QThread()
             wii=Worker(ii,self.func,self.jobqueue,self.outqueue)
             self.threads.append((tii,wii)) # need to keep record of both!
@@ -130,6 +133,7 @@ class Master(QObject):
 
     @pyqtSlot(int)
     def countJobDone(self,jobid):
+
         self.finished+=1
         self.finished_jobs.append(jobid)
         self.donejobs_count_signal.emit(self.finished)
@@ -139,7 +143,8 @@ class Master(QObject):
         if self.progressbar and self.progressbar_style=='classic':
             self.progressbar.setValue(self.finished)
 
-        print('# <countJobDone>: finished=',self.finished,len(self.results))
+        LOGGER.debug('finished = %s. NO of results = %d' %(self.finished,
+            len(self.results)))
 
         if self.finished==len(self.joblist):
             self.all_done_signal.emit()
@@ -155,7 +160,8 @@ class Master(QObject):
             tii.wait()
 
         if self.post_process_func is not None:
-            print('# <onAllJobsDone>: Call post process')
+            LOGGER.debug('Call post-process')
+
             self.results=self.post_process_func(self.results,
                     *self.post_process_func_args)
             if self.progressbar:
@@ -172,6 +178,7 @@ class Master(QObject):
 
         return
 
+
     @pyqtSlot()
     def abortJobs(self):
         for tii,wii in self.threads:
@@ -182,6 +189,8 @@ class Master(QObject):
             self.progressbar.setVisible(False)
         if self.statusbar:
             self.statusbar.clearMessage()
+
+        return
 
 
 class ThreadRunDialog(QtWidgets.QDialog):
@@ -246,12 +255,15 @@ class ThreadRunDialog(QtWidgets.QDialog):
 
     @pyqtSlot()
     def allJobsDone(self):
+
         self.cancel_button.setEnabled(False)
         self.ok_button.setEnabled(True)
         self.label.setText('Finished')
         if self.close_on_finish:
             self.accept()
+
         return
+
 
     @pyqtSlot()
     def abortJobs(self):
@@ -259,15 +271,18 @@ class ThreadRunDialog(QtWidgets.QDialog):
         if self.get_results:
             self.results=self.master.results
         self.reject()
+
         return
+
 
     @pyqtSlot()
     def accept(self):
-        print('# <accept>: get result?',self.get_results)
+
+        LOGGER.debug('get_results = %s' %self.get_results)
         if self.get_results:
             self.results=self.master.results
-            print('# <accept>: self.results',self.results)
         super(self.__class__,self).accept()
+
         return
 
 

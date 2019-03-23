@@ -8,8 +8,7 @@ from PyQt5.QtWidgets import QStyle, QStyleOptionSlider, QDialogButtonBox
 import resources
 from ..tools import getHLine, getXMinYExpandSizePolicy
 
-LOGGER=logging.getLogger('default_logger')
-
+LOGGER=logging.getLogger(__name__)
 
 
 
@@ -86,19 +85,21 @@ class PreferenceDialog(QtWidgets.QDialog):
         self.cate_list.currentItemChanged.connect(self.cateSelected)
         self.cate_list.setCurrentRow(0)
 
+
     @pyqtSlot()
     def applyChanges(self):
 
-        print('# <applyChanges>: Apply settings changes')
-        print('# <applyChanges>: Changes:',self.new_values)
+        LOGGER.info('Changes: %s' %self.new_values)
 
         for kk,vv in self.new_values.items():
             self.settings.setValue(kk,vv)
 
         #------------------Set new timer------------------
         if 'saving/auto_save_min' in self.new_values:
-            self.parent.main_frame.auto_save_timer.setInterval(
-                    self.settings.value('saving/auto_save_min',1,int)*60*1000)
+            interval=self.settings.value('saving/auto_save_min',1,int)
+            self.parent.main_frame.auto_save_timer.setInterval(interval*60*1000)
+
+            LOGGER.info('Set auto save timer to %s' %interval)
 
         self.new_values={}
 
@@ -106,10 +107,8 @@ class PreferenceDialog(QtWidgets.QDialog):
         storage_folder=self.settings.value('saving/storage_folder')
         if not os.path.exists(storage_folder):
             os.makedirs(storage_folder)
-            print('# <applyChanges>: Create new storage folder %s' %storage_folder)
+
             LOGGER.info('Create new storage folder %s' %storage_folder)
-
-
 
         # TODO: apply change to database and meta_dict
         # need to call saveFoldersToDatabase() with new folder, and
@@ -127,7 +126,8 @@ class PreferenceDialog(QtWidgets.QDialog):
     def cateSelected(self,item):
 
         item_text=item.text()
-        print('# <cateSelected>: item.text()=%s' %item_text)
+
+        LOGGER.info('item.text() = %s' %item.text())
 
         if self.content_vlayout.count()>1:
             self.content_vlayout.removeWidget(self.content_frame)
@@ -233,7 +233,7 @@ class PreferenceDialog(QtWidgets.QDialog):
     def chooseFont(self,item):
         item_text=item.text()
 
-        print('# <chooseFont>: item.text()=%s' %item_text)
+        LOGGER.info('item.text() = %s' %item.text())
 
         font_setting_name=self.font_dict[item_text]
         default=self.settings.value(font_setting_name, QFont)
@@ -241,13 +241,12 @@ class PreferenceDialog(QtWidgets.QDialog):
         new_font,isok=QtWidgets.QFontDialog.getFont(default,
                 caption='Choose Font for %s' %item_text)
 
-        print('# <loadDisplayOptions>: new_font', new_font,'isok',isok)
         if isok:
             self.new_values[font_setting_name]=new_font
-            print('# <chooseFont>: Font after change:', new_font)
+
+            LOGGER.info('Font after change = %s' %new_font)
 
         return
-
 
 
     def loadSavingsOptions(self):
@@ -286,7 +285,8 @@ class PreferenceDialog(QtWidgets.QDialog):
         #---------------Rename file section---------------
         checkbox=QtWidgets.QCheckBox('Rename Files')
         checked=self.settings.value('saving/rename_files',type=int)
-        print('# <loadSavingsOptions>: Got rename files=',checked)
+        LOGGER.debug('Is rename files = %s' %checked)
+
         checkbox.setChecked(checked)
 
         le=QtWidgets.QLineEdit(self)
@@ -332,37 +332,37 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def chooseSaveFolder(self):
+
         fname=QtWidgets.QFileDialog.getExistingDirectory(self,
             'Choose a folder to save documents and database')
 
         if fname:
-            print('# <chooseFont>: Folder after change:', fname)
+            LOGGER.info('Folder after change = %s' %fname)
             self.new_values['saving/storage_folder']=fname
-
 
         return
 
+
     def changeRenameFiles(self,on):
+
         on=1 if on>0 else 0 # for some reason <on> keeps giving me 2
         self.new_values['saving/rename_files']=on
-        print('# <changeRenameFiles>: Change rename files to %s' %on)
         LOGGER.info('Change rename files to %s' %on)
+
         return
 
 
     def changeSavingInterval(self,value):
-        print('# <changeSavingInterval>: Change auto saving interval to %s' %value)
+
         LOGGER.info('Change auto saving interval to %s' %value)
-
         self.new_values['saving/auto_save_min']=value
-        return
 
+        return
 
 
     def loadExportOptions(self):
 
         scroll, va=self.createFrame('bibtex Export')
-
         self.groupbox=self.createOmitKeyGroup()
         va.addWidget(self.groupbox)
 
@@ -370,11 +370,14 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def omitKeyChanged(self,on):
+
         self.new_values['export/bib/omit_fields']=self.getOmitKeys()
 
         return
 
+
     def omitKeysGroupChanged(self, on, groupbox):
+
         omit_keys=[]
 
         for box in groupbox.findChildren(QtWidgets.QCheckBox):
@@ -389,6 +392,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         return
 
+
     def getOmitKeys(self):
 
         omit_keys=[]
@@ -398,7 +402,6 @@ class PreferenceDialog(QtWidgets.QDialog):
                 omit_keys.append(box.text())
 
         return omit_keys
-
 
 
     def loadCitationStyleOptions(self):
@@ -461,6 +464,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         return scroll
 
+
     def changeAutoOpenLast(self,on):
 
         if on:
@@ -468,23 +472,24 @@ class PreferenceDialog(QtWidgets.QDialog):
         else:
             self.new_values['file/auto_open_last']=0
 
-        print('# <changeAutoOpenLast>: Change auto open last to %s' %on)
         LOGGER.info('Change auto open last to %s' %on)
+
         return
 
 
     def changeRecentNumber(self,value):
-        print('# <changeRecentNumber>: Change recent database number to %s' %value)
-        LOGGER.info('Change recent database number to %s' %value)
 
+        LOGGER.info('Change recent database number to %s' %value)
         self.new_values['file/recent_open_num']=value
+
         return
 
-    def changeDuplicateMinScore(self,value):
-        print('# <changeDuplicateMinScore>: Change min duplicate score to %s' %value)
-        LOGGER.info('Change min duplicate score to %s' %value)
 
+    def changeDuplicateMinScore(self,value):
+
+        LOGGER.info('Change min duplicate score to %s' %value)
         self.new_values['duplicate_min_score']=value
+
         return
 
 

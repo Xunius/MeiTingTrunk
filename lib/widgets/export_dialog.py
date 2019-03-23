@@ -1,4 +1,5 @@
 import os
+import shutil
 import logging
 from collections import OrderedDict
 from PyQt5 import QtWidgets
@@ -15,7 +16,7 @@ from ..tools import getHLine, createFolderTree, iterTreeWidgetItems, autoRename
 from .threadrun_dialog import ThreadRunDialog
 from .fail_dialog import FailDialog
 
-LOGGER=logging.getLogger('default_logger')
+LOGGER=logging.getLogger(__name__)
 
 
 
@@ -94,7 +95,7 @@ class ExportDialog(QtWidgets.QDialog):
     def cateSelected(self,item):
 
         item_text=item.text()
-        print('# <cateSelected>: item.text()=%s' %item_text)
+        LOGGER.debug('item.text() = %s' %item_text)
 
         if self.content_vlayout.count()>1:
             self.content_vlayout.removeWidget(self.content_frame)
@@ -109,6 +110,9 @@ class ExportDialog(QtWidgets.QDialog):
             self.content_frame=self.loadExportZoteroOptions()
 
         self.content_vlayout.insertWidget(0,self.content_frame)
+
+        return
+
 
     def createFrame(self,title):
 
@@ -126,15 +130,16 @@ class ExportDialog(QtWidgets.QDialog):
         va.addWidget(label)
         #va.addWidget(getHLine(self))
 
-
         return scroll, va
 
 
     def clearFolderTreeState(self):
+
         for item in iterTreeWidgetItems(self.folder_tree):
             item.setCheckState(0,False)
 
         return
+
 
     def createOmitKeyGroup(self):
 
@@ -179,7 +184,6 @@ class ExportDialog(QtWidgets.QDialog):
         return self.groupbox
 
 
-
     def loadCopyFileOptions(self):
 
         scroll,va=self.createFrame('Copy Document Files')
@@ -204,7 +208,6 @@ class ExportDialog(QtWidgets.QDialog):
             self.export_button.setEnabled(False)
 
         return scroll
-
 
 
     def loadExportBibOptions(self):
@@ -258,11 +261,15 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def omitKeyChanged(self,on):
+
         self.bib_settings['omit_keys']=self.getOmitKeys()
-        print('# <omitKeyChanged>: omit keys=',self.bib_settings['omit_keys'])
+        LOGGER.debug('omit keys = %s' %self.bib_settings['omit_keys'])
+
         return
 
+
     def omitKeysGroupChanged(self, on, groupbox):
+
         omit_keys=[]
 
         for box in groupbox.findChildren(QtWidgets.QCheckBox):
@@ -273,10 +280,8 @@ class ExportDialog(QtWidgets.QDialog):
             if box.isChecked():
                 omit_keys.append(box.text())
 
-        #self.bib_settings['omit_keys']=omit_keys
-        #print('# <omitKeyChanged>: omit keys=',self.bib_settings['omit_keys'])
-
         return
+
 
     def getOmitKeys(self):
 
@@ -287,7 +292,6 @@ class ExportDialog(QtWidgets.QDialog):
                 omit_keys.append(box.text())
 
         return omit_keys
-
 
 
     def loadExportRISOptions(self):
@@ -323,13 +327,7 @@ class ExportDialog(QtWidgets.QDialog):
 
         va.addWidget(self.radio_groupbox)
 
-        #----------------Omit keys section----------------
-        #self.omitkey_groupbox=self.createOmitKeyGroup()
-        #va.addWidget(self.omitkey_groupbox)
-
         return scroll
-
-
 
 
     def loadExportZoteroOptions(self):
@@ -341,12 +339,16 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def doExportFiles(self):
+
         folder_dict=self.parent.main_frame.folder_dict
         folder_data=self.parent.main_frame.folder_data
         meta_dict=self.parent.main_frame.meta_dict
         storage_folder=self.settings.value('saving/storage_folder',str)
 
         if not os.path.exists(storage_folder):
+            LOGGER.warning('Cant find storage folder (%s) when exporting files.'\
+                    %storage_folder)
+
             msg=QtWidgets.QMessageBox()
             msg.setIcon(QtWidgets.QMessageBox.Critical)
             msg.setWindowTitle('Critical Error!')
@@ -364,21 +366,22 @@ class ExportDialog(QtWidgets.QDialog):
             self.popUpChooseFolder()
             return
 
+        LOGGER.debug('Storage folder = %s' %storage_folder)
+
         job_list=[] # (jobid, source_path, target_path)
         for item in folders:
             folderid=item.data(1,0)
 
             docids=folder_data[folderid]
-            print('# <doExportFiles>: choose folder', item.data(0,0),
-                    item.data(1,0))
+
             tree=sqlitedb.getFolderTree(folder_dict,folderid)[1]
-            print('# <doExportFiles>: tree',tree)
-            print('# <doExportFiles>: docids in folder', docids)
+
+            LOGGER.debug('Process folder %s, id = %s, tree = %s'\
+                    %(item.data(0,0), item.data(1,0), tree))
 
             folderii=os.path.join(storage_folder,tree)
             if not os.path.exists(folderii):
                 os.makedirs(folderii)
-                print('# <doExportFiles>: Create folder %s' %folderii)
                 LOGGER.info('Create folder %s' %folderii)
 
             for idii in docids:
@@ -388,18 +391,19 @@ class ExportDialog(QtWidgets.QDialog):
                         newfjj=os.path.join(folderii,filenamejj)
                         job_list.append((len(job_list), fjj, newfjj))
 
-
-        import time
+        #import time
         def copyFunc(jobid,s,t):
             try:
-                #shutil.copy(s,t)
+                shutil.copy(s,t)
+                LOGGER.debug('Copied file %s to %s' %(s,t))
                 rec=0
                 result=None
             except:
+                LOGGER.exception('Failed to copy %s to %s' %(s,t))
                 rec=1
                 result=None
 
-            time.sleep(0.5)
+            #time.sleep(0.5)
             return rec,jobid,result
 
         if len(job_list)>0:
@@ -409,8 +413,8 @@ class ExportDialog(QtWidgets.QDialog):
                     get_results=False,
                     close_on_finish=False,
                     progressbar_style='classic',parent=self)
-        return
 
+        return
 
 
     def doBibExport(self):
@@ -441,16 +445,16 @@ class ExportDialog(QtWidgets.QDialog):
         if not fname:
             return
 
-        print('# <doBibExport>: Chosen bib file=%s' %fname)
-        LOGGER.info('Chosen bib file=%s' %fname)
+        LOGGER.info('Selected folders = %s' %folders)
+        LOGGER.info('Saving manner = %s' %manner)
+        LOGGER.info('Chosen bib file = %s' %fname)
 
         #-----------------Prepare job list-----------------
         folder_data=self.parent.main_frame.folder_data
         meta_dict=self.parent.main_frame.meta_dict
         omit_keys=self.getOmitKeys()
-        print('# <doBibExport>: manner=',manner)
-        print('# <doBibExport>: folders=',folders)
-        print('# <doBibExport>: omit keys=',omit_keys)
+
+        LOGGER.debug('omit keys = %s' %omit_keys)
 
         #-----------------Create job list-----------------
         job_list=[]
@@ -464,6 +468,7 @@ class ExportDialog(QtWidgets.QDialog):
 
             docs=list(set(docs))
             n=0
+
             for docii in docs:
                 cii=meta_dict[docii]['citationkey']
                 if cii=='':
@@ -518,9 +523,8 @@ class ExportDialog(QtWidgets.QDialog):
         return
 
 
-
-
     def saveBib(self,results,folders,manner,fname,folder_data,meta_dict,citationkeys):
+
         faillist=[]
 
         if manner=='All in one':
@@ -531,22 +535,24 @@ class ExportDialog(QtWidgets.QDialog):
                 elif recii==1:
                     faillist.append(docii)
 
-            print('# <saveBib>: combine save to file',fname)
             with open(fname,'w') as fout:
                 fout.write(text)
+
+            LOGGER.info('Saved combined outputs to file %s' %fname)
 
         elif manner=='Per document':
             for recii,jobii,textii,docii in results:
                 if recii==0:
                     citationkey=citationkeys[jobii]
                     fnameii='%s.bib' %citationkey
-
-                    print('# <saveBib>: seperate save to file',fnameii)
-
                     fnameii=os.path.join(fname,fnameii)
                     fnameii=autoRename(fnameii)
+
                     with open(fnameii,'w') as fout:
                         fout.write(textii)
+
+                    LOGGER.info('Saved per doc output to file %s' %fnameii)
+
                 elif recii==1:
                     faillist.append(docii)
 
@@ -569,24 +575,29 @@ class ExportDialog(QtWidgets.QDialog):
                         if recii==0:
                             folder_results[fidjj].append(textii)
 
-                        #print('# <saveBib>: size',folder_counts[fidjj],len(folder_data[fidjj]))
-                        # save if folder got all its doc processed, even if failed
                         if folder_counts[fidjj]==len(folder_data[fidjj]):
-                            print('# <saveBib>: Folder',fnamejj,'got all data. Save.')
+                            LOGGER.debug('folder %s got all data. Save.' %fnamejj)
+
                             fnamejj=os.path.join(fname,'%s.bib' %fnamejj)
                             text='\n'.join(folder_results[fidjj])
 
                             with open(fnamejj,'w') as fout:
                                 fout.write(text)
 
+                            LOGGER.info('Saved per folder output to file %s' %fnamejj)
+
         #-----------------Show failed jobs-----------------
         if len(faillist)>0:
+
             fail_entries=[]
             for docii in faillist:
                 metaii=meta_dict[docii]
                 entryii='* %s_%s_%s' %(', '.join(metaii['authors_l']),
                         metaii['year'],
                         metaii['title'])
+
+                LOGGER.warning('Failed export job: %s' %entryii)
+
                 fail_entries.append(entryii)
 
             '''
@@ -608,7 +619,6 @@ class ExportDialog(QtWidgets.QDialog):
             msg.exec_()
 
         return
-
 
 
     def doRISExport(self):
@@ -639,14 +649,13 @@ class ExportDialog(QtWidgets.QDialog):
         if not fname:
             return
 
-        print('# <doRIS>: Chosen ris file=%s' %fname)
-        LOGGER.info('Chosen ris file=%s' %fname)
+        LOGGER.info('Selected folders = %s' %folders)
+        LOGGER.info('Saving manner = %s' %manner)
+        LOGGER.info('Chosen ris file = %s' %fname)
 
         #-----------------Prepare job list-----------------
         folder_data=self.parent.main_frame.folder_data
         meta_dict=self.parent.main_frame.meta_dict
-        print('# <doRISExport>: manner=',manner)
-        print('# <doRISExport>: folders=',folders)
 
         #-----------------Create job list-----------------
         job_list=[]
@@ -714,8 +723,6 @@ class ExportDialog(QtWidgets.QDialog):
         return
 
 
-
-
     def saveRIS(self,results,folders,manner,fname,folder_data,meta_dict,citationkeys):
         faillist=[]
 
@@ -727,22 +734,24 @@ class ExportDialog(QtWidgets.QDialog):
                 elif recii==1:
                     faillist.append(docii)
 
-            print('# <saveRIS>: combine save to file',fname)
             with open(fname,'w') as fout:
                 fout.write(text)
+
+            LOGGER.info('Saved combined outputs to file %s' %fname)
 
         elif manner=='Per document':
             for recii,jobii,textii,docii in results:
                 if recii==0:
                     citationkey=citationkeys[jobii]
                     fnameii='%s.ris' %citationkey
-
-                    print('# <saveRIS>: seperate save to file',fnameii)
-
                     fnameii=os.path.join(fname,fnameii)
                     fnameii=autoRename(fnameii)
+
                     with open(fnameii,'w') as fout:
                         fout.write(textii)
+
+                    LOGGER.info('Saved per doc output to file %s' %fnameii)
+
                 elif recii==1:
                     faillist.append(docii)
 
@@ -767,12 +776,15 @@ class ExportDialog(QtWidgets.QDialog):
 
                         # save if folder got all its doc processed, even if failed
                         if folder_counts[fidjj]==len(folder_data[fidjj]):
-                            print('# <saveRIS>: Folder',fnamejj,'got all data. Save.')
+
                             fnamejj=os.path.join(fname,'%s.ris' %fnamejj)
                             text='\n'.join(folder_results[fidjj])
 
                             with open(fnamejj,'w') as fout:
                                 fout.write(text)
+
+                            LOGGER.info('Folder %s got all data. Saved.'\
+                                    %fnamejj)
 
         #-----------------Show failed jobs-----------------
         if len(faillist)>0:
@@ -783,6 +795,8 @@ class ExportDialog(QtWidgets.QDialog):
                         metaii['year'],
                         metaii['title'])
                 fail_entries.append(entryii)
+
+                LOGGER.warning('Failed export job %s' %entryii)
 
             msg=FailDialog()
             msg.setText('Oopsie.')
@@ -797,10 +811,9 @@ class ExportDialog(QtWidgets.QDialog):
 
 
 
-
     def doExport(self):
 
-        print('# <doExport>: task=',self.current_task)
+        LOGGER.info('task = %s' %self.current_task)
 
         if self.current_task=='copy_file':
             self.doExportFiles()
@@ -810,13 +823,17 @@ class ExportDialog(QtWidgets.QDialog):
             self.doRISExport()
         elif self.current_task=='zotero_export':
             pass
+
         return
 
+
     def popUpChooseFolder(self):
+
         msg=QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setWindowTitle('Input Needed')
         msg.setText("Choose at least one folder to process.")
         msg.exec_()
+
         return
 

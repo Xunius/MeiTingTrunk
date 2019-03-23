@@ -8,6 +8,7 @@ import os
 import re
 import time
 import platform
+import logging
 from functools import reduce
 from fuzzywuzzy import fuzz
 from PyQt5 import QtWidgets
@@ -16,6 +17,8 @@ try:
     from . import sqlitedb
 except:
     import sqlitedb
+
+LOGGER=logging.getLogger(__name__)
 
 def getMinSizePolicy():
     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
@@ -193,18 +196,14 @@ def fuzzyMatch(jobid,id1,id2,dict1,dict2):
 
     journal1=dict1['publication'] or ''
     journal2=dict2['publication'] or ''
-    print('# <fuzzyMatch>: year1=',dict1['year'])
-    print('# <fuzzyMatch>: year2=',dict2['year'])
     year1=dict1['year'] or ''
     year2=dict2['year'] or ''
 
     jy1='%s %s' %(journal1, year1)
     jy2='%s %s' %(journal2, year2)
 
-
     ratio_authors=fuzz.token_sort_ratio(authors1, authors2)
     ratio_title=fuzz.ratio(title1, title2)
-    #ratio_other=fuzz.token_set_ratio(jy1, jy2)
     ratio_other=fuzz.ratio(jy1, jy2)
 
     len_authors=0.5*(len(authors1)+len(authors2))
@@ -214,14 +213,13 @@ def fuzzyMatch(jobid,id1,id2,dict1,dict2):
     score=(len_authors*ratio_authors + len_title*ratio_title + len_other*ratio_other)/\
             (len_authors+len_title+len_other)
 
-    print('\n# <fuzzyMatch>: authors1=',authors1,'\nauthors2=',authors2,'\nscore=',
-            ratio_authors)
-    print('\n# <fuzzyMatch>: title1=',title1,'\ntitle2=',title2,'\nscore=',
-            ratio_title)
-    print('\n# <fuzzyMatch>: jy1=',jy1,'\njy2=',jy2,'\nscore=',
-            ratio_other)
+    LOGGER.debug('authors1 = %s, authors2 = %s, score = %d'\
+            %(authors1, authors2, ratio_authors))
+    LOGGER.debug('title1 = %s, title2 = %s, score = %d'\
+            %(title1, title2, ratio_title))
+    LOGGER.debug('jy1 = %s, jy2 = %s, score = %d'\
+            %(jy1, jy2, ratio_other))
 
-    #return round(score)
     return 0,jobid, ((id1,id2), round(score))
 
 
