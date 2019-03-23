@@ -1,8 +1,0 @@
-<!DOCTYPE RCC><RCC version="1.0">
-<qresource>
-    <file alias="bf.png">resources/bf.png</file>
-    <file alias="file_icon.png">resources/file_icon2.png</file>
-    <file alias="clap.png">resources/clap.png</file>
-    <file alias="logo.jpg">resources/logo.jpg</file>
-</qresource>
-</RCC>
