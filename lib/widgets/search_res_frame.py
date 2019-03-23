@@ -483,7 +483,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
             LOGGER.info('Selected docids=%s.' %docids)
 
-        self.create_folder_sig.emit(self.search_text, docids)
+            self.create_folder_sig.emit(self.search_text, docids)
 
         return
 
