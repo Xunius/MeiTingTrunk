@@ -288,7 +288,7 @@ New session started
                     self.logger.exception('Failed to create new database file')
                     return 1,jobid,None
 
-            ThreadRunDialog(func,
+            td=ThreadRunDialog(func,
                 [(0,fname)],
                 show_message='Creating new database...',
                 max_threads=1,
@@ -297,7 +297,10 @@ New session started
                 progressbar_style='busy',
                 parent=None)
 
-            self._openDatabase(fname)
+            td.master.all_done_signal.connect(lambda: self._openDatabase(fname))
+            td.exec_()
+            #self._openDatabase(fname)
+
 
         return
 
@@ -331,6 +334,7 @@ New session started
             return
 
 
+    @pyqtSlot(str)
     def _openDatabase(self,fname):
 
         # close current if loaded. For open recent calls
@@ -498,6 +502,7 @@ New session started
 
     def importTriggered(self):
         diag=ImportDialog(self.settings,parent=self)
+        diag.open_lib_signal.connect(self._openDatabase)
         diag.exec_()
         return
 

@@ -464,6 +464,8 @@ class ExportDialog(QtWidgets.QDialog):
                     close_on_finish=False,
                     progressbar_style='classic',parent=self)
 
+            thread_run_dialog.exec_()
+
         return
 
 
@@ -580,6 +582,8 @@ class ExportDialog(QtWidgets.QDialog):
                 post_process_func_args=(folders, manner, fname, folder_data,
                     meta_dict,citationkeys),
                 parent=self)
+
+        thread_run_dialog.exec_()
 
         return
 
@@ -791,6 +795,8 @@ class ExportDialog(QtWidgets.QDialog):
                 post_process_func_args=(folders, manner, fname, folder_data,
                     meta_dict,citationkeys),
                 parent=self)
+
+        thread_run_dialog.exec_()
 
         return
 

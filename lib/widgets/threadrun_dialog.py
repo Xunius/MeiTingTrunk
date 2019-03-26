@@ -249,8 +249,14 @@ class ThreadRunDialog(QtWidgets.QDialog):
         self.cancel_button=self.buttons.button(QDialogButtonBox.Cancel)
         self.master.all_done_signal.connect(self.allJobsDone)
 
+        #self.master.run()
+        #self.exec_()
+
+    def exec_(self):
+
         self.master.run()
-        self.exec_()
+        super(ThreadRunDialog,self).exec_()
+        return
 
 
     @pyqtSlot()

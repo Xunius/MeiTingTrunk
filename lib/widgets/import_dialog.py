@@ -1,16 +1,14 @@
 import os
+import shutil
 import logging
-from collections import OrderedDict
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QRegExp
-from PyQt5.QtGui import QFont, QRegExpValidator
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QDialogButtonBox
-import resources
-from .. import sqlitedb
 from ..tools import getHLine
 from .threadrun_dialog import ThreadRunDialog
-from .fail_dialog import FailDialog
-from import_mendeley import importMendeley
+#from import_mendeley import importMendeley
+import import_mendeley
 
 LOGGER=logging.getLogger(__name__)
 
@@ -18,6 +16,9 @@ LOGGER=logging.getLogger(__name__)
 
 
 class ImportDialog(QtWidgets.QDialog):
+
+    open_lib_signal=pyqtSignal(str)
+
     def __init__(self,settings,parent):
 
         super(ImportDialog,self).__init__(parent=parent)
@@ -129,6 +130,7 @@ class ImportDialog(QtWidgets.QDialog):
         va.addWidget(label)
 
         #---------------------Lib name---------------------
+        '''
         label=QtWidgets.QLabel('Name your library')
         va.addWidget(label)
 
@@ -142,6 +144,20 @@ class ImportDialog(QtWidgets.QDialog):
 
         label=QtWidgets.QLabel('(Only alphanumeric characters and "-", "_" are allowed)')
         ha.addWidget(label)
+        va.addLayout(ha)
+        '''
+        #-----------------New sqlite file-----------------
+        label=QtWidgets.QLabel('Name your library')
+        va.addWidget(label)
+
+        self.lib_name_le=QtWidgets.QLineEdit()
+        button=QtWidgets.QPushButton(self)
+        button.setText('Open')
+        button.clicked.connect(lambda: self.outFileChooseButtonClicked(
+            self.lib_name_le))
+        ha=QtWidgets.QHBoxLayout()
+        ha.addWidget(self.lib_name_le)
+        ha.addWidget(button)
         va.addLayout(ha)
 
         va.addWidget(getHLine())
@@ -162,7 +178,7 @@ class ImportDialog(QtWidgets.QDialog):
 
         button=QtWidgets.QPushButton(self)
         button.setText('Open')
-        button.clicked.connect(lambda: self.fileChooseButtonClicked(
+        button.clicked.connect(lambda: self.importFileChooseButtonClicked(
             self.mendeley_file_le))
 
         ha.addWidget(self.mendeley_file_le)
@@ -178,7 +194,30 @@ class ImportDialog(QtWidgets.QDialog):
 
 
     @pyqtSlot(QtWidgets.QLineEdit)
-    def fileChooseButtonClicked(self, le):
+    def outFileChooseButtonClicked(self, le):
+
+        storage_folder=self.settings.value('saving/storage_folder',str)
+        fname = QtWidgets.QFileDialog.getSaveFileName(self,
+                'Name your sqlite database file',
+                storage_folder,
+                "sqlite Files (*.sqlite);; All files (*)")[0]
+
+        if fname:
+            # make sure has .sqlite ext
+            dirname,filename=os.path.split(fname)
+            lib_name,ext=os.path.splitext(filename)
+            if ext=='':
+                filename='%s.sqlite' %lib_name
+                fname=os.path.join(dirname,filename)
+
+            LOGGER.info('Choose file name %s' %fname)
+            le.setText(fname)
+
+        return
+
+
+    @pyqtSlot(QtWidgets.QLineEdit)
+    def importFileChooseButtonClicked(self, le):
 
         fname = QtWidgets.QFileDialog.getOpenFileName(self,
                 'Select your Mendeley sqlite database file',
@@ -213,44 +252,177 @@ class ImportDialog(QtWidgets.QDialog):
         LOGGER.info('task = %s' %self.current_task)
 
         if self.current_task=='mendeley':
-            libname=self.lib_name_le.text()
-            if libname=='':
-                self.popUpGiveName()
-                return
-
-            fname=self.mendeley_file_le.text()
-            if fname=='':
-                self.popUpGiveFile()
-                return
-
-            if not os.path.exists(fname):
-                msg=QtWidgets.QMessageBox()
-                msg.setIcon(QtWidgets.QMessageBox.Information)
-                msg.setWindowTitle('File not found')
-                msg.setText("Can't find input file %s" %fname)
-                msg.exec_()
-                return
-
-            storage_folder=self.settings.value('saving/storage_folder',str)
-            file_out_name='%s.sqlite' %libname
-            file_out_name=os.path.join(storage_folder,file_out_name)
-
-            rename_files=self.settings.value('saving/rename_files', 1)
-
-            print('# <doImport>: storage_folder=',storage_folder)
-            print('# <doImport>: file_in_name=',fname)
-            print('# <doImport>: file_out_name=',file_out_name)
-            print('# <doImport>: libname=',libname)
-            print('# <doImport>: rename_files=',rename_files)
-
-            rec=importMendeley(fname, file_out_name, rename_files)
-
+            self.doMendeleyImport1()
         elif self.current_task=='zotero':
             pass
         elif self.current_task=='endnote':
             pass
 
         return
+
+
+    def doMendeleyImport1(self):
+
+        file_out_name=self.lib_name_le.text()
+        if file_out_name=='':
+            self.popUpGiveName()
+            return
+
+        if os.path.exists(file_out_name):
+            choice=QtWidgets.QMessageBox.question(self, 'sqlite file already exists',
+                    'Overwrite the file %s?' %file_out_name,
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+
+            if choice==QtWidgets.QMessageBox.Yes:
+                os.remove(file_out_name)
+            if choice==QtWidgets.QMessageBox.No:
+                return
+
+        file_in_name=self.mendeley_file_le.text()
+        if file_in_name=='':
+            self.popUpGiveFile()
+            return
+
+        if not os.path.exists(file_in_name):
+            msg=QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Information)
+            msg.setWindowTitle('File not found')
+            msg.setText("Can't find input file %s" %file_in_name)
+            msg.exec_()
+            return
+
+        LOGGER.debug('file_in_name = %s' %file_in_name)
+        LOGGER.debug('file_out_name = %s' %file_out_name)
+        LOGGER.debug('Launching thread...')
+
+        '''
+        self.master1=Master(import_mendeley.importMendeleyPreprocess,
+                [(0, file_in_name, file_out_name)],
+                1, self.parent.main_frame.progressbar,
+                'busy', self.parent.main_frame.status_bar,
+                'Connecting databases...')
+
+        self.master1.all_done_signal.connect(self.doMendeleyImport2)
+        self.master1.run()
+        '''
+        #------------------Run in thread------------------
+        self.thread_run_dialog1=ThreadRunDialog(
+                import_mendeley.importMendeleyPreprocess,
+                [(0, file_in_name, file_out_name)],
+                show_message='Connecting database...',
+                max_threads=1,
+                get_results=True,
+                close_on_finish=True,
+                progressbar_style='busy',
+                post_process_func=None,
+                parent=self)
+
+        self.thread_run_dialog1.master.all_done_signal.connect(self.doMendeleyImport2)
+        self.thread_run_dialog1.exec_()
+
+        return
+
+
+    def doMendeleyImport2(self):
+
+        file_out_name=self.lib_name_le.text()
+        step1_results=self.thread_run_dialog1.results[0]
+        rec, _, dbin, dbout, docids,lib_folder,lib_name=step1_results
+        LOGGER.info('return code of importMendeleyPreprocess: %s' %rec)
+
+        if rec==1:
+            msg=QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Error)
+            msg.setWindowTitle('Oopsie')
+            msg.setText("Failed to process database files.         ")
+            msg.exec_()
+            LOGGER.warning('Failed to run importMendeleyPreprocess().')
+
+            if os.path.exists(file_out_name):
+                os.remove(file_out_name)
+                LOGGER.info('Remove sqlite database file %s' %file_out_name)
+            if os.path.exists(lib_folder):
+                shutil.rmtree(lib_folder)
+                LOGGER.info('Remove lib folder %s' %lib_folder)
+
+            return
+
+        rename_files=self.settings.value('saving/rename_files', 1)
+
+        LOGGER.debug('rename_files = %s' %rename_files)
+
+        #-----------------Prepare job list-----------------
+        job_list=[]
+        for ii, docii in enumerate(docids):
+            job_list.append((ii, dbin, dbout, lib_name, lib_folder,
+                rename_files, ii, docii))
+
+        job_list.append((-1, dbin, dbout, lib_name, lib_folder,
+            rename_files, ii, None))
+
+        #------------------Run in thread------------------
+        self.thread_run_dialog2=ThreadRunDialog(import_mendeley.importMendeleyCopyData,
+                job_list,
+                show_message='Transfering data...',
+                max_threads=1,
+                get_results=False,
+                close_on_finish=False,
+                progressbar_style='classic',
+                post_process_func=None,
+                parent=self)
+
+        self.thread_run_dialog2.master.all_done_signal.connect(lambda: self.postImport(
+            file_out_name))
+
+        self.thread_run_dialog2.exec_()
+
+        return
+
+
+    @pyqtSlot()
+    def postImport(self, file_name):
+
+        step2_results=self.thread_run_dialog2.master.results[-1]
+        rec,_=step2_results
+        LOGGER.info('return code of importMendeleyCopyData: %s' %rec)
+
+        if rec==0:
+            choice=QtWidgets.QMessageBox.question(self,
+                    'Open newly imported library?',
+                    'Open newly imported library?',
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+
+            if choice==QtWidgets.QMessageBox.Yes:
+                LOGGER.info('Emitting open lib signal. File = %s' %file_name)
+                self.thread_run_dialog2.accept()
+                self.reject()
+
+                self.open_lib_signal.emit(file_name)
+
+        elif rec==1:
+            msg=QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            msg.setWindowTitle('Oopsie')
+            msg.setText("Failed to import Mendeley database files.")
+            msg.exec_()
+
+            LOGGER.warning('Failed to run importMendeleyCopyData().')
+            dirname,fname=os.path.split(file_name)
+            lib_folder=os.path.join(dirname,os.path.splitext(fname)[0])
+
+            if os.path.exists(file_name):
+                os.remove(file_name)
+                LOGGER.info('Remove sqlite database file %s' %file_name)
+            if os.path.exists(lib_folder):
+                shutil.rmtree(lib_folder)
+                LOGGER.info('Remove lib folder %s' %lib_folder)
+
+            self.thread_run_dialog2.accept()
+
+            return
+
+        return
+
 
 
     def popUpGiveName(self):
