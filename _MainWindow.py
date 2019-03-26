@@ -388,6 +388,7 @@ New session started
         self.current_lib=lib_name
         self.current_lib_folder=lib_folder
         self.settings.setValue('saving/current_lib_folder', self.current_lib_folder)
+        self.setWindowTitle('MEI-TING TRUNK %s: %s' %(__version__, lib_name))
 
         self.logger.info('Get current_lib = %s' %lib_name)
         self.logger.info('Get current_lib_folder = %s' %self.current_lib_folder)
@@ -469,6 +470,7 @@ New session started
             self.current_lib=None
             self.current_lib_folder=None
             self.settings.setValue('saving/current_lib_folder','')
+            self.setWindowTitle('MEI-TING TRUNK %s' %__version__)
             self.main_frame.auto_save_timer.stop()
 
             self.logger.info('Stop auto save timer.')

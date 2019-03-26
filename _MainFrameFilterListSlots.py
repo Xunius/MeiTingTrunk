@@ -68,7 +68,7 @@ class MainFrameFilterListSlots:
 
             #---------------Get items in folder---------------
             foldername,folderid=current_folder
-            if foldername=='All' and folderid=='-1':
+            if folderid=='-1':
                 docids=list(self.meta_dict.keys())
             else:
                 docids=self.folder_data[folderid]

@@ -242,7 +242,8 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
             # on item
             if indicatorpos==0:
 
-                if newparent.data(0,0) in ['All', 'Needs Review']:
+                #if newparent.data(0,0) in ['All', 'Needs Review']:
+                if newparent.data(1,0) in ['-1', '-2']:
                     event.ignore()
                     return
 
