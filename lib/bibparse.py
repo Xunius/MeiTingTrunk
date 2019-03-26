@@ -138,7 +138,7 @@ def readBibFile(bibfile):
     return results
 
 
-def toOrdinaryDict(metadict,alt_dict,omit_keys):
+def toOrdinaryDict(metadict,alt_dict,omit_keys,path_prefix):
 
     result={}
 
@@ -155,6 +155,8 @@ def toOrdinaryDict(metadict,alt_dict,omit_keys):
                     continue
                 if kk in ['folders_l',]:
                     vv=[vii[1] for vii in vv]
+                if kk == 'files_l':
+                    vv=[os.path.join(path_prefix,vii) for vii in vv]
                 vv='; '.join(vv)
             result[alt_dict[kk]]=vv
         else:
@@ -181,11 +183,11 @@ def toOrdinaryDict(metadict,alt_dict,omit_keys):
     return result
 
 
-def metaDictToBib(jobid,metadict,omit_keys):
+def metaDictToBib(jobid,metadict,omit_keys,path_prefix):
 
     try:
         alt_dict=INV_ALT_KEYS
-        ord_dict=toOrdinaryDict(metadict,alt_dict,omit_keys)
+        ord_dict=toOrdinaryDict(metadict,alt_dict,omit_keys,path_prefix)
 
         db=BibDatabase()
         db.entries=[ord_dict,]
@@ -214,7 +216,7 @@ if __name__=='__main__':
 
     entries=[]
     for eii in aa:
-        dii=toOrdinaryDict(eii,INV_ALT_KEYS,OMIT_KEYS)
+        dii=toOrdinaryDict(eii,INV_ALT_KEYS,OMIT_KEYS,'/home/')
         entries.append(dii)
 
     db=BibDatabase()

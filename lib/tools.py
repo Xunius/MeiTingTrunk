@@ -271,7 +271,8 @@ def createFolderTree(folder_dict,parent):
             fitem.setFlags(fitem.flags() | Qt.ItemIsTristate |\
                     Qt.ItemIsUserCheckable)
             fitem.setCheckState(0, Qt.Unchecked)
-            parent.addTopLevelItem(fitem)
+            #parent.addTopLevelItem(fitem)
+            parent.addChild(fitem)
         else:
             fitem.setFlags(fitem.flags() | Qt.ItemIsUserCheckable)
             fitem.setCheckState(0, Qt.Unchecked)
@@ -293,6 +294,16 @@ def createFolderTree(folder_dict,parent):
             QtWidgets.QHeaderView.ResizeToContents)
     folder_tree.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
 
+    #---------------------Add All---------------------
+    allitem=QtWidgets.QTreeWidgetItem(['All', '-1'])
+    style=QtWidgets.QApplication.style()
+    diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+    allitem.setIcon(0,diropen_icon)
+    allitem.setFlags(allitem.flags() | Qt.ItemIsTristate |\
+            Qt.ItemIsUserCheckable)
+    allitem.setCheckState(0, Qt.Unchecked)
+    folder_tree.addTopLevelItem(allitem)
+
     #-------------Get all level 1 folders-------------
     folders1=[(vv[0],kk) for kk,vv in folder_dict.items() if\
             vv[1] in ['-1',]]
@@ -300,7 +311,9 @@ def createFolderTree(folder_dict,parent):
 
     #------------Add folders to tree------------
     for fnameii,idii in folders1:
-        addFolder(folder_tree,idii,folder_dict)
+        addFolder(allitem,idii,folder_dict)
+
+    allitem.setExpanded(True)
 
     return folder_tree
 

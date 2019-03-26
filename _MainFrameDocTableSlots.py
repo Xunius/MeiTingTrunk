@@ -491,9 +491,16 @@ class MainFrameDocTableSlots:
             if isinstance(omit_keys,str) and omit_keys=='':
                 omit_keys=[]
 
+            path_type=self.settings.value('export/bib/path_type',str)
+            if path_type=='absolute':
+                prefix=self.settings.value('saving/current_lib_folder',str)
+            elif path_type=='relative':
+                prefix=''
+
             job_list=[]
             for ii,docii in enumerate(docids):
-                job_list.append((ii,meta_dict[docii],omit_keys))
+                job_list.append((ii,meta_dict[docii],omit_keys,prefix))
+
             self.master1=Master(bibparse.metaDictToBib, job_list,
                     1, self.progressbar,
                     'classic', self.status_bar, 'Exporting to bibtex...',
@@ -557,9 +564,15 @@ class MainFrameDocTableSlots:
             return
 
         if fname:
+            path_type=self.settings.value('export/ris/path_type',str)
+            if path_type=='absolute':
+                prefix=self.settings.value('saving/current_lib_folder',str)
+            elif path_type=='relative':
+                prefix=''
+
             job_list=[]
             for ii,docii in enumerate(docids):
-                job_list.append((ii,meta_dict[docii]))
+                job_list.append((ii,meta_dict[docii],prefix))
             self.master1=Master(risparse.metaDictToRIS, job_list,
                     1, self.progressbar,
                     'classic', self.status_bar, 'Exporting to RIS...',
@@ -659,9 +672,7 @@ class MainFrameDocTableSlots:
 
             lib_folder=self.settings.value('saving/current_lib_folder',str)
             for fii in files:
-                print('# <docDoubleClicked>: fii=',fii)
                 fii=os.path.join(lib_folder,fii)
-                print('# <docDoubleClicked>: fii=',fii)
                 listwidget.addItem(fii)
 
             listwidget.setCurrentRow(0)

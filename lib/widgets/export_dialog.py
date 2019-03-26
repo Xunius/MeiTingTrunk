@@ -140,6 +140,18 @@ class ExportDialog(QtWidgets.QDialog):
 
         return
 
+    def getFolderTreeState(self):
+
+        folders=[]
+        for item in iterTreeWidgetItems(self.folder_tree):
+            if item.data(1,0)=='-1':
+                # all folder
+                continue
+            if item.checkState(0):
+                folders.append(item)
+
+        return folders
+
 
     def createOmitKeyGroup(self):
 
@@ -247,7 +259,35 @@ class ExportDialog(QtWidgets.QDialog):
         self.omitkey_groupbox=self.createOmitKeyGroup()
         va.addWidget(self.omitkey_groupbox)
 
+        #--------------File path type section--------------
+        self.path_type_groupbox=self.createPathTypeGroup('bib')
+        va.addWidget(self.path_type_groupbox)
+
         return scroll
+
+
+    def createPathTypeGroup(self, export_type):
+
+        groupbox=QtWidgets.QGroupBox('Use relative or absolute paths for files.')
+        ha=QtWidgets.QHBoxLayout()
+        path_type=self.settings.value('export/%s/path_type' %export_type,str)
+
+        for ii in ['Relative', 'Absolute']:
+            buttonii=QtWidgets.QRadioButton(ii)
+            if ii.lower()==path_type:
+                buttonii.setChecked(True)
+            ha.addWidget(buttonii)
+
+        groupbox.setLayout(ha)
+
+        return groupbox
+
+
+    def getPathType(self):
+
+        for rii in self.path_type_groupbox.findChildren(QtWidgets.QRadioButton):
+            if rii.isChecked():
+                return rii.text().lower()
 
 
     def getExportManner(self):
@@ -299,7 +339,7 @@ class ExportDialog(QtWidgets.QDialog):
         scroll,va=self.createFrame('Export to RIS')
         self.current_task='ris_export'
 
-        self.ris_settings={}
+        #self.ris_settings={}
 
         #--------------Folder choice section--------------
         label=QtWidgets.QLabel('Choose folder(s) to export.')
@@ -326,6 +366,10 @@ class ExportDialog(QtWidgets.QDialog):
             ha2.addWidget(radioii)
 
         va.addWidget(self.radio_groupbox)
+
+        #--------------File path type section--------------
+        self.path_type_groupbox=self.createPathTypeGroup('bib')
+        va.addWidget(self.path_type_groupbox)
 
         return scroll
 
@@ -359,10 +403,13 @@ class ExportDialog(QtWidgets.QDialog):
             msg.exec_()
             return
 
+        '''
         folders=[]
         for item in iterTreeWidgetItems(self.folder_tree):
             if item.checkState(0):
                 folders.append(item)
+        '''
+        folders=self.getFolderTreeState()
         if len(folders)==0:
             self.popUpChooseFolder()
             return
@@ -423,12 +470,15 @@ class ExportDialog(QtWidgets.QDialog):
     def doBibExport(self):
 
         #---------------Get selected folders---------------
+        '''
         folders=[]
         for item in iterTreeWidgetItems(self.folder_tree):
             if item.checkState(0):
                 folderid=item.data(1,0)
                 foldername=item.data(0,0)
                 folders.append((foldername, folderid))
+        '''
+        folders=[(item.data(0,0), item.data(1,0)) for item in self.getFolderTreeState()]
         if len(folders)==0:
             self.popUpChooseFolder()
             return
@@ -448,9 +498,17 @@ class ExportDialog(QtWidgets.QDialog):
         if not fname:
             return
 
+        #------------------Get path type------------------
+        path_type=self.getPathType()
+        if path_type=='absolute':
+            prefix=self.settings.value('saving/current_lib_folder',str)
+        elif path_type=='relative':
+            prefix=''
+
         LOGGER.info('Selected folders = %s' %folders)
         LOGGER.info('Saving manner = %s' %manner)
         LOGGER.info('Chosen bib file = %s' %fname)
+        LOGGER.info('path_prefix = %s' %prefix)
 
         #-----------------Prepare job list-----------------
         folder_data=self.parent.main_frame.folder_data
@@ -477,7 +535,7 @@ class ExportDialog(QtWidgets.QDialog):
                 if cii=='':
                     cii=str(docii)
                 citationkeys.append(cii)
-                job_list.append((n, meta_dict[docii], omit_keys))
+                job_list.append((n, meta_dict[docii], omit_keys, prefix))
                 n+=1
 
             #---------------Sort by citationkey---------------
@@ -503,7 +561,7 @@ class ExportDialog(QtWidgets.QDialog):
                     if cii=='':
                         cii=str(docii)
                     citationkeysii.append(cii)
-                    jobsii.append((n, meta_dict[docii], omit_keys))
+                    jobsii.append((n, meta_dict[docii], omit_keys, prefix))
                     n+=1
                     docs.append(docii)
 
@@ -627,12 +685,15 @@ class ExportDialog(QtWidgets.QDialog):
     def doRISExport(self):
 
         #---------------Get selected folders---------------
+        '''
         folders=[]
         for item in iterTreeWidgetItems(self.folder_tree):
             if item.checkState(0):
                 folderid=item.data(1,0)
                 foldername=item.data(0,0)
                 folders.append((foldername, folderid))
+        '''
+        folders=[(item.data(0,0), item.data(1,0)) for item in self.getFolderTreeState()]
         if len(folders)==0:
             self.popUpChooseFolder()
             return
@@ -652,9 +713,17 @@ class ExportDialog(QtWidgets.QDialog):
         if not fname:
             return
 
+        #------------------Get path type------------------
+        path_type=self.getPathType()
+        if path_type=='absolute':
+            prefix=self.settings.value('saving/current_lib_folder',str)
+        elif path_type=='relative':
+            prefix=''
+
         LOGGER.info('Selected folders = %s' %folders)
         LOGGER.info('Saving manner = %s' %manner)
         LOGGER.info('Chosen ris file = %s' %fname)
+        LOGGER.info('path_prefix = %s' %prefix)
 
         #-----------------Prepare job list-----------------
         folder_data=self.parent.main_frame.folder_data
@@ -677,7 +746,7 @@ class ExportDialog(QtWidgets.QDialog):
                 if cii=='':
                     cii=str(docii)
                 citationkeys.append(cii)
-                job_list.append((n, meta_dict[docii]))
+                job_list.append((n, meta_dict[docii], prefix))
                 n+=1
 
             #---------------Sort by citationkey---------------
@@ -703,7 +772,7 @@ class ExportDialog(QtWidgets.QDialog):
                     if cii=='':
                         cii=str(docii)
                     citationkeysii.append(cii)
-                    jobsii.append((n, meta_dict[docii]))
+                    jobsii.append((n, meta_dict[docii], prefix))
                     n+=1
                     docs.append(docii)
 

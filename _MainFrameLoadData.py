@@ -239,7 +239,14 @@ class MainFrameLoadData:
         omit_keys=self.settings.value('export/bib/omit_fields', [], str)
         if isinstance(omit_keys,str) and omit_keys=='':
             omit_keys=[]
-        text=bibparse.metaDictToBib(0,metaii,omit_keys)[2]
+
+        path_type=self.settings.value('export/bib/path_type',str)
+        if path_type=='absolute':
+            prefix=self.settings.value('saving/current_lib_folder',str)
+        elif path_type=='relative':
+            prefix=''
+
+        text=bibparse.metaDictToBib(0,metaii,omit_keys,prefix)[2]
         self.bib_textedit.setText(text)
 
         return

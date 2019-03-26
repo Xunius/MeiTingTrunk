@@ -193,10 +193,10 @@ def readRISFile(filename):
     return results
 
 
-def metaDictToRIS(jobid,metadict):
+def metaDictToRIS(jobid,metadict,path_prefix):
 
     try:
-        text=parseMeta(metadict)
+        text=parseMeta(metadict,path_prefix)
         return 0,jobid,text,metadict['id']
     except Exception as e:
         LOGGER.exception('Failed to write to RIS format. Jobid = %s. Doc id = %s'\
@@ -204,7 +204,7 @@ def metaDictToRIS(jobid,metadict):
         return 1,jobid,'',metadict['id']
 
 
-def parseMeta(metadict):
+def parseMeta(metadict,path_prefix):
 
     def getField(doc,field,default=''):
         return doc[field] or default
@@ -288,7 +288,7 @@ def parseMeta(metadict):
     if files:
         # can only store 2 files?
         for fii in files[:2]:
-            entries.append('L1 - %s' %fii)
+            entries.append('L1 - %s' %os.path.join(path_prefix,fii))
 
             LOGGER.debug('file (L1) = %s' %fii)
 

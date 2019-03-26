@@ -101,6 +101,8 @@ class DocMeta(MutableMapping):
                 raise Exception("keys end with '_l' accepts only list or tuple. key: %s, value: %s" %(key, value))
         if key not in self.store.keys():
             return
+        if value is None:
+            return
 
         self.store[key] = value
 
@@ -185,6 +187,7 @@ def fetchField(db,query,values,ncol=1,ret_type='str'):
     aa=db.execute(query,values).fetchall()
 
     if len(aa)==0:
+        # don't think this ever happens. Null is returned as None
         if ret_type=='str':
             return None
         else:
@@ -194,7 +197,10 @@ def fetchField(db,query,values,ncol=1,ret_type='str'):
         aa=[ii[0] for ii in aa]
     if ret_type=='str':
         if len(aa)==1:
-            return str(aa[0])
+            if aa[0] is None:
+                return None
+            else:
+                return str(aa[0])
         else:
             return '; '.join(aa)
     else:
@@ -290,7 +296,7 @@ def getMetaData(db, did):
 
     if 'id' in names:
         vii=fetchField(db,query_base %'id', (did,))
-        result['id']=vii
+        result['id']=int(vii)
     else:
         vii=fetchField(db,query_base %'rowid', (did,))
         result['rowid']=vii

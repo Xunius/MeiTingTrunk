@@ -64,8 +64,8 @@ class PreferenceDialog(QtWidgets.QDialog):
             #background-color: rgb(230,234,235);
             #''')
 
-        self.cate_list.addItems(['Citation Style', 'Display', 'Export',
-            'Savings', 'Miscellaneous'])
+        self.cate_list.addItems(['Citation Style', 'Display', 'Bibtex Export',
+            'RIS Export', 'Savings', 'Miscellaneous'])
 
         self.content_vlayout=QtWidgets.QVBoxLayout()
         h_layout.addLayout(self.content_vlayout)
@@ -134,8 +134,10 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         if item_text=='Display':
             self.content_frame=self.loadDisplayOptions()
-        elif item_text=='Export':
-            self.content_frame=self.loadExportOptions()
+        elif item_text=='Bibtex Export':
+            self.content_frame=self.loadBibExportOptions()
+        elif item_text=='RIS Export':
+            self.content_frame=self.loadRISExportOptions()
         elif item_text=='Citation Style':
             self.content_frame=self.loadCitationStyleOptions()
         elif item_text=='Savings':
@@ -360,13 +362,68 @@ class PreferenceDialog(QtWidgets.QDialog):
         return
 
 
-    def loadExportOptions(self):
+    def loadBibExportOptions(self):
 
-        scroll, va=self.createFrame('bibtex Export')
+        scroll, va=self.createFrame('Bibtex Export')
         self.groupbox=self.createOmitKeyGroup()
         va.addWidget(self.groupbox)
 
+        va.addWidget(getHLine())
+
+        label=QtWidgets.QLabel('File path type')
+        label.setStyleSheet(self.label_color)
+        label.setFont(self.title_label_font)
+
+        self.radio_groupbox=self.createPathTypeGroup('bib')
+        va.addWidget(self.radio_groupbox)
+
         return scroll
+
+
+    def loadRISExportOptions(self):
+
+        scroll, va=self.createFrame('RIS Export')
+
+        label=QtWidgets.QLabel('File path type')
+        label.setStyleSheet(self.label_color)
+        label.setFont(self.title_label_font)
+
+        self.radio_groupbox=self.createPathTypeGroup('ris')
+        va.addWidget(self.radio_groupbox)
+
+        va.addStretch()
+
+        return scroll
+
+
+    def createPathTypeGroup(self, export_type):
+
+        groupbox=QtWidgets.QGroupBox('Use relative or absolute paths for files.')
+        ha=QtWidgets.QHBoxLayout()
+        path_type=self.settings.value('export/%s/path_type' %export_type,str)
+
+        for ii in ['Relative', 'Absolute']:
+            buttonii=QtWidgets.QRadioButton(ii)
+            if ii.lower()==path_type:
+                buttonii.setChecked(True)
+            buttonii.toggled.connect(lambda on: self.pathTypeChanged(on, export_type))
+            ha.addWidget(buttonii)
+
+        groupbox.setLayout(ha)
+
+        return groupbox
+
+
+    @pyqtSlot(bool, str)
+    def pathTypeChanged(self,on, export_type):
+
+        LOGGER.debug('export_type = %s' %export_type)
+        for rii in self.radio_groupbox.findChildren(QtWidgets.QRadioButton):
+            if rii.isChecked():
+                self.new_values['export/%s/path_type' %export_type]=rii.text().lower()
+                break
+
+        return
 
 
     def omitKeyChanged(self,on):

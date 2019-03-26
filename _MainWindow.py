@@ -86,6 +86,8 @@ New session started
                     QBrush(QColor(200,200,255)))
 
             settings.setValue('export/bib/omit_fields', OMIT_KEYS)
+            settings.setValue('export/bib/path_type', 'absolute')
+            settings.setValue('export/ris/path_type', 'absolute')
             settings.setValue('file/recent_open', [])
             settings.setValue('file/recent_open_num', 2)
             settings.setValue('file/auto_open_last', 1)
@@ -94,7 +96,7 @@ New session started
                     'Documents/MeiTingTrunk')
             settings.setValue('saving/storage_folder', storage_folder)
 
-            settings.setValue('saving/auto_save_min', 1),
+            settings.setValue('saving/auto_save_min', 5),
             settings.setValue('saving/rename_files', 1)
             settings.setValue('saving/rename_file_replace_space', 1)
 
@@ -309,8 +311,10 @@ New session started
             if not do:
                 return
 
-        fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a sqlite file',
-     '',"sqlite files (*.sqlite);; All files (*)")[0]
+        fname = QtWidgets.QFileDialog.getOpenFileName(self,
+                'Choose a sqlite file',
+                self.settings.value('saving/storage_folder',str),
+                "sqlite files (*.sqlite);; All files (*)")[0]
 
         if fname:
             try:
