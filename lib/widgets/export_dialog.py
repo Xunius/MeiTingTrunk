@@ -390,7 +390,9 @@ class ExportDialog(QtWidgets.QDialog):
                     for fjj in meta_dict[idii]['files_l']:
                         filenamejj=sqlitedb.renameFile(fjj,meta_dict[idii])
                         newfjj=os.path.join(folderii,filenamejj)
-                        job_list.append((len(job_list), fjj, newfjj))
+                        # prepend lib_folder to rel file path
+                        oldjj=os.path.join(lib_folder,fjj)
+                        job_list.append((len(job_list), oldjj, newfjj))
 
         #import time
         def copyFunc(jobid,s,t):

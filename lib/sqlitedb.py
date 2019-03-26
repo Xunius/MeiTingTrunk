@@ -312,7 +312,7 @@ def getMetaData(db, did):
     result['tags_l']=fetchField(db,query_tags,(did,),1,'list')
     result['urls_l']=fetchField(db,query_urls,(did,),1,'list')
 
-    LOGGER.debug('Done fetching meta data for doc %s' %str(did))
+    #LOGGER.debug('Done fetching meta data for doc %s' %str(did))
 
     return result
 
