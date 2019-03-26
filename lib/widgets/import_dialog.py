@@ -10,6 +10,7 @@ from .. import sqlitedb
 from ..tools import getHLine
 from .threadrun_dialog import ThreadRunDialog
 from .fail_dialog import FailDialog
+from import_mendeley import importMendeley
 
 LOGGER=logging.getLogger(__name__)
 
@@ -64,10 +65,10 @@ class ImportDialog(QtWidgets.QDialog):
 
         self.buttons=QDialogButtonBox(QDialogButtonBox.Close,
             Qt.Horizontal, self)
-        self.export_button=self.buttons.addButton('Import',
+        self.import_button=self.buttons.addButton('Import',
                 QDialogButtonBox.ApplyRole)
 
-        self.export_button.clicked.connect(self.doImport)
+        self.import_button.clicked.connect(self.doImport)
         self.buttons.rejected.connect(self.reject)
 
         self.content_vlayout.addWidget(self.buttons)
@@ -122,7 +123,7 @@ class ImportDialog(QtWidgets.QDialog):
         scroll,va=self.createFrame('Import From Mendeley')
         self.current_task='mendeley'
 
-        label=QtWidgets.QLabel('(Notice: Only Mendeley version < 1.9 can be imported. Later version of Mendeley encrypts the database file.)')
+        label=QtWidgets.QLabel('(Notice: Only Mendeley version < 1.19 can be imported. Later version of Mendeley encrypts the database file.)')
         label.setStyleSheet('Font: bold')
         label.setWordWrap(True)
         va.addWidget(label)
@@ -212,7 +213,38 @@ class ImportDialog(QtWidgets.QDialog):
         LOGGER.info('task = %s' %self.current_task)
 
         if self.current_task=='mendeley':
-            pass
+            libname=self.lib_name_le.text()
+            if libname=='':
+                self.popUpGiveName()
+                return
+
+            fname=self.mendeley_file_le.text()
+            if fname=='':
+                self.popUpGiveFile()
+                return
+
+            if not os.path.exists(fname):
+                msg=QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Information)
+                msg.setWindowTitle('File not found')
+                msg.setText("Can't find input file %s" %fname)
+                msg.exec_()
+                return
+
+            storage_folder=self.settings.value('saving/storage_folder',str)
+            file_out_name='%s.sqlite' %libname
+            file_out_name=os.path.join(storage_folder,file_out_name)
+
+            rename_files=self.settings.value('saving/rename_files', 1)
+
+            print('# <doImport>: storage_folder=',storage_folder)
+            print('# <doImport>: file_in_name=',fname)
+            print('# <doImport>: file_out_name=',file_out_name)
+            print('# <doImport>: libname=',libname)
+            print('# <doImport>: rename_files=',rename_files)
+
+            rec=importMendeley(fname, file_out_name, rename_files)
+
         elif self.current_task=='zotero':
             pass
         elif self.current_task=='endnote':
@@ -221,12 +253,23 @@ class ImportDialog(QtWidgets.QDialog):
         return
 
 
-    def popUpChooseFolder(self):
+    def popUpGiveName(self):
 
         msg=QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setWindowTitle('Input Needed')
-        msg.setText("Choose at least one folder to process.")
+        msg.setText("Give a name to the library.")
+        msg.exec_()
+
+        return
+
+
+    def popUpGiveFile(self):
+
+        msg=QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setWindowTitle('Input Needed')
+        msg.setText("Choose file to be imported.")
         msg.exec_()
 
         return

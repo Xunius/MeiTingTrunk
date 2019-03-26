@@ -2,13 +2,13 @@
 
 '''
 
-
 import sys
 import os
 import sqlite3
 import shutil
 import re
 import uuid
+import logging
 import time
 if sys.version_info[0]>=3:
     #---------------------Python3---------------------
@@ -19,10 +19,15 @@ else:
     from urllib import unquote
     from urlparse import urlparse
 
-FILE_OUT_NAME='nonfts3.sqlite'
+from lib import sqlitedb
+
+FILE_OUT_NAME='~/Documents/MeiTingTrunk/mendeley.sqlite'
 FILE_IN_NAME='mendeley.sqlite'
-LIB_FOLDER='~/Papers2'
-FILE_FOLDER=os.path.join(LIB_FOLDER,'collections')
+#STORAGE_FOLDER='~/Documents/MTT/'
+#LIB_NAME='mendeley'
+RENAME_FILE=True
+
+LOGGER=logging.getLogger(__name__)
 
 
 READ_DOC_ATTRS=[\
@@ -87,7 +92,8 @@ def converturl2abspath(url):
     '''
 
     #--------------------For linux--------------------
-    path = unquote(str(urlparse(url).path)).decode("utf8")
+    #path = unquote(str(urlparse(url).path)).decode("utf8")
+    path = unquote(str(urlparse(url).path))
     path=os.path.abspath(path)
 
     if os.path.exists(path):
@@ -98,14 +104,37 @@ def converturl2abspath(url):
             url=u'file://'+url[8:]
             path=urlparse(url)
             path=os.path.join(path.netloc,path.path)
-            path=unquote(str(path)).decode('utf8')
+            #path=unquote(str(path)).decode('utf8')
+            path=unquote(str(path))
             path=os.path.abspath(path)
             return path
 
 
-if __name__=='__main__':
 
-    dbfin=os.path.abspath(FILE_IN_NAME)
+
+def selByDocid(cursor, table, column, docid):
+    if isinstance(column, str):
+        cols=column
+        single=True
+    elif isinstance(column, (tuple, list)):
+        cols=', '.join(column)
+        single=False
+
+    query='''SELECT %s from %s
+    WHERE %s.documentId = ?''' %(cols, table, table)
+    ret=cursor.execute(query, (docid,)).fetchall()
+
+    if single:
+        return [ii[0] for ii in ret]
+    else:
+        return [ii for ii in ret]
+
+
+
+def importMendeley(file_in_path, file_out_path, rename_file):
+
+    #--------------Connect input database--------------
+    dbfin=os.path.abspath(file_in_path)
 
     try:
         dbin = sqlite3.connect(dbfin)
@@ -113,121 +142,17 @@ if __name__=='__main__':
     except:
         print('Failed to connect to database:')
 
-    dbfout=os.path.abspath(FILE_OUT_NAME)
-
-    try:
-        dbout = sqlite3.connect(dbfout)
-        print('Connected to database:')
-    except:
-        print('Failed to connect to database:')
-
     cin=dbin.cursor()
+
+    #-----------------Create empty db-----------------
+    file_out_path=os.path.expanduser(file_out_path)
+    dbout, storage_folder, lib_name=sqlitedb.createNewDatabase(file_out_path)
     cout=dbout.cursor()
 
-    #--------------Create documents table--------------
-    query='''CREATE TABLE IF NOT EXISTS Documents (
-    id INTEGER PRIMARY KEY,
-    %s)'''
-    columns=[]
-    for kii in WRITE_DOC_ATTRS:
-        if kii in INT_COLUMNS:
-            columns.append('%s INT' %kii)
-        else:
-            columns.append('%s TEXT' %kii)
-
-    columns=', '.join(columns)
-    query=query %columns
-
-    print('Creating empty table...')
-    cout.execute(query)
-    dbout.commit()
-
-    #------------Create DocumentTags table------------
-    query='''CREATE TABLE IF NOT EXISTS DocumentTags (
-    did INT,
-    tag TEXT)'''
-
-    cout.execute(query)
-    dbout.commit()
-
-    #------------Create DocumentNotes table------------
-    query='''CREATE TABLE IF NOT EXISTS DocumentNotes (
-    did INT,
-    note TEXT,
-    modifiedTime TEXT,
-    createdTime TEXT
-    )'''
-
-    cout.execute(query)
-    dbout.commit()
-
-    #----------Create DocumentKeywords table----------
-    query='''CREATE TABLE IF NOT EXISTS DocumentKeywords (
-    did INT,
-    text TEXT)'''
-
-    cout.execute(query)
-    dbout.commit()
-
-    #-----------Create DocumentFolders table-----------
-    query='''CREATE TABLE IF NOT EXISTS DocumentFolders (
-    did INT,
-    folderid INT
-    )'''
-
-    cout.execute(query)
-    dbout.commit()
-
-    #---------------Create Folders table---------------
-    query='''CREATE TABLE IF NOT EXISTS Folders (
-    id INTEGER PRIMARY KEY,
-    name TEXT,
-    parentId INT,
-    path TEXT,
-    UNIQUE (name, parentId)
-    )'''
-
-    cout.execute(query)
-    dbout.commit()
-
-
-    #--------Create DocumentContributors table--------
-    query='''CREATE TABLE IF NOT EXISTS DocumentContributors (
-    did INT,
-    contribution TEXT,
-    firstNames TEXT,
-    lastName TEXT
-    )'''
-
-    cout.execute(query)
-    dbout.commit()
-
-    #------------Create DocumentFiles table------------
-    query='''CREATE TABLE IF NOT EXISTS DocumentFiles (
-    did INT,
-    abspath TEXT
-    )'''
-
-    cout.execute(query)
-    dbout.commit()
-
-    #------------Create DocumentUrls table------------
-    query='''CREATE TABLE IF NOT EXISTS DocumentUrls (
-    did INT,
-    url TEXT
-    )'''
-
-    cout.execute(query)
-    dbout.commit()
-
-    #----------------Copy over content----------------
-    docids=getDocIds(dbin)
-
-    #---------------Create output folder---------------
-    FILE_FOLDER=os.path.expanduser(FILE_FOLDER)
-    if not os.path.exists(FILE_FOLDER):
-        os.makedirs(FILE_FOLDER)
-        print("Create folder %s" %FILE_FOLDER)
+    lib_folder=os.path.join(storage_folder,lib_name)
+    file_folder=os.path.join(lib_folder,'_collections')
+    rel_lib_folder=os.path.join('', lib_name) # relative to storage folder
+    rel_file_folder=os.path.join('','_collections')
 
     #----------------Copy folders table----------------
     query='''SELECT id, name, parentId
@@ -241,6 +166,7 @@ if __name__=='__main__':
     for fid, fname, pid in ret:
         if fname=='Default' and pid==-1:
             fname='Default_Mendeley'
+        # may not happen to you
         if pid==0:
             pid=-1
         folders.append((fid, fname, pid))
@@ -249,75 +175,43 @@ if __name__=='__main__':
     VALUES (?,?,?,?)'''
 
     for fii in folders:
-        cout.execute(query, (fii[0], fii[1], fii[2], os.path.join(LIB_FOLDER,fii[1])))
-
-    #---------------Add default folder---------------
-    cout.execute(query, (0, 'Default', -1, os.path.join(LIB_FOLDER,'Default')))
+        cout.execute(query, (fii[0], fii[1], fii[2],
+            os.path.join(rel_lib_folder,fii[1])))
 
     #----------------Loop through docs----------------
-    def selByDocid(cursor, table, column, docid):
-        if isinstance(column, str):
-            cols=column
-            single=True
-        elif isinstance(column, (tuple, list)):
-            cols=', '.join(column)
-            single=False
-
-        query='''SELECT %s from %s
-        WHERE %s.documentId = ?''' %(cols, table, table)
-        ret=cursor.execute(query, (docid,)).fetchall()
-
-        if single:
-            return [ii[0] for ii in ret]
-        else:
-            return [ii for ii in ret]
-
+    docids=getDocIds(dbin)
 
     for ii,docii in enumerate(docids):
 
         ii+=1
-        print('\n# <createsqlite>: Copying doc ', ii)
+        print('# <imporMendeley>: Copying doc ', ii)
 
-        #---------------Get Documents fields---------------
-        #meta_query='''SELECT %s from Documents
-        #WHERE Documents.id = ?''' %', '.join(READ_DOC_ATTRS)
+        #---------------Get Documents columns---------------
         meta_query='''SELECT %s from Documents
-        WHERE Documents.id = ?'''
+        WHERE Documents.id = ?''' %', '.join(READ_DOC_ATTRS)
 
-        metaii=[]
-        for jj in WRITE_DOC_ATTRS:
-            if jj in READ_DOC_ATTRS:
-                fjj=cin.execute(meta_query %jj, (docii,)).fetchall()[0][0]
-                if jj in INT_COLUMNS and fjj is not None:
-                    fjj=int(fjj)
-
-                if jj=='added' and fjj is None:
-                    __import__('pdb').set_trace()
-                    fjj=str(int(time.time()))
-            else:
-                if jj in ['deletionPending']:
-                    fjj='false'
-                else:
-                    fjj=None
-
-            metaii.append(fjj)
-
-        '''
         ret=cin.execute(meta_query, (docii,))
-        metaii=ret.fetchall()[0]
+        metaii=list(ret.fetchall()[0])
 
-        metaii2=[]
-        for jj,fjj in zip(READ_DOC_ATTRS,metaii):
-            if jj in INT_COLUMNS and fjj is not None:
+        # convert int
+        for jj in INT_COLUMNS:
+            idxjj=READ_DOC_ATTRS.index(jj)
+            fjj=metaii[idxjj]
+            if fjj is not None:
                 fjj=int(fjj)
-                print 'jj=',jj,'fjj=',fjj
-            metaii2.append(fjj)
+                metaii[idxjj]=fjj
 
-        metaii=tuple(metaii2)
+        # make sure added exists
+        idxjj=READ_DOC_ATTRS.index('added')
+        fjj=metaii[idxjj]
+        if fjj is None:
+            fjj=str(int(time.time()))
+        metaii[idxjj]=fjj
 
-        # set deletionPending to false, in_trash to false
-        metaii=metaii+('false', 'false')
-        '''
+        meta_dictii=dict(zip(READ_DOC_ATTRS, metaii))
+        meta_dictii['deletionPending']='false'
+        metaii.append('false')
+        metaii=tuple(metaii)
 
         #-----------------Get DocumentTags-----------------
         tags=selByDocid(cin, 'DocumentTags', 'tag', docii)
@@ -358,11 +252,14 @@ if __name__=='__main__':
         authors=selByDocid(cin, 'DocumentContributors',
         ['contribution', 'firstNames', 'Lastname'], docii)
 
+        meta_dictii['lastName_l']=[jj[2] for jj in authors]
+
         #------------Insert to output database------------
         query='''INSERT INTO Documents (
         %s )
         VALUES (%s)''' %(', '.join(WRITE_DOC_ATTRS), ', '.join(['?']*len(WRITE_DOC_ATTRS)))
 
+        metaii=tuple([meta_dictii[jj] for jj in WRITE_DOC_ATTRS])
         cout.execute(query, metaii)
 
         for tagii in tags:
@@ -384,12 +281,11 @@ if __name__=='__main__':
             query='''INSERT INTO DocumentFolders (did, folderid)
             VALUES (?, ?)'''
             cout.execute(query, (ii, fii[0]))
-            #cout.execute(query, (ii, fii[1], fii[2],
-                #os.path.join(LIB_FOLDER,fii[1])))
 
             query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
             VALUES (?,?,?,?)'''
-            cout.execute(query, (fii[0], fii[1], fii[2], os.path.join(LIB_FOLDER,fii[1])))
+            cout.execute(query, (fii[0], fii[1], fii[2],
+                os.path.join(rel_lib_folder,fii[1])))
 
         for aii in authors:
             query='''INSERT INTO DocumentContributors (
@@ -411,28 +307,42 @@ if __name__=='__main__':
         ret=cin.execute(query, (docii,))
 
         fileurl=ret.fetchall()
+        meta_dictii['files_l']=[]
         if len(fileurl)>0:
 
             for fileii in fileurl:
                 urlii=fileii[0]
-
                 filepath=converturl2abspath(urlii)
+                meta_dictii['files_l'].append(filepath)
 
-                # copy to collection
-                filename=os.path.split(filepath)[1]
-                newpath=os.path.join(FILE_FOLDER,filename)
-                newpath=re.sub(r'[\ <>:"|?*]','_',newpath)
-                newpath=re.sub(r'al.','al',newpath)
-                newpath=re.sub(r'_-_','_',newpath)
-                newpath=newpath.strip()
+            for filepath in meta_dictii['files_l']:
 
-                shutil.copy2(filepath,newpath)
+                # rename file
+                if rename_file:
+                    filename=sqlitedb.renameFile(filepath,meta_dictii)
+                else:
+                    filename=os.path.split(filepath)[1]
 
-                query='''INSERT INTO DocumentFiles (did, abspath)
+                filename=re.sub(r'[//\ <>:"|?*]','_',filename)
+                filename=re.sub(r'al.','al',filename)
+                filename=re.sub(r'_-_','_',filename)
+                filename=filename.strip()
+
+                relpath=os.path.join(rel_file_folder,filename)
+
+                query='''INSERT INTO DocumentFiles (did, relpath)
                 VALUES (?, ?)'''
 
-                cout.execute(query, (ii, newpath))
+                cout.execute(query, (ii, relpath))
+
+                abspath=os.path.join(file_folder, filename)
+                shutil.copy2(filepath,abspath)
+
+    dbout.commit()
+
+    return 0
 
 
-        dbout.commit()
+if __name__=='__main__':
 
+    importMendeley(FILE_IN_NAME, FILE_OUT_NAME, True)

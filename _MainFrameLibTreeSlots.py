@@ -42,6 +42,7 @@ class MainFrameLibTreeSlots:
             self.add_folder_button.setDisabled(True)
             self.search_button.setEnabled(True)
         else:
+            self.logger.debug('######################################')
             if folderid in self._trashed_folder_ids:
                 self.add_button.setDisabled(True)
                 self.add_folder_button.setDisabled(True)

@@ -218,7 +218,7 @@ New session started
         self.tool_menu.addAction(self.import_action)
         self.tool_menu.addAction(self.export_action)
         if not self.is_loaded:
-            self.import_action.setEnabled(False)
+            #self.import_action.setEnabled(False)
             self.export_action.setEnabled(False)
 
         #--------------------Help menu--------------------
@@ -270,6 +270,7 @@ New session started
                 "sqlite files (*.sqlite);; All files (*)")[0]
 
         if fname:
+
             # make sure has .sqlite ext
             dirname,filename=os.path.split(fname)
             lib_name,ext=os.path.splitext(filename)
@@ -277,33 +278,22 @@ New session started
                 filename='%s.sqlite' %lib_name
                 fname=os.path.join(dirname,filename)
 
-            lib_folder=os.path.join(storage_folder,lib_name)
-            if not os.path.exists(lib_folder):
-                os.makedirs(lib_folder)
-
-            self.logger.info('Create folder %s' %lib_folder)
-
-            def func(jobid,fname,storage_folder):
+            def func(jobid,fname):
                 try:
-                    result=sqlitedb.createNewDatabase(fname, lib_folder)
+                    result=sqlitedb.createNewDatabase(fname)
                     return 0,jobid,result
                 except Exception:
                     self.logger.exception('Failed to create new database file')
                     return 1,jobid,None
 
             ThreadRunDialog(func,
-                [(0,fname,storage_folder)],
+                [(0,fname)],
                 show_message='Creating new database...',
                 max_threads=1,
                 get_results=False,
                 close_on_finish=True,
                 progressbar_style='busy',
                 parent=None)
-
-            #self.main_frame.status_bar.showMessage('Creating new database...')
-            #sqlitedb.createNewDatabase(fname,storage_folder,
-                #self.settings.value('saving/rename_files'))
-            #self.main_frame.status_bar.clearMessage()
 
             self._openDatabase(fname)
 
@@ -365,7 +355,7 @@ New session started
                 recent.remove(fname)
                 self.settings.setValue('file/recent_open', recent)
 
-                self.logger.warninng('Remove non-exist database file from recent list: %s' %fname)
+                self.logger.warning('Remove non-exist database file from recent list: %s' %fname)
 
                 for actionii in self.recent_open_menu.findChildren(
                         QtWidgets.QAction):
@@ -391,10 +381,12 @@ New session started
         self.is_loaded=True
 
         # get library name
-        lib_name=os.path.splitext(os.path.split(fname)[1])[0]
-        storage_folder=self.settings.value('saving/storage_folder')
+        storage_folder,filename=os.path.split(fname)
+        lib_name=os.path.splitext(filename)[0]
+        lib_folder=os.path.join(storage_folder,lib_name)
+
         self.current_lib=lib_name
-        self.current_lib_folder=os.path.join(storage_folder,lib_name)
+        self.current_lib_folder=lib_folder
         self.settings.setValue('saving/current_lib_folder', self.current_lib_folder)
 
         self.logger.info('Get current_lib = %s' %lib_name)
@@ -402,11 +394,28 @@ New session started
 
         #-----------Make sure lib folder exists-----------
         if not os.path.exists(self.current_lib_folder):
+
+            msg=QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            msg.setWindowTitle('Can not find folder')
+            msg.setText("Can not find library folder.")
+            msg.setInformativeText("The library folder\n    %s\nmay have be deleted, renamed or removed. \nA new folder is created, but the PDF files are missing."\
+                    %self.current_lib_folder)
+            msg.exec_()
+
             os.makedirs(self.current_lib_folder)
             self.logger.info('Create lib folder: %s' %self.current_lib_folder)
 
         lib_collection_folder=os.path.join(self.current_lib_folder,'_collections')
         if not os.path.exists(lib_collection_folder):
+
+            msg=QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            msg.setWindowTitle('Can not find folder')
+            msg.setText("Can not find library folder.")
+            msg.setInformativeText("The library folder\n    %s\nmay have be deleted, renamed or removed. \nA new folder is created, but the PDF files are missing."\
+                    %lib_collection_folder)
+            msg.exec_()
             os.makedirs(lib_collection_folder)
             self.logger.info('Create lib collection folder: %s' %lib_collection_folder)
 

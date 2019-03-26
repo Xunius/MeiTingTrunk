@@ -267,7 +267,7 @@ def getMetaData(db, did):
 
     query_files=\
     '''
-    SELECT DocumentFiles.abspath
+    SELECT DocumentFiles.relpath
     FROM DocumentFiles
     WHERE (DocumentFiles.did=?)
     '''
@@ -642,17 +642,37 @@ def saveFoldersToDatabase(db,folder_ids,folder_dict,folder_data,lib_folder):
     return 0
 
 
-def createNewDatabase(file_path,lib_folder):
+def createNewDatabase(file_path):
+
+    # make sure has .sqlite ext
+    dirname,filename=os.path.split(file_path)
+    lib_name,ext=os.path.splitext(filename)
+    if ext=='':
+        filename='%s.sqlite' %lib_name
+        file_path=os.path.join(dirname,filename)
 
     dbfout=os.path.abspath(file_path)
 
     try:
         dbout = sqlite3.connect(dbfout)
         LOGGER.info('Connected to databaase %s' %file_path)
-    except Exception as e:
+    except Exception:
         LOGGER.exception('Failed to connect to database %s' %file_path)
 
     cout=dbout.cursor()
+
+    #dirname,filename=os.path.split(file_path)
+    #lib_name,ext=os.path.splitext(filename)
+    lib_folder=os.path.join(dirname,lib_name)
+
+    if not os.path.exists(lib_folder):
+        os.makedirs(lib_folder)
+        LOGGER.info('Create lib folder %s' %lib_folder)
+
+    file_folder=os.path.join(lib_folder,'_collections')
+    if not os.path.exists(file_folder):
+        os.makedirs(file_folder)
+        LOGGER.info('Create lib collections folder %s' %file_folder)
 
     #--------------Create documents table--------------
     query='''CREATE TABLE IF NOT EXISTS Documents (
@@ -734,7 +754,7 @@ def createNewDatabase(file_path,lib_folder):
     #------------Create DocumentFiles table------------
     query='''CREATE TABLE IF NOT EXISTS DocumentFiles (
     did INT,
-    abspath TEXT
+    relpath TEXT
     )'''
 
     cout.execute(query)
@@ -753,7 +773,8 @@ def createNewDatabase(file_path,lib_folder):
     query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
     VALUES (?,?,?,?)'''
 
-    cout.execute(query, (0, 'Default', -1, os.path.join(lib_folder,'Default')))
+    #cout.execute(query, (0, 'Default', -1, os.path.join(lib_folder,'Default')))
+    cout.execute(query, (0, 'Default', -1, os.path.join(lib_name,'Default')))
     dbout.commit()
 
     LOGGER.info('Created empty table.')
@@ -773,7 +794,7 @@ def createNewDatabase(file_path,lib_folder):
 
     #metaDictToDatabase(dbout,1,bib_entries[0],lib_folder,rename_files)
 
-    return dbout
+    return dbout, dirname, lib_name
 
 
 def metaDictToDatabase(db,docid,meta_dict,lib_folder,rename_files):
@@ -790,7 +811,7 @@ def metaDictToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
             LOGGER.info('docid %s in database. New meta=None. Deleting...' %docid)
 
-            rec=delDocFromDatabase(db,docid,lib_folder)
+            rec=delDocFromDatabase(db,docid)
 
         else:
             LOGGER.info('docid %s in database. Updating...' %docid)
@@ -872,33 +893,67 @@ def delFromTable(db, table, docid):
 def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
 
     cout=db.cursor()
+    _,lib_name=os.path.split(lib_folder)
+    if lib_name=='':
+        lib_name=os.path.split(_)[1]
+
+    abs_file_folder=os.path.join(lib_folder,'_collections')
+    rel_file_folder=os.path.join('','_collections')
+    print('# <insertToDocumentFiles>: lib_name=' , lib_name)
+    print('# <insertToDocumentFiles>: abs_file_folder=' , abs_file_folder)
+    print('# <insertToDocumentFiles>: rel_file_folder=' , rel_file_folder)
+
+    if not os.path.exists(abs_file_folder):
+        os.makedirs(abs_file_folder)
+
     files=meta_dict['files_l']
     if len(files)>0:
-        query='''INSERT OR IGNORE INTO DocumentFiles (did, abspath)
+        query='''INSERT OR IGNORE INTO DocumentFiles (did, relpath)
         VALUES (?,?)'''
 
         for fii in files:
-            absii=os.path.expanduser(fii)
-            #absii=tools.removeInvalidPathChar(absii)
-            folder,filename=os.path.split(absii)
-            # can't do filename change here, will cause missing file.
-            #filename=re.sub(r'[<>:"|?*]','_',filename)
+            fii=os.path.expanduser(fii)
+            fii=os.path.abspath(fii)
+
             if rename_files:
                 filename=renameFile(fii,meta_dict)
-            newabsii=os.path.join(lib_folder,'_collections')
-            newabsii=os.path.join(newabsii,filename)
+            else:
+                filename=os.path.split(fii)[1]
+
+            #absii=tools.removeInvalidPathChar(absii)
+            #folder,filename=os.path.split(absii)
+            # can't do filename change here, will cause missing file.
+            #filename=re.sub(r'[<>:"|?*]','_',filename)
+            #if rename_files:
+                #filename=renameFile(fii,meta_dict)
+            #newabsii=os.path.join(lib_folder,'_collections')
+            newabsii=os.path.join(abs_file_folder,filename)
 
             # deal with name conflicts
             newabsii=autoRename(newabsii)
+            filename=os.path.split(newabsii)[1]
 
-            cout.execute(query,(docid,newabsii))
+            rel_fii=os.path.join(rel_file_folder,filename)
+            cout.execute(query,(docid,rel_fii))
+
+            print('# <insertToDocumentFiles>: newabsii=',newabsii)
+            print('# <insertToDocumentFiles>: rel_fii=',rel_fii)
+
+            #if not os.path.exists(newabsii):
+            # check if fii is abspath or relpath
+            if os.path.isabs(fii):
+                try:
+                    shutil.copy(fii,newabsii)
+                    print('# <insertToDocumentFiles>: copy file',fii,'->',newabsii)
+                except:
+                    LOGGER.exception('Failed to copy file %s to %s' %(fii,newabsii))
 
             #--------------------Copy file--------------------
-            try:
-                shutil.copy(absii, newabsii)
-                LOGGER.debug('Copied file %s to %s' %(absii,newabsii))
-            except:
-                LOGGER.exception('Failed to copy file %s to %s' %(absii,newabsii))
+            #try:
+                #shutil.copy(fii, newabsii)
+                #LOGGER.debug('Copied file %s to %s' %(absii,newabsii))
+            #except:
+                #LOGGER.exception('Failed to copy file %s to %s' %(absii,newabsii))
 
         db.commit()
 
@@ -1129,7 +1184,7 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
     return 0
 
 
-def delDocFromDatabase(db,docid,lib_folder):
+def delDocFromDatabase(db,docid):
 
     cout=db.cursor()
 
@@ -1148,7 +1203,7 @@ def delDocFromDatabase(db,docid,lib_folder):
 
     #-------------------del files-------------------
     query_files='''
-    SELECT DocumentFiles.abspath
+    SELECT DocumentFiles.relpath
     FROM DocumentFiles
     WHERE (DocumentFiles.did=?)
     '''

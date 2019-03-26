@@ -343,18 +343,19 @@ class ExportDialog(QtWidgets.QDialog):
         folder_dict=self.parent.main_frame.folder_dict
         folder_data=self.parent.main_frame.folder_data
         meta_dict=self.parent.main_frame.meta_dict
-        storage_folder=self.settings.value('saving/storage_folder',str)
+        #storage_folder=self.settings.value('saving/storage_folder',str)
+        lib_folder=self.settings.value('saving/current_lib_folder',str)
 
-        if not os.path.exists(storage_folder):
+        if not os.path.exists(lib_folder):
             LOGGER.warning('Cant find storage folder (%s) when exporting files.'\
-                    %storage_folder)
+                    %lib_folder)
 
             msg=QtWidgets.QMessageBox()
             msg.setIcon(QtWidgets.QMessageBox.Critical)
             msg.setWindowTitle('Critical Error!')
             msg.setText("Can not find storage folder.")
             msg.setInformativeText("I can't find the storage folder at %s. Data lost."\
-                    %storage_folder)
+                    %lib_folder)
             msg.exec_()
             return
 
@@ -366,7 +367,7 @@ class ExportDialog(QtWidgets.QDialog):
             self.popUpChooseFolder()
             return
 
-        LOGGER.debug('Storage folder = %s' %storage_folder)
+        LOGGER.debug('Current lib folder = %s' %lib_folder)
 
         job_list=[] # (jobid, source_path, target_path)
         for item in folders:
@@ -379,7 +380,7 @@ class ExportDialog(QtWidgets.QDialog):
             LOGGER.debug('Process folder %s, id = %s, tree = %s'\
                     %(item.data(0,0), item.data(1,0), tree))
 
-            folderii=os.path.join(storage_folder,tree)
+            folderii=os.path.join(lib_folder,tree)
             if not os.path.exists(folderii):
                 os.makedirs(folderii)
                 LOGGER.info('Create folder %s' %folderii)

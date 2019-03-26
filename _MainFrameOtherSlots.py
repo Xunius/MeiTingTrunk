@@ -196,16 +196,16 @@ class MainFrameOtherSlots:
         if not self.doc_table.isVisible():
             self.doc_table.setVisible(True)
 
-        current_folder=self._current_folder
-        if current_folder:
-            folder,folderid=current_folder
+            current_folder=self._current_folder
+            if current_folder:
+                folder,folderid=current_folder
 
-            # TODO: keep a record of previous sortidx?
-            if folder=='All' and folderid=='-1':
-                self.loadDocTable(None,sortidx=4,sel_row=0)
-            else:
-                self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
-            #self.doc_table.selectRow(0)
+                # TODO: keep a record of previous sortidx?
+                if folder=='All' and folderid=='-1':
+                    self.loadDocTable(None,sortidx=4,sel_row=0)
+                else:
+                    self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
+                #self.doc_table.selectRow(0)
 
         return
 

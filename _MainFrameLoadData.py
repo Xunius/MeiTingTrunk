@@ -164,13 +164,17 @@ class MainFrameLoadData:
 
             #-------------------Select a given row-------------------
             if sel_row is not None:
-                self.doc_table.selectRow(sel_row)
                 current_row=self.doc_table.currentIndex().row()
                 docid=self._current_doc
 
                 self.logger.info('Selected row = %s, docid = %s'\
                         %(current_row, docid))
-                self.selDoc(self.doc_table.currentIndex(),None)
+
+                self.doc_table.selectRow(sel_row)
+
+                if current_row==sel_row:
+                    self.logger.info('@@@@@row not change. force sel doc')
+                    self.selDoc(self.doc_table.currentIndex(),None)
 
             self.status_bar.showMessage('%d rows' %len(data))
         else:

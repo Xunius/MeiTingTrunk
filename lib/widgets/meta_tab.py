@@ -188,15 +188,16 @@ class FileLineEdit(QtWidgets.QLineEdit):
             super(FileLineEdit,self).setText(self.short_text)
         '''
         #super(FileLineEdit,self).setText(text)
+        # It seems that it requires a 20 pixel space
         super(FileLineEdit,self).setText(
-             self.fm.elidedText(self.short_text,Qt.ElideRight,self.width()))
+             self.fm.elidedText(self.short_text,Qt.ElideRight,self.width()-20))
 
         return
 
 
     def text(self):
         #return self.full_text
-        return self.fm.elidedText(self.short_text,Qt.ElideRight,self.width())
+        return self.fm.elidedText(self.short_text,Qt.ElideRight,self.width()-20)
 
 
     def resizeEvent(self,event):
@@ -416,10 +417,15 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         le.setFont(self.settings.value('display/fonts/%s' %font_name, QFont))
 
         if text is not None:
+            print('# <createFileField>: file text=',text)
             le.setText(text)
 
         if le not in self.fields_dict['files_l']:
+            LOGGER.debug('before add file le to fields_dict. %s'\
+                    %self.fields_dict['files_l'])
             self.fields_dict['files_l'].append(le)
+            LOGGER.debug('after add file le to fields_dict. %s'\
+                    %self.fields_dict['files_l'])
 
         # create a del file button
         button=QtWidgets.QPushButton()
@@ -450,7 +456,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         h_layout.addWidget(le)
         h_layout.addWidget(button)
 
-        LOGGER.debug('Insert file entry at %s' %self.file_insert_idx)
+        LOGGER.debug('Insert file %s entry at %s' %(text,self.file_insert_idx))
 
         self.v_layout.insertLayout(self.file_insert_idx,h_layout)
         self.file_insert_idx+=1
@@ -473,21 +479,20 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             self.v_layout.removeWidget(le)
             le.deleteLater()
             le.del_button.deleteLater()
-            self.fields_dict['files_l'].remove(le)
+            # NOTE: you can't del a element in list if it is iterating
+            #self.fields_dict['files_l'].remove(le)
             self.file_insert_idx-=1
 
         if idx is None:
-            #for ii in range(len(self.fields_dict['files'])):
             for leii in self.fields_dict['files_l']:
-
-                LOGGER.debug('Del %s. Current file_insert_idx = %s'\
-                        %(leii, self.file_insert_idx))
-
                 delFile(leii)
+            self.fields_dict['files_l']=[]
+
         else:
             if idx in range(len(self.fields_dict['files_l'])):
                 leii=self.fields_dict['files_l'][idx]
                 delFile(leii)
+                self.fields_dict['files_l'].remove(leii)
 
         return
 

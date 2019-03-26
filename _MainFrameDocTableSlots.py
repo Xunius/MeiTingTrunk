@@ -231,9 +231,11 @@ class MainFrameDocTableSlots:
     def openDoc(self,docids):
 
         self.logger.info('docids = %s' %docids)
+        lib_folder=self.settings.value('saving/current_lib_folder',str)
 
         for docii in docids:
             file_pathii=self.meta_dict[docii]['files_l'][0] # take the 1st file
+            file_pathii=os.path.join(lib_folder,file_pathii)
 
             if not os.path.exists(file_pathii):
                 msg=QtWidgets.QMessageBox()
@@ -269,8 +271,10 @@ class MainFrameDocTableSlots:
         file_man=prop.communicate()[0].decode('ascii').strip().replace('.desktop','')
 
         #----------------Open file manager----------------
+        lib_folder=self.settings.value('saving/current_lib_folder',str)
         for docii in docids:
             file_pathii=self.meta_dict[docii]['files_l'][0] # take the 1st file
+            file_pathii=os.path.join(lib_folder,file_pathii)
 
             self.logger.debug('docid = %s. file_path = %s' %(docii, file_pathii))
 
@@ -653,7 +657,11 @@ class MainFrameDocTableSlots:
             listwidget=QtWidgets.QListWidget()
             listwidget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
+            lib_folder=self.settings.value('saving/current_lib_folder',str)
             for fii in files:
+                print('# <docDoubleClicked>: fii=',fii)
+                fii=os.path.join(lib_folder,fii)
+                print('# <docDoubleClicked>: fii=',fii)
                 listwidget.addItem(fii)
 
             listwidget.setCurrentRow(0)
