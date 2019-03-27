@@ -96,9 +96,17 @@ LOG_CONFIG={
 # [Not now] add tooltip to search bar
 # [y] the folder highlighting is still buggy
 # add search result caching
-# save to sqlite before calling search
-# crop file path within 255?
-# show number of docs and number of selected rows in status bar
+# [y] save to sqlite before calling search
+# [y] search desend into sub folders
+# [y] crop file path within 255?
+# [y] show number of docs and number of selected rows in status bar
+# [y] import from Mendeley
+# [y] show loaded lib name at title
+# [y] deny renaming sys folders
+# [y] make file paths relative
+# [y] rel v.s. abs file path choices in bib, ris exports
+# [y] del prints
+#
 
 
 if __name__=='__main__':

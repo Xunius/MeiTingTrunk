@@ -2,15 +2,124 @@ import os
 import shutil
 import logging
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QDialogButtonBox
+from PyQt5.QtWidgets import QDialogButtonBox, QStyle
 from ..tools import getHLine
 from .threadrun_dialog import ThreadRunDialog
 #from import_mendeley import importMendeley
-import import_mendeley
+from .. import import_mendeley
 
 LOGGER=logging.getLogger(__name__)
+
+
+class ResultDialog(QtWidgets.QDialog):
+
+    #open_lib_signal=pyqtSignal()
+
+    def __init__(self,main_text='',info_text='',detailed_text='',parent=None):
+        super(self.__class__,self).__init__(parent=parent)
+
+        self.main_text=main_text
+        self.info_text=info_text
+        self.detailed_text=detailed_text
+
+        self.setWindowTitle('Import Result')
+        self.resize(450,250)
+        self.grid=QtWidgets.QGridLayout(self)
+
+        icon=self.style().standardIcon(QStyle.SP_MessageBoxInformation)
+        icon_label=QtWidgets.QLabel()
+        icon_label.setPixmap(icon.pixmap(QSize(32,32)))
+        self.grid.addWidget(icon_label,0,0)
+
+        self.main_text_label=QtWidgets.QLabel(main_text)
+        label_font=QFont('Serif',12,QFont.Bold)
+        self.main_text_label.setFont(label_font)
+        self.grid.addWidget(self.main_text_label,0,1)
+
+        self.info_text_label=QtWidgets.QLabel(info_text)
+        self.info_text_label.setTextFormat(Qt.RichText)
+        self.info_text_label.setWordWrap(True)
+        self.grid.addWidget(self.info_text_label,1,1,1,2)
+
+        self.open_lib_checkbox=QtWidgets.QCheckBox('Open Imported Library?')
+        self.open_lib_checkbox.setChecked(True)
+        self.grid.addWidget(self.open_lib_checkbox,2,0)
+
+        self.buttons=QDialogButtonBox(self)
+
+        self.ok_button=QtWidgets.QPushButton('Ok')
+        self.ok_button.setDefault(True)
+        self.ok_button.setAutoDefault(True)
+
+        self.detail_button=QtWidgets.QPushButton('Show Details')
+        self.detail_button.setDefault(False)
+        self.detail_button.setAutoDefault(False)
+        self.detail_button.clicked.connect(self.detailButtonClicked)
+
+        #self.create_folder_button=QtWidgets.QPushButton('Show Failed Docs')
+        #self.create_folder_button.setDefault(False)
+        #self.create_folder_button.setAutoDefault(False)
+        #self.create_folder_button.clicked.connect(self.createFailList)
+
+        self.buttons.addButton(self.ok_button,QDialogButtonBox.AcceptRole)
+        self.buttons.addButton(self.detail_button,QDialogButtonBox.ActionRole)
+        #self.buttons.addButton(self.create_folder_button,
+                #QDialogButtonBox.ActionRole)
+
+        self.grid.addWidget(self.buttons,3,2)
+
+        self.text_edit=QtWidgets.QTextEdit(self)
+        self.text_edit.setText(detailed_text)
+        self.text_edit.setVisible(False)
+
+        self.grid.addWidget(self.text_edit,4,0,1,3)
+
+        self.buttons.accepted.connect(self.accept)
+
+        #self.exec_()
+
+    def setText(self,text):
+        self.main_text=text
+        self.main_text_label.setText(text)
+        return
+
+    def setInformativeText(self,text):
+        self.info_text=text
+        self.info_text_label.setText(text)
+        return
+
+    def setDetailedText(self,text):
+        self.detailed_text=text
+        self.text_edit.setText(text)
+        return
+
+
+    def detailButtonClicked(self):
+        if self.detailed_text=='':
+            return
+
+        if self.text_edit.isVisible():
+            self.detail_button.setText('Show Details')
+            self.text_edit.setVisible(False)
+        else:
+            self.detail_button.setText('Hide Details')
+            self.text_edit.setVisible(True)
+
+        return
+
+    #def createFailList(self):
+        #self.create_fail_summary.emit()
+        #return
+
+    def accept(self):
+        if self.open_lib_checkbox.isChecked():
+            print('# <accept>: open lib')
+            #self.open_lib_signal.emit()
+            super(self.__class__, self).accept()
+        else:
+            super(self.__class__, self).reject()
 
 
 
@@ -352,17 +461,17 @@ class ImportDialog(QtWidgets.QDialog):
         LOGGER.debug('rename_files = %s' %rename_files)
 
         #-----------------Prepare job list-----------------
-        job_list=[]
+        self.job_list=[]
         for ii, docii in enumerate(docids):
-            job_list.append((ii, dbin, dbout, lib_name, lib_folder,
+            self.job_list.append((ii, dbin, dbout, lib_name, lib_folder,
                 rename_files, ii, docii))
 
-        job_list.append((-1, dbin, dbout, lib_name, lib_folder,
+        self.job_list.append((-1, dbin, dbout, lib_name, lib_folder,
             rename_files, ii, None))
 
         #------------------Run in thread------------------
         self.thread_run_dialog2=ThreadRunDialog(import_mendeley.importMendeleyCopyData,
-                job_list,
+                self.job_list,
                 show_message='Transfering data...',
                 max_threads=1,
                 get_results=False,
@@ -382,31 +491,54 @@ class ImportDialog(QtWidgets.QDialog):
     @pyqtSlot()
     def postImport(self, file_name):
 
-        step2_results=self.thread_run_dialog2.master.results[-1]
-        rec,_=step2_results
+        step2_results=self.thread_run_dialog2.master.results
+        rec,_=step2_results[-1]
         LOGGER.info('return code of importMendeleyCopyData: %s' %rec)
 
         if rec==0:
-            choice=QtWidgets.QMessageBox.question(self,
-                    'Open newly imported library?',
-                    'Open newly imported library?',
-                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+            fail_list=[]
 
-            if choice==QtWidgets.QMessageBox.Yes:
-                LOGGER.info('Emitting open lib signal. File = %s' %file_name)
-                self.thread_run_dialog2.accept()
-                self.reject()
+            for recii, jobii in step2_results[:-1]:
+                if recii==1:
+                    docii=self.job_list[jobii][7]
+                    entryii='* docid = %s' %(docii)
+                    LOGGER.warning('Failed to import doc id = %s' %docii)
+                    fail_list.append(entryii)
 
-                self.open_lib_signal.emit(file_name)
+            if len(fail_list)>0:
+
+                msg=ResultDialog()
+                msg.setText('Import Results')
+                msg.setInformativeText('Failed to export some entries.')
+                msg.setDetailedText('\n'.join(fail_list))
+                choice=msg.exec_()
+
+                if choice==1:
+                    LOGGER.info('Emitting open lib signal. File = %s' %file_name)
+                    self.thread_run_dialog2.accept()
+                    self.reject()
+                    self.open_lib_signal.emit(file_name)
+
+            else:
+                choice=QtWidgets.QMessageBox.question(self, 'Import completed',
+                        'Open new library?',
+                        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+
+                if choice==QtWidgets.QMessageBox.Yes:
+                    LOGGER.info('Emitting open lib signal. File = %s' %file_name)
+                    self.thread_run_dialog2.accept()
+                    self.reject()
+                    self.open_lib_signal.emit(file_name)
+
 
         elif rec==1:
             msg=QtWidgets.QMessageBox()
             msg.setIcon(QtWidgets.QMessageBox.Warning)
             msg.setWindowTitle('Oopsie')
-            msg.setText("Failed to import Mendeley database files.")
+            msg.setText("Failed to write output database file.")
             msg.exec_()
 
-            LOGGER.warning('Failed to run importMendeleyCopyData().')
+            LOGGER.warning('Failed to commit output sqlite.')
             dirname,fname=os.path.split(file_name)
             lib_folder=os.path.join(dirname,os.path.splitext(fname)[0])
 

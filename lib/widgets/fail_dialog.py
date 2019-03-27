@@ -88,10 +88,10 @@ class FailDialog(QtWidgets.QDialog):
             return
 
         if self.text_edit.isVisible():
-            self.detail_button.setText('Hide Details')
+            self.detail_button.setText('Show Details')
             self.text_edit.setVisible(False)
         else:
-            self.detail_button.setText('Show Details')
+            self.detail_button.setText('Hide Details')
             self.text_edit.setVisible(True)
 
         return
