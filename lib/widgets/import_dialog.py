@@ -492,25 +492,50 @@ class ImportDialog(QtWidgets.QDialog):
     def postImport(self, file_name):
 
         step2_results=self.thread_run_dialog2.master.results
-        rec,_=step2_results[-1]
+        rec=step2_results[-1][0]
         LOGGER.info('return code of importMendeleyCopyData: %s' %rec)
 
+        #---------Succeeded in committing database---------
         if rec==0:
             fail_list=[]
+            pdf_fail_list=[]
 
-            for recii, jobii in step2_results[:-1]:
+            for recii, jobii, fail_fileii in step2_results[:-1]:
                 if recii==1:
                     docii=self.job_list[jobii][7]
-                    entryii='* docid = %s' %(docii)
+                    entryii='* docid = %s' %docii
                     LOGGER.warning('Failed to import doc id = %s' %docii)
                     fail_list.append(entryii)
+                elif recii==2:
+                    entryii='* PDF file(s) = %s' %fail_fileii
+                    LOGGER.warning('Failed to export annotated pdf(s) %s'\
+                            %fail_fileii)
+                    pdf_fail_list.append(entryii)
 
-            if len(fail_list)>0:
+            if len(fail_list)>0 or len(pdf_fail_list)>0:
 
                 msg=ResultDialog()
-                msg.setText('Import Results')
-                msg.setInformativeText('Failed to export some entries.')
-                msg.setDetailedText('\n'.join(fail_list))
+                msg.setText('Errors encountered.')
+
+                if len(fail_list)>0 and len(pdf_fail_list)==0:
+                    msg.setInformativeText('Failed to import some documents.')
+                    fail_str='\n'.join(fail_list)
+                    msg.setDetailedText(fail_str)
+
+                elif len(fail_list)==0 and len(pdf_fail_list)>0:
+                    msg.setInformativeText('Failed to export annotations in some PDFs.')
+                    fail_str='\n'.join(pdf_fail_list)
+                    msg.setDetailedText(fail_str)
+
+                elif len(fail_list)>0 and len(pdf_fail_list)>0:
+                    msg.setInformativeText('''
+                    Failed to import some documents. <br/>
+                    Failed to export annotations in some PDFs.''')
+                    fail_str1='\n'.join(fail_list)
+                    fail_str2='\n'.join(pdf_fail_list)
+                    msg.setDetailedText('Failed documents:\n%s\n\nFailed PDFs:\n%s'\
+                            %(fail_str1, fail_str2))
+
                 choice=msg.exec_()
 
                 if choice==1:
@@ -531,6 +556,7 @@ class ImportDialog(QtWidgets.QDialog):
                     self.open_lib_signal.emit(file_name)
 
 
+        #------------Failed to commit database------------
         elif rec==1:
             msg=QtWidgets.QMessageBox()
             msg.setIcon(QtWidgets.QMessageBox.Warning)

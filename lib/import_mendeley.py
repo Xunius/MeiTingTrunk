@@ -7,9 +7,9 @@ import os
 import sqlite3
 import shutil
 import re
-import uuid
 import logging
 import time
+from datetime import datetime
 if sys.version_info[0]>=3:
     #---------------------Python3---------------------
     from urllib.parse import unquote
@@ -19,10 +19,12 @@ else:
     from urllib import unquote
     from urlparse import urlparse
 
-from lib import sqlitedb
+from . import sqlitedb
+from . import exportpdf
+from bs4 import BeautifulSoup
 
-FILE_OUT_NAME='~/Documents/MeiTingTrunk/mendeley.sqlite'
-FILE_IN_NAME='mendeley.sqlite'
+FILE_OUT_NAME='../New_Folder/men.sqlite'
+FILE_IN_NAME='../mendeley.sqlite'
 #STORAGE_FOLDER='~/Documents/MTT/'
 #LIB_NAME='mendeley'
 RENAME_FILE=True
@@ -66,6 +68,24 @@ WRITE_DOC_ATTRS=[\
 INT_COLUMNS=['month', 'year', 'day']
 
 
+DOI_PATTERN=re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
+        re.DOTALL|re.UNICODE)
+
+# Sometimes citation imported via a .bib or .ris file may contain
+# a note field (`annote = {{some note}} `for .bib, `N1 - some note` for .ris).
+# It can be doi strings:
+#    * doi: 10.1021/ed020p517.1
+#    * 10.1021/ed020p517.1
+# It can also be ISBN strings: e.g. ISBN 978.....
+# It can also be PMID strings: e.g. PMID: xxxx
+# It could be something else, whatever the citation provider decides to put in.
+# So to distinguish them from actuall notes made by users, below is a list
+# of regex patterns trying to catch some recognizable patterns and exclude
+# them from the notes.
+
+NOTE_EXCLUDE_PATTERNS=[
+        DOI_PATTERN,
+        ]
 
 
 #----------Get a list of docids from a folder--------------
@@ -85,6 +105,7 @@ def getDocIds(db,verbose=True):
     docids=[ii[0] for ii in data]
     docids.sort()
     return docids
+
 
 def converturl2abspath(url):
     '''Convert a url string to an absolute path
@@ -110,8 +131,6 @@ def converturl2abspath(url):
             return path
 
 
-
-
 def selByDocid(cursor, table, column, docid):
     if isinstance(column, str):
         cols=column
@@ -129,6 +148,407 @@ def selByDocid(cursor, table, column, docid):
     else:
         return [ii for ii in ret]
 
+
+def convert2datetime(s):
+    return datetime.strptime(s,'%Y-%m-%dT%H:%M:%SZ')
+
+
+def getUserName(db):
+    '''Query db to get user name'''
+
+    query=\
+    '''SELECT Profiles.firstName, Profiles.lastName
+    FROM Profiles WHERE Profiles.isSelf="true"
+    '''
+    query_fallback=\
+    '''SELECT Profiles.firstName, Profiles.lastName
+    FROM Profiles
+    '''
+    ret=db.execute(query).fetchall()
+    if len(ret)==0:
+        ret=db.execute(query_fallback).fetchall()
+    return ' '.join(filter(None,ret[0]))
+
+
+def getFilePath(db,docid,verbose=True):
+    '''Get file path of PDF(s) using documentId
+
+    Return <pth>: None or a LIST of file paths. If a single path, a len-1 list.
+    '''
+
+    query=\
+    '''SELECT Files.localUrl
+       FROM Files
+       LEFT JOIN DocumentFiles
+           ON DocumentFiles.hash=Files.hash
+       LEFT JOIN Documents
+           ON Documents.id=DocumentFiles.documentId
+       WHERE (Documents.id=%s)
+    ''' %docid
+
+    ret=db.execute(query)
+    data=ret.fetchall()
+    if len(data)==0:
+        return None
+    else:
+        pth=[converturl2abspath(urlii[0]) for urlii in data]
+        return pth
+
+
+#----------Extract highlights coordinates and related meta data-------
+def getHighlights(db,filterdocid,results=None):
+    '''Extract highlights coordinates and related meta data.
+
+    <db>: sqlite3.connection to Mendeley sqlite database.
+    <filterdocid>: int, id of document to query.
+    <results>: dict or None, optional dictionary to hold the results. If None,
+               create a new empty dict.
+
+    Return: <results>: dictionary containing the query results, with
+            the following structure:
+
+            results=
+            {
+            path1:
+                {'highlights': {page1: [hl1, hl2,...],
+                                page2: [hl1, hl2,...],
+                                ...}
+                }
+                 'notes': {page1: [nt1, nt2,...],
+                           page2: [nt1, nt2,...],
+                           ...}
+            path2:
+                ...
+            }
+
+            where hl1={'rect': bbox,\
+                       'cdate': cdate,\
+                       'color': color,
+                       'page':pg,
+                        'author':'highlight author',\
+                       'path':pth
+                      }
+                  note={'rect': bbox,\
+                        'author':'note author',\
+                        'content':docnote,\
+                        'cdate': datetime.now(),\
+                        'page':pg,
+                        'path':pth
+                        }
+
+    Update time: 2019-03-27 19:01:21.
+    '''
+
+    # For Mendeley versions newer than 1.16.1 (include), with highlight colors
+    query_new =\
+    '''SELECT Files.localUrl, FileHighlightRects.page,
+                    FileHighlightRects.x1, FileHighlightRects.y1,
+                    FileHighlightRects.x2, FileHighlightRects.y2,
+                    FileHighlights.createdTime,
+                    FileHighlights.author,
+                    Profiles.firstName,
+                    Profiles.lastName,
+                    FileHighlights.color
+            FROM Files
+            LEFT JOIN FileHighlights
+                ON FileHighlights.fileHash=Files.hash
+            LEFT JOIN FileHighlightRects
+                ON FileHighlightRects.highlightId=FileHighlights.id
+            LEFT JOIN Profiles
+                ON Profiles.uuid=FileHighlights.profileUuid
+            WHERE (FileHighlightRects.page IS NOT NULL) AND
+            (FileHighlights.documentId=%s)
+    ''' %filterdocid
+
+    # For Mendeley versions older than 1.16.1, no highlight colors
+    query_old =\
+    '''SELECT Files.localUrl, FileHighlightRects.page,
+                    FileHighlightRects.x1, FileHighlightRects.y1,
+                    FileHighlightRects.x2, FileHighlightRects.y2,
+                    FileHighlights.createdTime,
+                    FileHighlights.author,
+                    Profiles.firstName,
+                    Profiles.lastName
+            FROM Files
+            LEFT JOIN FileHighlights
+                ON FileHighlights.fileHash=Files.hash
+            LEFT JOIN FileHighlightRects
+                ON FileHighlightRects.highlightId=FileHighlights.id
+            LEFT JOIN Profiles
+                ON Profiles.uuid=FileHighlights.profileUuid
+            WHERE (FileHighlightRects.page IS NOT NULL) AND
+            (FileHighlights.documentId=%s)
+    ''' %filterdocid
+
+    if results is None:
+        results={}
+
+    #------------------Get highlights------------------
+    try:
+        ret = db.execute(query_new)
+        hascolor=True
+    except:
+        ret = db.execute(query_old)
+        hascolor=False
+
+    for ii,r in enumerate(ret):
+        pth = converturl2abspath(r[0])
+        pg = r[1]
+        bbox = [r[2], r[3], r[4], r[5]]
+        # [x1,y1,x2,y2], (x1,y1) being bottom-left,
+        # (x2,y2) being top-right. Origin at bottom-left.
+        # Fix incorrect storage ordering in Mendeley:
+        if bbox[0] > bbox[2]: bbox[0], bbox[2] = bbox[2], bbox[0]
+        if bbox[1] > bbox[3]: bbox[1], bbox[3] = bbox[3], bbox[1]
+        cdate = convert2datetime(r[6])
+
+        # Changes suggested by matteosecli: retrieve author of highlight:
+        author=r[7]
+        if not author.strip():
+            author=' '.join(filter(None,r[8:10]))
+
+        color=r[10] if hascolor else None
+
+        hlight = {'rect': bbox,\
+                  'cdate': cdate,\
+                  'color': color,
+                  'page': pg,
+                  'author': author,
+                  'path': pth   # distinguish between multi-attachments
+                  }
+
+        #------------Save to dict------------
+        # any better way of doing this sht?
+        if pth in results:
+            if 'highlights' in results[pth]:
+                if pg in results[pth]['highlights']:
+                    results[pth]['highlights'][pg].append(hlight)
+                else:
+                    results[pth]['highlights'][pg]=[hlight,]
+            else:
+                results[pth]['highlights']={pg:[hlight,]}
+        else:
+            results[pth]={'highlights': {pg:[hlight,]}}
+
+
+    return results
+
+
+#-------------------Get sticky notes-------------------
+def getNotes(db,filterdocid,results=None):
+    '''Extract notes and related meta data
+
+    <db>: sqlite3.connection to Mendeley sqlite database.
+    <filterdocid>: int, id of document to query.
+    <results>: dict or None, optional dictionary to hold the results. If None,
+               create a new empty dict.
+
+    Return: <results>: dictionary containing the query results. See
+            more in the doc of getHighlights()
+
+    Update time: 2016-04-12 20:39:15.
+    Update time: 2018-06-27 21:52:04.
+    Update time: 2018-07-28 20:01:40.
+    '''
+
+    query=\
+    '''SELECT Files.localUrl, FileNotes.page,
+                    FileNotes.x, FileNotes.y,
+                    FileNotes.note,
+                    FileNotes.modifiedTime,
+                    FileNotes.author,
+                    Profiles.firstName,
+                    Profiles.lastName
+            FROM Files
+            LEFT JOIN FileNotes
+                ON FileNotes.fileHash=Files.hash
+            LEFT JOIN Profiles
+                ON Profiles.uuid=FileNotes.profileUuid
+            WHERE (FileNotes.page IS NOT NULL) AND
+            (FileNotes.documentId=%s)
+    ''' %filterdocid
+
+    if results is None:
+        results={}
+
+    #------------------Get notes------------------
+    ret = db.execute(query)
+
+    for ii,r in enumerate(ret):
+        pth = converturl2abspath(r[0])
+        pg = r[1]
+        bbox = [r[2], r[3], r[2]+30, r[3]+30]
+        # needs a rectangle, size does not matter
+
+        txt = r[4]
+        cdate = convert2datetime(r[5])
+
+        # Changes suggested by matteosecli: retrieve author of note:
+        author=r[6]
+        if not author.strip():
+            author=' '.join(filter(None,r[7:9]))
+
+        note = {'rect': bbox,\
+                'author':author,\
+                'content':txt,\
+                'cdate': cdate,\
+                'page':pg,
+                'path':pth,
+                'isgeneralnote': False
+                  }
+
+        #------------Save to dict------------
+        if pth in results:
+            if 'notes' in results[pth]:
+                if pg in results[pth]['notes']:
+                    results[pth]['notes'][pg].append(note)
+                else:
+                    results[pth]['notes'][pg]=[note,]
+            else:
+                results[pth]['notes']={pg:[note,]}
+        else:
+            results[pth]={'notes': {pg:[note,]}}
+
+
+    return results
+
+
+#-------------------Get side-bar notes-------------------
+def getDocNotes(db,filterdocid,results=None):
+    '''Extract side-bar notes and related meta data
+
+    <db>: sqlite3.connection to Mendeley sqlite database.
+    <filterdocid>: int, id of document to query.
+    <results>: dict or None, optional dictionary to hold the results. If None,
+               create a new empty dict.
+
+    Return: <results>: dictionary containing the query results. with
+            See the doc in getHighlights().
+
+    Update time: 2016-04-12 20:44:38.
+    Update time: 2018-06-27 21:56:51.
+    Update time: 2018-07-28 20:02:10.
+    '''
+
+    # Some versions of Mendeley saves notes in DocumentsNotes
+    query=\
+    '''SELECT DocumentNotes.text,
+              DocumentNotes.documentId,
+              DocumentNotes.baseNote
+            FROM DocumentNotes
+            WHERE (DocumentNotes.documentId IS NOT NULL) AND
+            (DocumentNotes.documentId=%s)
+    ''' %filterdocid
+
+    # Some versions (not sure which exactly) of Mendeley saves
+    # notes in Documents.note
+    query2=\
+    '''SELECT Documents.note
+            FROM Documents
+            WHERE (Documents.note IS NOT NULL) AND
+            (Documents.id=%s)
+    ''' %filterdocid
+
+    # regex to transform Mendeley's old note formatting to html
+    # e.g. <m:bold>Bold</m:bold>  to <bold>Bold</bold>
+    pattern=re.compile(r'<(/?)m:(bold|italic|underline|center|left|right|linebreak)(/?)>',
+            re.DOTALL | re.UNICODE)
+    subfunc=lambda match: u'<%s%s%s>' %match.groups()
+
+    if results is None:
+        results={}
+
+    #------------------Get notes------------------
+    ret=[]
+    try:
+        ret1 = db.execute(query).fetchall()
+        ret.extend(ret1)
+    except:
+        pass
+    try:
+        ret2 = db.execute(query2).fetchall()
+        ret.extend(ret2)
+    except:
+        pass
+    username=getUserName(db)
+
+    for ii,rii in enumerate(ret):
+        docnote=rii[0]
+        if len(docnote)==0:
+            # skip u''
+            continue
+
+        # skip things that are not user notes. See def of NOTE_EXCLUDE_PATTERNS
+        skip=False
+        for patternii in NOTE_EXCLUDE_PATTERNS:
+            if patternii.match(docnote) is not None:
+                skip=True
+                break
+
+        if skip:
+            continue
+
+        docid=filterdocid
+        try:
+            basenote=rii[2]
+        except:
+            basenote=None
+        pg=1
+
+        if docnote is not None and basenote is not None\
+                and docnote!=basenote:
+            docnote=basenote+'\n\n'+docnote
+
+        #--------Convert old <m:tag> to html <tag>--------
+        docnote=re.sub(pattern,subfunc,docnote)
+
+        #--------------------Parse html--------------------
+        soup=BeautifulSoup(docnote,'html.parser')
+        # replace <br> tags with newline
+        for br in soup.find_all('br'):
+            br.replace_with('\n')
+        docnote=soup.get_text()
+        '''
+        parser=html2text.HTML2Text()
+        parser.ignore_links=True
+        docnote=parser.handle(docnote)
+        '''
+
+        # Try get file path
+        #pth=getFilePath(db,docid) or '/pseudo_path/%s.pdf' %title
+        pth=getFilePath(db,docid) # a list, could be more than 1, or None
+        # If no attachment, use None as path
+        if pth is None:
+            # make it compatible with the for loop below
+            pth=[None,]
+
+        bbox = [50, 700, 80, 730]
+        # needs a rectangle, size does not matter
+        note = {'rect': bbox,
+                'author': username,
+                'content':docnote,
+                'cdate': datetime.now(),
+                'page':pg,
+                'path':pth,
+                'isgeneralnote': True
+                  }
+
+        #-------------------Save to dict-------------------
+        # if multiple attachments, add to each of them
+        for pthii in pth:
+            if pthii in results:
+                if 'notes' in results[pthii]:
+                    if pg in results[pthii]['notes']:
+                        results[pthii]['notes'][pg].insert(0,note)
+                    else:
+                        results[pthii]['notes'][pg]=[note,]
+                else:
+                    results[pthii]['notes']={pg:[note,]}
+            else:
+                results[pthii]={'notes': {pg:[note,]}}
+
+
+    return results
 
 
 def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
@@ -195,7 +615,6 @@ def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
         return 1, jobid, None, None, None, None, None
 
 
-
 def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
         rename_file, ii, docii):
 
@@ -204,7 +623,7 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
         dbout.commit()
         dbout.close()
         dbin.close()
-        return 0, jobid
+        return 0, jobid, None
 
     cout=dbout.cursor()
     cin=dbin.cursor()
@@ -295,6 +714,12 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
         metaii=tuple([meta_dictii[jj] for jj in WRITE_DOC_ATTRS])
         cout.execute(query, metaii)
 
+        #---------------Fetch pdf highlights and notes---------
+        annotations={}
+        annotations = getHighlights(dbin,docii,annotations)
+        annotations = getNotes(dbin,docii,annotations)
+        annotations = getDocNotes(dbin,docii,annotations)
+
         for tagii in tags:
             query='''INSERT INTO DocumentTags (did, tag)
             VALUES (?, ?)'''
@@ -331,7 +756,7 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
             VALUES (?, ?)'''
             cout.execute(query, (ii, urlii))
 
-        # get path
+        #------------------Get file paths------------------
         query='''SELECT Files.localUrl
         FROM Files
         LEFT JOIN DocumentFiles ON DocumentFiles.hash = Files.hash
@@ -341,6 +766,8 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
 
         fileurl=ret.fetchall()
         meta_dictii['files_l']=[]
+
+        file_fail_list=[]
         if len(fileurl)>0:
 
             for fileii in fileurl:
@@ -350,12 +777,13 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
 
             for filepath in meta_dictii['files_l']:
 
-                # rename file
+                #-------------------Rename file-------------------
                 if rename_file:
                     filename=sqlitedb.renameFile(filepath,meta_dictii)
                 else:
                     filename=os.path.split(filepath)[1]
 
+                #---------------Remove invalid chars---------------
                 filename=re.sub(r'[//\ <>:"|?*]','_',filename)
                 filename=re.sub(r'al.','al',filename)
                 filename=re.sub(r'_-_','_',filename)
@@ -365,26 +793,42 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
 
                 query='''INSERT INTO DocumentFiles (did, relpath)
                 VALUES (?, ?)'''
-
                 cout.execute(query, (ii, relpath))
 
+                #---------------------Copy file---------------------
                 abspath=os.path.join(file_folder, filename)
 
-                LOGGER.debug('relpath = %s' %relpath)
+                #LOGGER.debug('relpath = %s' %relpath)
                 LOGGER.debug('abspath = %s' %abspath)
 
-                try:
-                    shutil.copy2(filepath,abspath)
-                    LOGGER.debug('Copied %s to %s' %(filepath, abspath))
-                except:
-                    LOGGER.exception('Failed to copy %s to %s' %(filepath,
-                        abspath))
+                if len(annotations)>0 and filepath in annotations:
+                    anno=annotations[filepath]
+                    try:
+                        exportpdf.exportPdf(filepath, abspath, anno)
+                    except:
+                        LOGGER.warning('Failed to export annotated pdf %s'\
+                                %filepath)
+                        file_fail_list.append(filepath)
+                        try:
+                            shutil.copy2(filepath,abspath)
+                            LOGGER.debug('Copied %s to %s' %(filepath, abspath))
+                        except:
+                            LOGGER.exception('Failed to copy %s to %s' %(filepath,
+                                abspath))
+                else:
+                    try:
+                        shutil.copy2(filepath,abspath)
+                        LOGGER.debug('Copied %s to %s' %(filepath, abspath))
+                    except:
+                        LOGGER.exception('Failed to copy %s to %s' %(filepath,
+                            abspath))
 
-        return 0, jobid
+        if len(file_fail_list)>0:
+            return 2, jobid, '; '.join(file_fail_list)
+        else:
+            return 0, jobid, None
     except:
-        return 1, jobid
-
-
+        return 1, jobid, None
 
 
 
@@ -603,4 +1047,12 @@ def importMendeley(file_in_path, file_out_path, rename_file):
 
 if __name__=='__main__':
 
-    importMendeley(FILE_IN_NAME, FILE_OUT_NAME, True)
+    #importMendeley(FILE_IN_NAME, FILE_OUT_NAME, True)
+    rec, jobid, dbin, dbout, docids, lib_folder, lib_name=\
+    importMendeleyPreprocess(0, FILE_IN_NAME, FILE_OUT_NAME)
+
+    for ii, docii in enumerate(docids):
+        rec2, jobid, fail_list = importMendeleyCopyData(1, dbin, dbout, lib_name, lib_folder,
+            True, ii, docii)
+
+        print('rec = ', rec2, 'jobid = ', jobid, 'fail=', fail_list)

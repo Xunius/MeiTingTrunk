@@ -397,3 +397,5 @@ def iterItems(treewidget, root):
                 yield child
                 if child.childCount()>0:
                     stack.append(child)
+
+
