@@ -583,7 +583,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         if 'firstNames_l' in fields or 'lastName_l' in fields:
             fields.append('authors_l') # updateTabelData monitors this
 
-        LOGGER.debug('Changed fields = %' %fields)
+        LOGGER.debug('Changed fields = %s' %fields)
 
         if len(fields)==0:
             return

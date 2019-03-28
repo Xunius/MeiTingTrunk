@@ -115,7 +115,7 @@ if __name__=='__main__':
     logging.config.dictConfig(LOG_CONFIG)
     app=QtWidgets.QApplication(sys.argv)
 
-    splash_pic=QPixmap(':/logo.jpg')
+    splash_pic=QPixmap(':/logo.png')
     splash=QtWidgets.QSplashScreen(splash_pic, Qt.WindowStaysOnTopHint)
     splash.show()
     splash.showMessage(__version__)
