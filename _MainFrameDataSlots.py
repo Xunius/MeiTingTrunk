@@ -1,10 +1,25 @@
+'''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+Handles data updating, including updates of the in-memory data dictionary from
+editing the meta data tabs, from DOI querying, adding docs to folders, and
+saving the in-memory data to sqlite database.
+'''
+
 from datetime import datetime
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QBrush
-from queue import Queue
 from lib import sqlitedb
 from lib import widgets
-from lib.tools import WorkerThread
 
 
 
@@ -13,6 +28,10 @@ class MainFrameDataSlots:
 
     def threadedFuncCall2(self,func,joblist,show_message='',max_threads=4,
             get_results=False,close_on_finish=True,progressbar_style='classic'):
+        '''Call function in another thread.
+        See threadrun_dialog.py for more details
+        Consider remove this later
+        '''
 
         thread_run_dialog=widgets.ThreadRunDialog(func,joblist,
                 show_message,max_threads,get_results,close_on_finish,
@@ -30,6 +49,18 @@ class MainFrameDataSlots:
     #######################################################################
 
     def updateTabelData(self,docid,meta_dict,field_list=None):
+        """Update the in-memory dictionary self.meta_dict
+
+        Args:
+            docid (int): id of doc to update.
+            meta_dict (DocMeta dict): dict containing the updated meta data for
+                                      doc with id = <docid>.
+        Kwargs:
+            field_list (None or list): if list of str, giving the keys in
+                                       <meta_dict> that needs update.
+                                       if None, adding a new doc (<docid> not in
+                                       self.meta_dict).
+        """
 
         if docid is None:
 
@@ -59,7 +90,7 @@ class MainFrameDataSlots:
             self.loadDocTable(docids=self._current_docids+[docid,],sel_row=None)
 
             #xx=self.doc_table.model().rowCount(None)
-            # NOTE that the below method won't work when table was empty before
+            # NOTE that the below method may not work when table was empty before
             # adding, as I connected doc_table.currentChanged to selDoc.
             # When table was empty, the index for previous current isnt defined
             # UPDATE: never mind the above.
@@ -80,6 +111,7 @@ class MainFrameDataSlots:
 
                 self.meta_dict[docid]=meta_dict
 
+            # reload doc table
             self.loadDocTable(docids=self._current_docids,
                     sel_row=self.doc_table.currentIndex().row())
 
@@ -89,13 +121,20 @@ class MainFrameDataSlots:
 
 
     @pyqtSlot(sqlitedb.DocMeta)
-    def updateByDOI(self,meta_dict):
+    def updateByDOI(self, meta_dict):
+        """update in-memory dictionary self.meta_dict via doi query
+
+        args:
+            meta_dict (docmeta dict): new dict containing meta data from doi
+                                      query.
+        """
 
         docid=self._current_doc
         self.logger.info('Update doc %s by doi' %docid)
 
         if docid:
             self.meta_dict[docid]=meta_dict
+            self.changed_doc_ids.append(docid)
             self.loadDocTable(docids=self._current_docids,
                     sel_row=self.doc_table.currentIndex().row())
 
@@ -103,24 +142,36 @@ class MainFrameDataSlots:
 
 
     @pyqtSlot()
-    def updateNotes(self,docid,note_text):
+    def updateNotes(self, docid, note_text):
+        """update notes in the in-memory dictionary
+
+        args:
+            docid (int): id of doc to update.
+            note_text (str): new note texts.
+        """
 
         if docid is None:
             return
 
         self.meta_dict[docid]['notes']=note_text
         self.changed_doc_ids.append(docid)
-
         self.logger.info('New notes for docid=%s: %s' %(docid,note_text))
 
         return
 
 
     @pyqtSlot(int,str)
-    def addDocToFolder(self,docid,folderid):
+    def addDocToFolder(self, docid, folderid):
+        """Add a doc to a folder
+
+        Args:
+            docid (int): id of doc.
+            folderid (str): id of folder to accept doc.
+        """
 
         self.logger.info('docid=%s, folderid=%s' %(docid,folderid))
 
+        #----------Add folder to doc's folders_l----------
         docfolders=self.meta_dict[docid]['folders_l']
         # note folderid here is an int
         newfolder=(int(folderid), self.folder_dict[folderid][0])
@@ -128,6 +179,7 @@ class MainFrameDataSlots:
             docfolders.append(newfolder)
             self.meta_dict[docid]['folders_l']=docfolders
 
+        #-------------Add docid to folder_data-------------
         if docid not in self.folder_data[folderid]:
             self.folder_data[folderid].append(docid)
 
@@ -139,12 +191,12 @@ class MainFrameDataSlots:
         current_folderid=self._current_folder[1]
         trashed_folders=self._trashed_folder_ids+['-3']
         if current_folderid in trashed_folders and folderid not in trashed_folders:
-
             self.logger.info('Restoring a trashed doc.')
             self.logger.debug('Updated deletionPending = %s'\
                     %self.meta_dict[docid]['deletionPending'])
-
             self.meta_dict[docid]['deletionPending']=='false'
+
+            # remove doc from current folder when restoring
             if docid in self.folder_data[current_folderid]:
                 self.folder_data[current_folderid].remove(docid)
                 self.loadDocTable(folder=self._current_folder,sel_row=None,sortidx=4)
@@ -167,6 +219,12 @@ class MainFrameDataSlots:
 
     @pyqtSlot()
     def saveToDatabase(self):
+        """Save in-memory data to sqlite file
+
+        self.changed_folder_ids contains ids of folder to update.
+        self.changed_doc_ids contains ids of docs to update.
+        Clear these two after saving.
+        """
 
         mtime=datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         self.logger.info('Save called. %s' %mtime)
@@ -205,7 +263,6 @@ class MainFrameDataSlots:
 
         self.changed_doc_ids=[]
         self.settings.sync()
-
         self.status_bar.clearMessage()
         self.progressbar.setVisible(False)
 
@@ -215,7 +272,15 @@ class MainFrameDataSlots:
 
 
     @pyqtSlot()
-    def createFailFolder(self,show_text,docids):
+    def createFailFolder(self, show_text, docids):
+        """Show in the doc table docs in a failed task
+
+        Args:
+            show_text (str): info texts to show in the label describing the task.
+            docids (list): list of doc ids (int) to load in the doc table.
+
+        NOTE: this is a misnomer, no folder is created. rename later
+        """
 
         self.clear_filter_label.setText('Failed tasks in %s' %show_text)
         self.clear_filter_frame.setVisible(True)

@@ -1,3 +1,20 @@
+'''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+
+Slots involving folder changes, including creation, re-parenting, renaming,
+trashing, and restoring from trash.
+'''
+
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QCursor, QBrush, QColor, QIcon
@@ -13,8 +30,14 @@ class MainFrameLibTreeSlots:
     #######################################################################
 
 
-    def clickSelFolder(self,item,column):
-        '''Select folder by clicking'''
+    def clickSelFolder(self, item, column):
+        """Change button states and load doc table on selecting a folder
+
+        Args:
+            item (QTreeWidgetItem): selected item in folder tree.
+            column (int): column index in folder tree.
+        """
+
         folder=item.data(0,0)
         folderid=item.data(1,0)
 
@@ -42,7 +65,6 @@ class MainFrameLibTreeSlots:
             self.add_folder_button.setDisabled(True)
             self.search_button.setEnabled(True)
         else:
-            self.logger.debug('######################################')
             if folderid in self._trashed_folder_ids:
                 self.add_button.setDisabled(True)
                 self.add_folder_button.setDisabled(True)
@@ -61,18 +83,22 @@ class MainFrameLibTreeSlots:
         return
 
 
-    def selFolder(self,selected,deselected):
-        '''Select folder by changing current'''
+    @pyqtSlot()
+    def selFolder(self):
+        '''Select folder by changing current
+
+        This is the slot to libtree.selectionModel().selectionChanged signal.
+        '''
 
         item=self._current_folder_item
         if item:
-            column=0
-            self.clickSelFolder(item,column)
+            self.clickSelFolder(item,0)
 
         return
 
 
     def libTreeMenu(self,pos):
+        '''Right click menu in folder tree'''
 
         item=self._current_folder_item
         folderid=item.data(1,0)
@@ -139,7 +165,18 @@ class MainFrameLibTreeSlots:
 
 
     @pyqtSlot(str,str)
-    def changeFolderParent(self,move_folder_id,new_parent_id):
+    def changeFolderParent(self, move_folder_id, new_parent_id):
+        """Change the parent of a folder
+
+        Args:
+            move_folder_id (str): id of changed folder.
+            new_parent_id (str): id of new parent folder.
+
+        This is the slot to libree.folder_move_signal signal, which is emitted
+        on re-parenting by drag/drop. See lib/widgets/folder_tree.py.
+
+        It is also called when trashing a folder, see trashFolder().
+        """
 
         folder_name=self.folder_dict[move_folder_id][0]
 

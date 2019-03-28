@@ -1,3 +1,88 @@
+'''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+
+This part contains methods that load data into various widgets.
+
+loadLibTree() is the major entrance of data loaded from sqlite.
+Folders in the library are created, plus 3 preserved system folders:
+
+    * All (id='-1'): contains all documents. It can not contain sub-folders.
+                     You can not add directly new documents in All, new
+                     documents can only be added in a normal folder.
+    * Needs Review (id='-2'): contains all documents whose 'confirmed' dict
+                              value is 'false', indicating uncertain
+                              state in the correctness of meta-data. Needs-
+                              review docs are shown in bold font in the doc
+                              table. This folder doesn't contain sub-folders,
+                              and does not accept new documents.
+    * Trash (id='-3'): can contain sub-folders. Folders in trash, or any other
+                       folder inside trash are identified by the _trashed_folder_ids
+                       property (see _MainFrameProperties.py). As a document
+                       can appear in more than one folder, trashing a folder
+                       doesn't necessarily trash a doc within, as the doc may
+                       still appear in one or more normal folders. Docs that
+                       ONLY appear in folders in _trashed_folder_ids are
+                       labelled "orphan" and is denoted by the 'deletionPending'==
+                       'true' dict value. Orphan docs won't appear in the All
+                       folder. Orphan docs are restored by moving into any
+                       normal folder, when their 'deletionPending' value is set
+                       to 'false'. Orphan docs that don't belong to any folder
+                       inside Trash will be put to the Trash folder itself.
+
+System folders are static in that they can't be deleted, renamed or changed in
+the order of appearance. They are not saved in the sqlite database file, but
+created everytime a library is opened.
+
+Folders are defined by their name (str) and id (str). Folder info in a library
+is stored in the dict self.folder_dict, with the following structure:
+
+    self.folder_dict[folder_id_in_str] = (folder_name, parentid)
+
+Parentid of a folder points to the id of the parent. All top level folders,
+including <Needs Review> and <Trash>, have a parentid of '-1'. <All> folder
+doesn't have parentid.  Currently there is no limit on the level of folder
+nesting.
+
+Valid characters for folder names include alphanumeric characters plus '_' and
+'-'. Name confliction is allowed as long as they don't share the same parent.
+
+A <Default> (id='0') folder is created in a newly created library.
+
+After the folder tree creation, the <All> folder is selected.
+
+Upon selecting a folder, documents within, not including those in its
+sub-folders, are loaded into the doc table. This is done in loadDocTable(). Ids
+of docs in a folder are stored in the dict self.folder_data, with the following
+format:
+
+    self.folder_data[folder_id_in_str] = [docid1_in_int, docid2_in_int2, ...]
+
+Meanwhile, each doc stores a list of folder ids that the doc resides in:
+
+    self.meta_dict[docid_in_int]['folders_l'] = [folder_id1_in_int,
+                                                 folder_id2_in_int,
+                                                 ...
+                                                 ]
+    forgive me about the int/str type confusion, I haven't got time to fix this.
+
+Upon calling loadDocTable(), a row is selected (if there is any).
+
+Upon selecting a row in doc table, the meta data tab is populated, in
+loadMetaTab()
+
+
+'''
+
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from lib import sqlitedb
@@ -6,7 +91,19 @@ from lib.tools import getHLine
 
 
 
-def addFolder(parent,folderid,folder_dict):
+def addFolder(parent, folderid, folder_dict):
+    """Add a new folder item to the folder tree
+
+    Args:
+        parent (QTreeWidgetItem or QTreeWidget): parent widget/item onto which
+                                                 to add a new folder.
+        folderid (str): id of the new folder.
+        folder_dict (dict): dict containing folder defs:
+
+            self.folder_dict[folder_id_in_str] = (folder_name, parentid)
+
+    Sub-folders are added by recursive calls of the function.
+    """
 
     foldername,parentid=folder_dict[folderid]
     fitem=QtWidgets.QTreeWidgetItem([foldername,str(folderid)])
@@ -24,7 +121,22 @@ def addFolder(parent,folderid,folder_dict):
 
     return
 
-def prepareDocs(meta_dict,docids):
+
+def prepareDocs(meta_dict, docids):
+    """Format meta data of docs for display in the doc table
+
+    Args:
+        meta_dict (dict): dict containing meta data of all docs in the library,
+                          in the format:
+
+                    self.meta_dict[doc_id_in_int] = DocMeta
+
+                          where DocMeta is a dict. See sqlitedb.py for details.
+        docids (list): list of doc ids to format.
+
+    Returns: data (list): each element is a list containing 10 fields of a
+                          doc to feed into the doc_table QTableView.
+    """
 
     data=[]
     for ii in docids:
@@ -58,7 +170,15 @@ class MainFrameLoadData:
     #######################################################################
 
 
-    def loadLibTree(self,db,meta_dict,folder_data,folder_dict):
+    def loadLibTree(self, db, meta_dict, folder_data, folder_dict):
+        """Load folders in a library
+
+        Args:
+            db (sqlite connection): sqlite connection of the library.
+            meta_dict (dict): dict containing meta data of all docs in the library.
+            folder_data (dict): dict containing doc ids in a folder.
+            folder_dict (dict): dict containing folder info in the library.
+        """
 
         self.db=db
         self.meta_dict=meta_dict
@@ -88,7 +208,7 @@ class MainFrameLoadData:
 
         #-------------Get all level 1 folders-------------
         folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if\
-                vv[1] in ['-1',]]
+                vv[1]=='-1']
         folders1.sort()
 
         self.logger.debug('Level 1 folder ids = %s' %folders1)
@@ -105,7 +225,8 @@ class MainFrameLoadData:
             addFolder(self.libtree,idii,self.folder_dict)
 
         #---------------Add folders in trash---------------
-        trashed_folders=[(vv[0],kk) for kk,vv in self.folder_dict.items() if vv[1]=='-3']
+        trashed_folders=[(vv[0],kk) for kk,vv in self.folder_dict.items()\
+                if vv[1]=='-3']
 
         self.logger.debug('Ids of folders in Trash = %s' %trashed_folders)
 
@@ -115,14 +236,26 @@ class MainFrameLoadData:
         self.sortFolders()
         self.libtree.setCurrentItem(self.all_folder)
 
-        self.changed_doc_ids=[] # store ids of changed docs, for auto save
-        self.changed_folder_ids=[] # store ids of changed folders, for auto save
+        self.changed_doc_ids=[] # store ids of changed docs
+        self.changed_folder_ids=[] # store ids of changed folders
 
         return
 
 
-    def loadDocTable(self,folder=None,docids=None,sortidx=None,sel_row=None):
-        '''Load doc table given folder'''
+    def loadDocTable(self, folder=None, docids=None, sortidx=None,
+            sel_row=None):
+        """Load the doc table
+
+        Kwargs:
+            folder ((fname_in_str, fid_in_str) or None ): if tuple, load docs
+                   within the folder. If None, load the <All> folder.
+            docids (list or None): if list, a list of doc ids to load. If None,
+                                   load according to the <folder> arg.
+            sortidx (int): int in [0,9], index of the column to sort the table
+                           with.
+            sel_row (int or None): index of the row to select after loading.
+                                   If None, don't change selection.
+        """
 
         tablemodel=self.doc_table.model()
         hh=self.doc_table.horizontalHeader()
@@ -150,10 +283,11 @@ class MainFrameLoadData:
                 docids=self.folder_data[folder[1]]
                 self.logger.info('NO. in folder %s = %d' %(folder[1], len(docids)))
 
-        #-------------Format data to table row-------------
+        #-------------Format data to table rows-------------
         data=prepareDocs(self.meta_dict,docids)
         tablemodel.arraydata=data
 
+        #--------------------Sort rows--------------------
         if sortidx is not None and sortidx in range(tablemodel.columnCount(None)):
             self.logger.info('sort idx = %s' %sortidx)
 
@@ -178,7 +312,7 @@ class MainFrameLoadData:
 
             self.status_bar.showMessage('%d rows' %len(data))
         else:
-            # clear meta tab
+            #------------------Clear meta tab------------------
             self.logger.info('No data to be loaded. Clear meta tab.')
             self.removeFolderHighlights()
             self.clearMetaTab()
@@ -189,7 +323,12 @@ class MainFrameLoadData:
         return
 
 
-    def loadMetaTab(self,docid=None):
+    def loadMetaTab(self, docid=None):
+        """Load meta data tab of a doc
+
+        Kwargs:
+            docid (int or None): if int, the id of the doc to load.
+        """
 
         self.logger.info('docid = %s' %docid)
 
@@ -207,6 +346,7 @@ class MainFrameLoadData:
             else:
                 return str(text)
 
+        #---------Loop through fields in meta tab---------
         for fii in fields:
             tii=metaii[fii]
             if tii is None:
@@ -224,12 +364,18 @@ class MainFrameLoadData:
 
             if fii in ['authors_l','abstract','tags_l','keywords_l']:
                 if self.t_meta.fold_dict[fii]:
+                    # fold long texts
                     self._current_meta_dict[fii].foldText()
 
         return
 
 
-    def loadBibTab(self,docid=None):
+    def loadBibTab(self, docid=None):
+        """Load bibtex tab of a doc
+
+        Kwargs:
+            docid (int or None): if int, the id of the doc to load.
+        """
 
         self.logger.info('docid = %s' %docid)
         if docid is None:
@@ -252,7 +398,12 @@ class MainFrameLoadData:
         return
 
 
-    def loadNoteTab(self,docid=None):
+    def loadNoteTab(self, docid=None):
+        """Load note tab of a doc
+
+        Kwargs:
+            docid (int or None): if int, the id of the doc to load.
+        """
 
         self.logger.info('docid = %s' %docid)
         if docid is None:

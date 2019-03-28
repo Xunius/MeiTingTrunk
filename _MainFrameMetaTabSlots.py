@@ -1,3 +1,19 @@
+'''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+
+Contains a few functions manipulating the meta tab.
+'''
+
 from PyQt5.QtCore import pyqtSlot
 
 
@@ -41,6 +57,14 @@ class MainFrameMetaTabSlots:
 
     @pyqtSlot()
     def confirmReviewButtonClicked(self):
+        """Confirm meta data of a doc is correct
+
+        This involves:
+            * set DocMeta['confirmed']='true'
+            * hide self.confirm_reivew_frame.
+            * update current doc table
+            * remove docid from the Needs Review folder (id='-2')
+        """
 
         docid=self._current_doc
 

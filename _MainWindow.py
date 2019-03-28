@@ -1,3 +1,21 @@
+'''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+
+Defines the main window GUI including the title bar, and database
+controls (creation, opening, saving, closing and switching).
+Also defines default settings and loading of settings.
+'''
+
 import os
 import logging
 import logging.config
@@ -8,12 +26,13 @@ from PyQt5.QtCore import Qt, QSettings, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 import _MainFrame
 from lib import sqlitedb
-from lib.widgets import PreferenceDialog, ExportDialog, Master,\
-        ThreadRunDialog, ImportDialog
-import resource
+from lib.widgets import PreferenceDialog, ExportDialog, ThreadRunDialog,\
+        ImportDialog
 
 from main import __version__
 
+
+# default setting for bibtex export
 OMIT_KEYS=[
     'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
     'lastName_l', 'deletionPending', 'folders_l', 'type', 'id',
@@ -39,7 +58,7 @@ New session started
 ##############################################
         ''')
         self.settings=self.initSettings()
-        self.is_loaded=False
+        self.is_loaded=False  # is any database opended
 
         self.main_frame=_MainFrame.MainFrame(self.settings)
         self.main_frame.view_change_sig.connect(self.viewChangeResponse)
@@ -48,6 +67,7 @@ New session started
         # put initUI() after main_frame as it's referencing widgets in main_frame
         self.initUI()
 
+        # auto open recent lib
         recent=self.settings.value('file/recent_open',[],str)
         if isinstance(recent,str) and recent=='':
             recent=[]
@@ -58,13 +78,18 @@ New session started
             # add a delay, otherwise splash won't show
             QTimer.singleShot(100, lambda: self._openDatabase(recent[-1]))
 
+
     def initSettings(self):
+        """Load settings file if exists, create new otherwise
+        """
+
         folder_name=os.path.dirname(os.path.abspath(__file__))
         settings_path=os.path.join(folder_name,'settings.ini')
 
         if not os.path.exists(settings_path):
             settings=QSettings(settings_path,QSettings.IniFormat)
 
+            # fonts for various fields
             settings.setValue('display/fonts/meta_title',
                 QFont('Serif', 14, QFont.Bold | QFont.Capitalize))
             settings.setValue('display/fonts/meta_authors',
@@ -82,39 +107,48 @@ New session started
             settings.setValue('display/fonts/scratch_pad',
                 QFont('Serif', 10)),
 
+            # highlight folder containing a doc
             settings.setValue('display/folder/highlight_color_br',
                     QBrush(QColor(200,200,255)))
 
             settings.setValue('export/bib/omit_fields', OMIT_KEYS)
             settings.setValue('export/bib/path_type', 'absolute')
             settings.setValue('export/ris/path_type', 'absolute')
+
+            # storage recently opened database
             settings.setValue('file/recent_open', [])
             settings.setValue('file/recent_open_num', 2)
             settings.setValue('file/auto_open_last', 1)
 
+            # default storage folder
             storage_folder=os.path.join(str(pathlib.Path.home()),
                     'Documents/MeiTingTrunk')
             settings.setValue('saving/storage_folder', storage_folder)
 
+            # auto save
             settings.setValue('saving/auto_save_min', 5),
+
+            # rename pdf files in storage
             settings.setValue('saving/rename_files', 1)
             settings.setValue('saving/rename_file_replace_space', 1)
 
+            # min score to flag a duplication
             settings.setValue('duplicate_min_score', 60)
 
             settings.setValue('import/default_add_action', 'Add PDF File')
 
+            # search fields
             settings.setValue('search/search_fields', ['Authors', 'Title',
                 'Abstract', 'Keywords', 'Tags', 'Notes', 'Publication'])
             settings.setValue('search/desend_folder', True)
 
+            # view control
             settings.setValue('view/show_widgets', ['Toggle Filter List',
                 'Toggle Tab Pane', 'Toggle Meta Tab', 'Toggle Notes Tab',
                 'Toggle BibTex Tab', 'Toggle Scratch Pad Tab',
                 'Toggle Status bar'])
 
             settings.sync()
-
         else:
             settings=QSettings(settings_path,QSettings.IniFormat)
 
@@ -132,6 +166,9 @@ New session started
 
 
     def initUI(self):
+        """Create menu bar
+        """
+
         self.setWindowTitle('MEI-TING TRUNK %s' %__version__)
         self.setGeometry(100,100,1200,900)    #(x_left,y_top,w,h)
         #self.setWindowIcon(QIcon('img.png'))
@@ -220,7 +257,6 @@ New session started
         self.tool_menu.addAction(self.import_action)
         self.tool_menu.addAction(self.export_action)
         if not self.is_loaded:
-            #self.import_action.setEnabled(False)
             self.export_action.setEnabled(False)
 
         #--------------------Help menu--------------------
@@ -247,8 +283,21 @@ New session started
 
 
     def closeEvent(self,event):
-        self.logger.info('settings.sync()')
-        self.settings.sync()
+
+        if self.is_loaded:
+            choice=QtWidgets.QMessageBox.question(self, 'Confirm Close',
+                    'Save and close?',
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+
+        if choice==QtWidgets.QMessageBox.Yes:
+            self.saveDatabaseTriggered()
+            self.closeDatabaseTriggered(ask=False)
+
+            self.logger.info('settings.sync()')
+            self.settings.sync()
+            event.accept()
+        elif choice==QtWidgets.QMessageBox.Cancel:
+            event.ignore()
 
         return
 
@@ -257,6 +306,7 @@ New session started
     #                           Menu bar actions                           #
     #######################################################################
 
+    @pyqtSlot()
     def createDatabaseTriggered(self):
 
         # close current if loaded
@@ -288,6 +338,7 @@ New session started
                     self.logger.exception('Failed to create new database file')
                     return 1,jobid,None
 
+            # run in separate thread
             td=ThreadRunDialog(func,
                 [(0,fname)],
                 show_message='Creating new database...',
@@ -299,13 +350,12 @@ New session started
 
             td.master.all_done_signal.connect(lambda: self._openDatabase(fname))
             td.exec_()
-            #self._openDatabase(fname)
 
 
         return
 
 
-
+    @pyqtSlot()
     def openDatabaseTriggered(self):
 
         # close current if loaded
@@ -331,11 +381,18 @@ New session started
                 msg.setText("Oopsi.")
                 msg.setInformativeText("Failed to open database file\n    %s" %fname)
                 msg.exec_()
+
             return
 
 
     @pyqtSlot(str)
-    def _openDatabase(self,fname):
+    def _openDatabase(self, fname):
+        """Open a sqlite database
+
+        Args:
+            fname (str): abs file path to sqlite data file
+
+        """
 
         # close current if loaded. For open recent calls
         if self.is_loaded:
@@ -363,7 +420,7 @@ New session started
                 recent.remove(fname)
                 self.settings.setValue('file/recent_open', recent)
 
-                self.logger.warning('Remove non-exist database file from recent list: %s' %fname)
+                self.logger.info('Remove non-exist database file from recent list: %s' %fname)
 
                 for actionii in self.recent_open_menu.findChildren(
                         QtWidgets.QAction):
@@ -374,21 +431,26 @@ New session started
 
         self.main_frame.status_bar.showMessage('Opening database...')
         QtWidgets.QApplication.processEvents() # needed?
-        # These won't work, the sqlitedb is in the same GUI thread.
+        # progressbar won't work atm, as the sqlitedb is in the same GUI thread.
         #self.main_frame.progressbar.setVisible(True)
         #self.main_frame.progressbar.setMaximum(0)
-        db = sqlite3.connect(fname)
-
-        self.logger.info('Connected to database: %s' %fname)
+        try:
+            db = sqlite3.connect(fname)
+            self.logger.info('Connected to database: %s' %fname)
+        except:
+            self.logger.warning('Failed to connect to database %s' %fname)
+            return
 
         self.db=db
+        # read and parse data
         meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
+        # load data into GUI
         self.main_frame.loadLibTree(db,meta_dict,folder_data,folder_dict)
-        self.main_frame.progressbar.setVisible(False)
+        #self.main_frame.progressbar.setVisible(False)
 
         self.is_loaded=True
 
-        # get library name
+        # get sqlite file name without ext as library name
         storage_folder,filename=os.path.split(fname)
         lib_name=os.path.splitext(filename)[0]
         lib_folder=os.path.join(storage_folder,lib_name)
@@ -457,18 +519,21 @@ New session started
         return
 
 
+    @pyqtSlot()
     def saveDatabaseTriggered(self):
         self.main_frame.saveToDatabase()
         return
 
 
-    def closeDatabaseTriggered(self):
+    @pyqtSlot()
+    def closeDatabaseTriggered(self,ask=True):
 
-        choice=QtWidgets.QMessageBox.question(self, 'Confirm Close',
-                'Save and close current library?',
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        if ask:
+            choice=QtWidgets.QMessageBox.question(self, 'Confirm Close',
+                    'Save and close current library?',
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
-        if choice==QtWidgets.QMessageBox.Yes:
+        if not ask or (ask and choice==QtWidgets.QMessageBox.Yes):
             self.main_frame.clearData()
             self.is_loaded=False
 
@@ -489,31 +554,49 @@ New session started
             return False
 
 
-
+    @pyqtSlot()
     def helpMenuTriggered(self,action):
         self.logger.info('action=%s, action.text()=%s' %(action,action.text()))
         return
 
 
+    @pyqtSlot()
     def preferenceTriggered(self):
+
         diag=PreferenceDialog(self.settings,parent=self)
         diag.exec_()
 
+        return
 
+
+    @pyqtSlot()
     def importTriggered(self):
+
         diag=ImportDialog(self.settings,parent=self)
+        # for open newly imported database
         diag.open_lib_signal.connect(self._openDatabase)
         diag.exec_()
+
         return
 
 
+    @pyqtSlot()
     def exportTriggered(self):
+
         diag=ExportDialog(self.settings,parent=self)
         diag.exec_()
+
         return
 
 
-    def viewChangeTriggered(self,action):
+    @pyqtSlot(QtWidgets.QAction)
+    def viewChangeTriggered(self, action):
+        """Change widget visibility in response to View menu actions
+
+        Args:
+            action (QAction): QAction in View menu
+        """
+
         action_text=action.text()
 
         self.logger.info('View change action = %s' %action_text)
@@ -526,11 +609,21 @@ New session started
             self.main_frame.statusbarViewChange()
         else:
             self.main_frame.metaTabViewChange(action_text)
+
         return
 
 
     @pyqtSlot(str,bool)
-    def viewChangeResponse(self,view_name,state):
+    def viewChangeResponse(self, view_name, state):
+        """Store widget visibility states in response to hide/show buttons
+
+        Args:
+            view_name (str): name of a widget view action, also the key
+                             in view_action_dict. See the View menu creation
+                             section in initUI().
+
+            state (bool): Visibility state of a widget.
+        """
 
         self.view_action_dict[view_name].setChecked(state)
 

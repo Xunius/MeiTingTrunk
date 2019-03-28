@@ -1,6 +1,47 @@
+'''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+
+This is the header of the MainFrame class definition. The entire class def
+is split into a few files:
+
+* _MainFrame.py             : the __init__(), and creation of various widgets.
+* _MainFrameLoadData.py       load data into various widgets. This is major
+                              entrance, in particular, its loadLibTree() call
+                              loads in data read from sqlite and triggers all
+                              subsequent data loading.
+* _MainFrameLibTreeSlots.py : actions involving folders, including creation,
+                              re-parenting, renaming, trashing, and restoring
+                              from trash.
+* _MainFrameDocTableSlots.py: actions involving documents, including selection,
+                               right clicking menu, deletion, opening.
+* _MainFrameToolBarSlots.py : slots to widgets in the tool bar, including adding
+                              new doc, new folder, duplicate checking and searching.
+* _MainFrameDataSlots.py    : handles data updating, including updates of the
+                              in-memory data dictionary from editing the meta
+                              data tabs, from DOI querying, adding docs to
+                              folders, and saving the in-memory data to sqlite
+                              database.
+* _MainFrameFilterListSlots.py: actions in response to filterings in the button
+                                left filtering widget.
+* _MainFrameProperties.py: a few getters for easier access to the current states
+                           in various widgets.
+* _MainFrameMetaTabSlots.py: actions in the meta data tab.
+'''
+
+
 import logging
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 
 import _MainFrameLoadData, _MainFrameDataSlots, _MainFrameToolBarSlots,\
@@ -24,7 +65,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         _MainFrameOtherSlots.MainFrameOtherSlots,
         _MainFrameProperties.MainFrameProperties
         ):
-
     def __init__(self,settings):
         super(MainFrame,self).__init__()
 
@@ -32,9 +72,10 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         self.logger=logging.getLogger(__name__)
         self.initUI()
         self.auto_save_timer=QTimer(self)
-        tinter=self.settings.value('saving/auto_save_min', 1, int)*60*1000
+        tinter=self.settings.value('saving/auto_save_min', 1, int)*60*1000 # in msc
         self.auto_save_timer.setInterval(tinter)
         self.auto_save_timer.timeout.connect(self.saveToDatabase)
+
 
     def initUI(self):
 
@@ -199,7 +240,9 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         button=QtWidgets.QToolButton(self)
         button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
+        @pyqtSlot(QtWidgets.QAction)
         def changeDefaultAction(action):
+            '''Change the default action'''
 
             action_data=action.data()
             for aii, (addii, cdii) in add_buttons.items():
@@ -214,6 +257,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
                     addii.setShortcut('')
                     cdii.setChecked(False)
 
+        #-------Add the default action to the button-------
         add_buttons={}
         menu=QtWidgets.QMenu()
         choose_default_menu=QtWidgets.QMenu('Choose Default Action',menu)
@@ -223,7 +267,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
                 'Add Entry Manually']:
 
             add_actionii=menu.addAction(aii)
-
             cd_actionii=choose_default_menu.addAction(aii)
             cd_actionii.setData(aii)
             cd_actionii.setCheckable(True)
@@ -293,6 +336,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         if isinstance(search_fields,str) and search_fields=='':
             search_fields=[]
 
+        # add search fields menu
         for fieldii in ['Authors', 'Title', 'Abstract', 'Keywords', 'Tags',
                 'Notes', 'Publication']:
             cbii=QtWidgets.QCheckBox(fieldii, menu)
@@ -401,6 +445,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         return frame
 
+
     def createSearchResultFrame(self):
 
         frame=SearchResFrame(self.settings,self)
@@ -477,8 +522,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         tv.setModel(tablemodel)
         hh.setModel(tablemodel)
         hh.initresizeSections()
-        tv.setColumnHidden(0,True)
-        tv.setColumnHidden(9,True)
+        tv.setColumnHidden(0,True) # doc id column, hide
+        tv.setColumnHidden(9,True) # needs review column, shown as bold/normal
 
         tv.selectionModel().currentChanged.connect(self.selDoc)
         tv.clicked.connect(self.docTableClicked)
@@ -512,7 +557,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
     def createTabs(self):
 
         tabs=QtWidgets.QTabWidget()
-        #tabs.setMinimumWidth(250)
 
         self.t_notes=self.createNoteTab()
         self.t_bib=self.createBiBTab()
@@ -522,6 +566,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
             self._current_doc,self.t_meta._meta_dict,field_list))
         self.t_meta.update_by_doi_signal.connect(self.updateByDOI)
 
+        # tab_dict is used for visibility control
         self.tab_dict={'Toggle Meta Tab': [self.t_meta, 'Meta Data'],
                 'Toggle Notes Tab': [self.t_notes, 'Notes'],
                 'Toggle BibTex Tab': [self.t_bib, 'BibTex'],
@@ -588,14 +633,12 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         scroll.setWidget(frame)
         v_layout=QtWidgets.QVBoxLayout()
 
-        # buttons
-        h_layout=QtWidgets.QHBoxLayout()
-
         self.copy_bib_button=QtWidgets.QToolButton(self)
         self.copy_bib_button.setText('Copy')
         self.copy_bib_button.setIcon(QIcon.fromTheme('edit-copy'))
         self.copy_bib_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
+        h_layout=QtWidgets.QHBoxLayout()
         h_layout.addWidget(self.copy_bib_button)
         h_layout.addStretch()
 
