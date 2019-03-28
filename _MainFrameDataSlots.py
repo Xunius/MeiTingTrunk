@@ -18,6 +18,7 @@ saving the in-memory data to sqlite database.
 from datetime import datetime
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QBrush
+from PyQt5 import QtWidgets
 from lib import sqlitedb
 from lib import widgets
 
@@ -231,9 +232,10 @@ class MainFrameDataSlots:
 
         self.status_bar.setVisible(True)
         self.status_bar.showMessage('Saving. Please standby ...')
-        # progressbar doesn't work in the main thread
+        # progressbar doesn't work in the main thread?
         self.progressbar.setVisible(True)
         self.progressbar.setMaximum(0)
+        QtWidgets.QApplication.processEvents()
 
         # remove duplicates
         self.changed_folder_ids=list(set(self.changed_folder_ids))

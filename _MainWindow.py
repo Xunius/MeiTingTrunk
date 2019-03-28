@@ -287,17 +287,23 @@ New session started
         if self.is_loaded:
             choice=QtWidgets.QMessageBox.question(self, 'Confirm Close',
                     'Save and close?',
-                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+                    QtWidgets.QMessageBox.Yes |\
+                    QtWidgets.QMessageBox.Discard |\
+                    QtWidgets.QMessageBox.Cancel)
 
         if choice==QtWidgets.QMessageBox.Yes:
             self.saveDatabaseTriggered()
             self.closeDatabaseTriggered(ask=False)
-
             self.logger.info('settings.sync()')
             self.settings.sync()
             event.accept()
         elif choice==QtWidgets.QMessageBox.Cancel:
             event.ignore()
+        elif choice==QtWidgets.QMessageBox.Discard:
+            self.closeDatabaseTriggered(ask=False)
+            self.logger.info('settings.sync()')
+            self.settings.sync()
+            event.accept()
 
         return
 

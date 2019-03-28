@@ -181,17 +181,17 @@ class MainFrameLibTreeSlots:
         folder_name=self.folder_dict[move_folder_id][0]
 
         #------------------Restoring docs------------------
-        self.logger.info('Moving folder (id = %s) out from Trash. Restoring docs within.'\
-                %move_folder_id)
-
         trashed_folder_ids=self._trashed_folder_ids
         if move_folder_id in trashed_folder_ids and new_parent_id \
                 not in trashed_folder_ids:
+            self.logger.info('Moving folder (id = %s) out from Trash. Restoring docs within.'\
+                    %move_folder_id)
             for docid in self.folder_data[move_folder_id]:
                 self.meta_dict[docid]['deletionPending']=='false'
                 self.changed_doc_ids.append(docid)
 
-                self.logger.debug("Restoring doc %d. meta_dict[docid]['deletionPending'] = %s" %(docid, self.meta_dict[docid]['deletionPending']))
+                self.logger.debug("Restoring doc %d. meta_dict[docid]['deletionPending'] = %s"\
+                        %(docid, self.meta_dict[docid]['deletionPending']))
 
         self.folder_dict[move_folder_id]=(folder_name, new_parent_id)
 
@@ -204,40 +204,62 @@ class MainFrameLibTreeSlots:
 
 
     @pyqtSlot(QtWidgets.QTreeWidgetItem,QtWidgets.QTreeWidgetItem,bool)
-    def trashFolder(self,item,newparent=None,ask=True):
+    def trashFolder(self, item, newparent=None, ask=True):
+        """Put a folder into Trash
 
+        Args:
+            item (QTreeWidgetItem): item of the folder to trash.
+
+        Kwargs:
+            newparent (QTreeWidgetItem or None): if QTreeWidgetItem, the new
+                parent item onto which to add <item>. This happens when
+                dragging a folder onto a folder already in Trash, or onto Trash
+                itself.  Then this function acts as the slot to
+                libtree.folder_del_signal emitted in libtree.dropEvent(), see
+                lib/widgets/folder_tree.py
+
+                If None, send the folder to Trash, this happens when trashing
+                a folder from the right click menu, see libTreeMenu().
+            ask (bool): whether to prompt for confirmation. Default to True.
+                It gets overwritten to False if it's moving folders within
+                the Trash.
+        """
+
+        folderid=item.data(1,0)
+        do_post_trash=True
+
+        #--------------Trashing by drag/drop--------------
         if newparent is not None:
-            if newparent.data(1,0) in self._trashed_folder_ids+['-3']:
-                ask=False
 
-                self.logger.debug('newparent id = %s in _trashed_folder_ids. Skip ask.'\
-                        %newparent.data(1,0))
+            if folderid in self._trashed_folder_ids+['-3']:
+                # move within Trash
+                self.logger.debug('newparent id %s, folderid %s both in _trashed_folder_ids. Skip postTrashFolder()'\
+                        %(newparent.data(1,0), folderid))
+                ask=False
+                do_post_trash=False
 
         if ask:
             choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
                 'Deleting a folder will delete all sub-folders and documents inside.\n\nConfirm?',
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
-
         if not ask or (ask and choice==QtWidgets.QMessageBox.Yes):
 
             root=self.libtree.invisibleRootItem()
             (item.parent() or root).removeChild(item)
 
-            folderid=item.data(1,0)
             if newparent is None:
-                self.logger.info('Put folder %s to Trash' %folderid)
-
+                self.logger.info('Send folder %s to Trash' %folderid)
                 self.trash_folder.addChild(item)
                 self.changeFolderParent(folderid,'-3')
             else:
-                self.logger.info('Put folder %s to trashed folder'\
+                self.logger.info('Put folder %s to trashed folder %s'\
                         %(folderid, newparent.data(1,0)))
-
                 newparent.addChild(item)
                 self.changeFolderParent(folderid,newparent.data(1,0))
 
-            self.postTrashFolder(item)
+            if do_post_trash:
+                self.postTrashFolder(item)
 
         return
 
