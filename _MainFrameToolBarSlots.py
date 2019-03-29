@@ -25,7 +25,19 @@ from lib.widgets import FailDialog, ThreadRunDialog
 import logging
 
 
-def _addPDF(jobid,abpath):
+def _addPDF(jobid, abpath):
+    """Retrieve meta data from PDF file
+
+    Args:
+        jobid (int): job id.
+        abpath (str): abspath to a PDF file
+
+    Returns:
+        rec (int): 0 for success, 1 otherwise.
+        jobid (int): the input jobid returned as it is.
+        pdfmetaii (DocMeta): dict storing meta data retrieved from PDF.
+    """
+
     try:
         pdfmetaii=retrievepdfmeta.getPDFMeta_pypdf2(abpath)
         pdfmetaii=retrievepdfmeta.prepareMeta(pdfmetaii)
@@ -37,7 +49,19 @@ def _addPDF(jobid,abpath):
     return rec,jobid,pdfmetaii
 
 
-def checkFolderName(foldername,folderid,folder_dict):
+def checkFolderName(foldername, folderid, folder_dict):
+    """Check for folder name conflicts
+
+    Args:
+        foldername (str): proposed name for folder.
+        folderid (str): id of folder.
+        folder_dict (dict): dict of folder info. key = folder_id,
+                            value = (foldername, parent_id)
+
+    Returns:
+        0 if proposed name <foldername> doesn't confict with other folders
+        with the same parent. 1 otherwise.
+    """
 
     logger=logging.getLogger(__name__)
 
@@ -84,6 +108,7 @@ class MainFrameToolBarSlots:
         """
 
         # action.data() is used in labelling the default add action.
+        # if it's not None, return
         if action.data() is not None:
             self.logger.debug('action.data() = %s is not None. Return.' %action.data())
             return
@@ -93,6 +118,7 @@ class MainFrameToolBarSlots:
         self.logger.info('action.text() = %s. action.data() = %s'\
                 %(action_text, action.data()))
 
+        #---------------------Add PDF---------------------
         if action_text=='Add PDF File':
 
             fname = QtWidgets.QFileDialog.getOpenFileNames(self,
@@ -107,9 +133,6 @@ class MainFrameToolBarSlots:
                         QtWidgets.QAbstractItemView.MultiSelection)
 
                 joblist=list(zip(range(len(fname)), fname))
-                #t_dialog=self.threadedFuncCall2(_addPDF, joblist,
-                    #'Adding PDF Files...',max_threads=1,get_results=True,
-                    #close_on_finish=True)
 
                 t_dialog=ThreadRunDialog(_addPDF, joblist,
                         show_message='Adding PDF Files...',
@@ -121,6 +144,7 @@ class MainFrameToolBarSlots:
 
                 t_dialog.exec_()
 
+                # collect failures
                 faillist=[]
                 for recii,jobidii,meta_dictii in t_dialog.results:
 
@@ -157,10 +181,12 @@ class MainFrameToolBarSlots:
                         QtWidgets.QAbstractItemView.ExtendedSelection)
 
 
+        #--------------------Add bibtex--------------------
         elif action_text=='Add Bibtex File':
-            fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose a bibtex file',
-         '',"Bibtex files (*.bib);; All files (*)")[0]
-
+            fname = QtWidgets.QFileDialog.getOpenFileName(self,
+                    'Choose a bibtex file',
+                    '',
+                    "Bibtex files (*.bib);; All files (*)")[0]
             self.logger.info('Chosen bib file = %s' %fname)
 
             if fname:
@@ -185,11 +211,13 @@ class MainFrameToolBarSlots:
                             QtWidgets.QAbstractItemView.ExtendedSelection)
 
 
+        #---------------------Add RIS---------------------
         elif action_text=='Add RIS File':
 
-            fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose an RIS file',
-         '',"RIS files (*.ris);; All files (*)")[0]
-
+            fname = QtWidgets.QFileDialog.getOpenFileName(self,
+                    'Choose an RIS file',
+                    '',
+                    "RIS files (*.ris);; All files (*)")[0]
             self.logger.info('Chosen ris file = %s' %fname)
 
             if fname:
@@ -214,6 +242,7 @@ class MainFrameToolBarSlots:
                             QtWidgets.QAbstractItemView.ExtendedSelection)
 
 
+        #-------------------Add manually-------------------
         elif action_text=='Add Entry Manually':
 
             dummy=sqlitedb.DocMeta()
@@ -223,15 +252,27 @@ class MainFrameToolBarSlots:
 
 
     @pyqtSlot(QtWidgets.QAction)
-    def addFolderButtonClicked(self,action):
+    def addFolderButtonClicked(self, action):
+        """Add new folder
+
+        Args:
+            action (QAction): QAction sent by menu button.
+
+        This is a slot to the triggered signal of the Add Folder button in the
+        tool bar, and is responsible for handling adding new folder to the
+        folder tree.
+        """
 
         item=self._current_folder_item
         if item:
             folderid=item.data(1,0)
 
             # create new item
-            current_ids=map(int,self.folder_dict.keys())
-            newid=str(max(current_ids)+1)
+            if len(self.folder_dict.keys())==0:
+                newid='0'
+            else:
+                current_ids=map(int,self.folder_dict.keys())
+                newid=str(max(current_ids)+1)
             newitem=QtWidgets.QTreeWidgetItem(['New folder',str(newid)])
             style=QtWidgets.QApplication.style()
             diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
@@ -259,8 +300,12 @@ class MainFrameToolBarSlots:
                 self.logger.info('action.text() = %s. As subfolder' %action.text())
 
             self.libtree.scrollToItem(newitem)
-            self.libtree.editItem(newitem)
             self.folder_dict[newid]=('New folder',parentid)
+            if newid not in self.folder_data:
+                self.folder_data[newid]=[]
+
+            # let user edit folder name
+            self.libtree.editItem(newitem)
 
             self.logger.info('New folder id = %s' %newid)
 
@@ -268,16 +313,31 @@ class MainFrameToolBarSlots:
 
 
     @pyqtSlot(QtWidgets.QTreeWidgetItem, int)
-    def addNewFolderToDict(self,item,column):
+    def addNewFolderToDict(self, item, column):
+        """Add newly create folder to folder dict
+
+        Args:
+            item (QTreeWidgetItem): newly created item for folder.
+            column (int): column of change. Not used.
+
+        This is a slot to the libtree.itemChanged signal, which is emitted when
+        data associated with a QTreeWidgetItem is changed. NOTE that by default
+        this covers ANY data change in an item, including its text, icon,
+        background color etc.. I need to restrict this signal firing to only
+        text changes (renaming folders). This is achieved by connecting
+        this signal in the commitData() method of the QTreeWidget (see
+        lib/widgets/folder_tree.py), and after emitting, disconnect immediately.
+        Therefore this is called whenever libtree.editItem() is called, for
+        instance in addFolderButtonClicked(), to update the changed folder
+        name to the folder_dict.
+        """
 
         foldername,folderid=item.data(0,0), item.data(1,0)
-
         self.logger.info('foldername = %s. folder id = %s'\
                 %(foldername, folderid))
 
         if folderid not in ['-1', '-2', '-3']:
             fnameold,parentid=self.folder_dict[folderid]
-
             self.logger.debug('Old folder name = %s. parentid = %s'\
                     %(fnameold, parentid))
 
@@ -290,7 +350,6 @@ class MainFrameToolBarSlots:
             if valid!=0:
 
                 self.logger.warning('Found invalid folder name: %s' %foldername)
-
                 msg=QtWidgets.QMessageBox()
                 msg.setIcon(QtWidgets.QMessageBox.Critical)
                 msg.setWindowTitle('Name conflict')
@@ -299,23 +358,25 @@ class MainFrameToolBarSlots:
                 msg.exec_()
 
                 item.setData(0,0,fnameold)
+                # let user input again
                 self.libtree.editItem(item)
 
                 return
 
+            # if name valid, update to dict
             self.folder_dict[folderid]=[foldername,parentid]
             self.logger.info('Added new folder name = %s. parentid = %s'\
                     %(self.folder_dict[folderid][0], self.folder_dict[folderid][1]))
 
         self.sortFolders()
         self.libtree.setCurrentItem(item)
-
         self.changed_folder_ids.append(folderid)
 
         return
 
 
     def sortFolders(self):
+        '''Sort folders in alphabetic order while keeping sys folder at top'''
 
         def moveItemToTop(item):
             idx=self.libtree.indexOfTopLevelItem(item)
@@ -333,6 +394,11 @@ class MainFrameToolBarSlots:
 
     @pyqtSlot()
     def checkDuplicateClicked(self):
+        """Check duplicates within current folder
+
+        This is a slot to the triggered signal of the Check Duplicate button in
+        the tool bar.
+        """
 
         docids=self._current_docids
         self.doc_table.setVisible(False)
@@ -350,13 +416,18 @@ class MainFrameToolBarSlots:
 
 
     @pyqtSlot(QtWidgets.QTreeWidgetItem,QtWidgets.QTreeWidgetItem)
-    def duplicateResultCurrentChange(self,current,previous):
+    def duplicateResultCurrentChange(self, current, previous):
+        """Select a doc in the result of duplicate checking
+
+        Args:
+            current (QTreeWidgetItem): item for a doc in the result tree widget.
+            previous (QTreeWidgetItem): not used.
+
+        """
 
         if current:
             docid=int(current.data(6,0))
-
             self.logger.info('current doc id = %s' %docid)
-
             self.loadMetaTab(docid)
             self.loadBibTab(docid)
             self.loadNoteTab(docid)
@@ -366,6 +437,19 @@ class MainFrameToolBarSlots:
 
     @pyqtSlot()
     def searchBarClicked(self):
+        """Start search in the database
+
+        This is a slot to the clicked signal of the search button in the tool
+        bar, and to the returnPressed signal of the search_bar.
+
+        Search text is retrieved from the search bar, and search options
+        are collected from the states of the search button menu. Then
+        these are passed as input args to the search function defined in
+        lib/widgets/search_res_frame.py
+
+        NOTE that as search is done in the sqlite data, a saving is first
+        called.
+        """
 
         text=self.search_bar.text()
         self.logger.info('Searched term = %s' %text)
@@ -380,7 +464,6 @@ class MainFrameToolBarSlots:
 
         for actii in actions:
             wii=actii.defaultWidget()
-
             self.logger.info('action %s isChecked() = %s'\
                     %(actii.text(), wii.isChecked()))
 
@@ -418,9 +501,19 @@ class MainFrameToolBarSlots:
 
     @pyqtSlot(str,list)
     def createFolderFromSearch(self, search_text, docids):
+        """Create a folder and populate with docs selected from search results
+
+        Args:
+            search_text (str): searched text in the search bar.
+            docids (list): ids of docs to add to the new folder
+
+
+        This is a slot to the create_folder_sig emitted by the
+        search_res_frame. It will create a top level folder with the name
+        'search_<search_text>', and add selected docs to it for later use.
+        """
 
         foldername='search_%s' %search_text
-
         toplevelfolders=[vv[0] for kk,vv in self.folder_dict.items() if\
                 vv[1] in ['-1',]]
 
@@ -430,7 +523,7 @@ class MainFrameToolBarSlots:
         # rename till no conflict
         append=1
         while foldername in toplevelfolders:
-            foldername='%s_(%d)' %(foldername,append)
+            foldername='%s_%d' %(foldername,append)
             append+=1
             self.logger.debug('new foldername after renaming = %s' %foldername)
 
@@ -450,7 +543,6 @@ class MainFrameToolBarSlots:
         self.libtree.setCurrentItem(newitem)
 
         self.logger.info('New folder id=%s' %newid)
-
         self.changed_folder_ids.append(newid)
 
         return
@@ -458,6 +550,7 @@ class MainFrameToolBarSlots:
 
     @pyqtSlot()
     def hideDocTable(self):
+        '''Not in use'''
         if self.doc_table.isVisible():
             self.doc_table.setVisible(False)
         return
@@ -465,12 +558,17 @@ class MainFrameToolBarSlots:
 
     @pyqtSlot(QtWidgets.QTreeWidgetItem,QtWidgets.QTreeWidgetItem)
     def searchResultCurrentChange(self,current,previous):
+        """Select a doc in the search results
+
+        Args:
+            current (QTreeWidgetItem): item for a doc in the result tree widget.
+            previous (QTreeWidgetItem): not used.
+
+        """
 
         if current:
             docid=int(current.data(5,0))
-
             self.logger.info('current doc id = %s' %docid)
-
             self.loadMetaTab(docid)
             self.loadBibTab(docid)
             self.loadNoteTab(docid)

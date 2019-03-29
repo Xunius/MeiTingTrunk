@@ -32,7 +32,7 @@ class MainFrameDataSlots:
             get_results=False,close_on_finish=True,progressbar_style='classic'):
         '''Call function in another thread.
         See threadrun_dialog.py for more details
-        Consider remove this later
+        NOT in use any more.
         '''
 
         thread_run_dialog=widgets.ThreadRunDialog(func,joblist,
