@@ -1,8 +1,7 @@
 from PyQt5.QtGui import QFont
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QDialogButtonBox, QStyle
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot, QObject, QEvent,\
-        QSize
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 
 
 class FailDialog(QtWidgets.QDialog):

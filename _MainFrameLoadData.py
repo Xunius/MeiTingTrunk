@@ -14,13 +14,14 @@ terms of the GPLv3 license.
 This part contains methods that load data into various widgets.
 
 loadLibTree() is the major entrance of data loaded from sqlite.
-Folders in the library are created, plus 3 preserved system folders:
+Folders in the library are created in this function, plus 3 preserved system
+folders:
 
     * All (id='-1'): contains all documents. It can not contain sub-folders.
                      You can not add directly new documents in All, new
                      documents can only be added in a normal folder.
     * Needs Review (id='-2'): contains all documents whose 'confirmed' dict
-                              value is 'false', indicating uncertain
+                              value is 'false', indicating an uncertain
                               state in the correctness of meta-data. Needs-
                               review docs are shown in bold font in the doc
                               table. This folder doesn't contain sub-folders,
@@ -41,7 +42,7 @@ Folders in the library are created, plus 3 preserved system folders:
 
 System folders are static in that they can't be deleted, renamed or changed in
 the order of appearance. They are not saved in the sqlite database file, but
-created everytime a library is opened.
+created everytime a library is loaded.
 
 Folders are defined by their name (str) and id (str). Folder info in a library
 is stored in the dict self.folder_dict, with the following structure:
@@ -65,12 +66,12 @@ sub-folders, are loaded into the doc table. This is done in loadDocTable(). Ids
 of docs in a folder are stored in the dict self.folder_data, with the following
 format:
 
-    self.folder_data[folder_id_in_str] = [docid1_in_int, docid2_in_int2, ...]
+    self.folder_data[folder_id_in_str] = [doc1_id_in_int, doc2_id_in_int, ...]
 
 Meanwhile, each doc stores a list of folder ids that the doc resides in:
 
-    self.meta_dict[docid_in_int]['folders_l'] = [folder_id1_in_int,
-                                                 folder_id2_in_int,
+    self.meta_dict[docid_in_int]['folders_l'] = [folder1_id_in_int,
+                                                 folder2_id_in_int,
                                                  ...
                                                  ]
     forgive me about the int/str type confusion, I haven't got time to fix this.
@@ -78,8 +79,8 @@ Meanwhile, each doc stores a list of folder ids that the doc resides in:
 Upon calling loadDocTable(), a row is selected (if there is any).
 
 Upon selecting a row in doc table, the meta data tab is populated, in
-loadMetaTab()
-
+loadMetaTab(). Note texts are loaded in loadNoteTab(), and bibtex string
+is loaded in loadBibTab().
 
 '''
 

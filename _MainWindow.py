@@ -290,6 +290,8 @@ New session started
                     QtWidgets.QMessageBox.Yes |\
                     QtWidgets.QMessageBox.Discard |\
                     QtWidgets.QMessageBox.Cancel)
+        else:
+            choice=QtWidgets.QMessageBox.Discard
 
         if choice==QtWidgets.QMessageBox.Yes:
             self.saveDatabaseTriggered()
@@ -551,6 +553,7 @@ New session started
             self.settings.setValue('saving/current_lib_folder','')
             self.setWindowTitle('MEI-TING TRUNK %s' %__version__)
             self.main_frame.auto_save_timer.stop()
+            self.main_frame.status_bar.clearMessage()
 
             self.logger.info('Stop auto save timer.')
             self.logger.info('Database closed.')

@@ -31,11 +31,13 @@ is split into a few files:
                               data tabs, from DOI querying, adding docs to
                               folders, and saving the in-memory data to sqlite
                               database.
-* _MainFrameFilterListSlots.py: actions in response to filterings in the button
+* _MainFrameFilterListSlots.py: actions in response to filterings in the bottom
                                 left filtering widget.
 * _MainFrameProperties.py: a few getters for easier access to the current states
                            in various widgets.
 * _MainFrameMetaTabSlots.py: actions in the meta data tab.
+* _MainFrameOtherSlots.py: some functions dealing with hide/show if widgets,
+                           clipboard copying and clearing data of widgets.
 '''
 
 
@@ -562,7 +564,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         self.t_bib=self.createBiBTab()
         self.t_scratchpad=self.createScratchTab()
         self.t_meta=MetaTabScroll(self.settings,self)
-        self.t_meta.meta_edited.connect(lambda field_list: self.updateTabelData(\
+        self.t_meta.meta_edited.connect(lambda field_list: self.updateTableData(\
             self._current_doc,self.t_meta._meta_dict,field_list))
         self.t_meta.update_by_doi_signal.connect(self.updateByDOI)
 

@@ -11,8 +11,9 @@ You may use, distribute and modify this code under the
 terms of the GPLv3 license.
 
 Handles data updating, including updates of the in-memory data dictionary from
-editing the meta data tabs, from DOI querying, adding docs to folders, and
-saving the in-memory data to sqlite database.
+editings in  the meta data tabs and from DOI querying; adding docs to folders,
+and saving the in-memory data to sqlite database.
+
 '''
 
 from datetime import datetime
@@ -49,7 +50,7 @@ class MainFrameDataSlots:
     #                      Meta data update functions                      #
     #######################################################################
 
-    def updateTabelData(self,docid,meta_dict,field_list=None):
+    def updateTableData(self,docid,meta_dict,field_list=None):
         """Update the in-memory dictionary self.meta_dict
 
         Args:
@@ -61,6 +62,11 @@ class MainFrameDataSlots:
                                        <meta_dict> that needs update.
                                        if None, adding a new doc (<docid> not in
                                        self.meta_dict).
+
+        Returns:
+            docid (int): id assigned to added doc. If <docid> was None, this
+                         gives the id assigned to it. Otherwise it return
+                         <docid>.
         """
 
         if docid is None:
@@ -118,7 +124,7 @@ class MainFrameDataSlots:
 
         self.changed_doc_ids.append(docid)
 
-        return
+        return docid
 
 
     @pyqtSlot(sqlitedb.DocMeta)

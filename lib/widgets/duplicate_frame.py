@@ -306,7 +306,7 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
     @pyqtSlot()
     def delDocs(self):
 
-        LOGGER.debug('current_folder = %s' %self.current_folder)
+        LOGGER.debug('current_folder = %s' %str(self.current_folder))
 
         foldername,folderid=self.current_folder
         sel_rows=self.tree.selectedItems()

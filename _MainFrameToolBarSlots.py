@@ -1,9 +1,27 @@
+'''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+
+This part contains functions handling actions triggered from the tool bar
+buttons or search bar, including adding new doc, new folder, duplicate checking
+and searching.
+'''
+
 from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5 import QtWidgets
 from lib import sqlitedb
 from lib import bibparse, risparse
 from lib import retrievepdfmeta
-from lib.widgets import FailDialog
+from lib.widgets import FailDialog, ThreadRunDialog
 import logging
 
 
@@ -53,17 +71,19 @@ class MainFrameToolBarSlots:
     #######################################################################
 
 
-    def addPDF(self,jobid,abpath):
-        rec,jobid,meta_dict=_addPDF(jobid,abpath)
-
-        if rec==0:
-            self.updateTabelData(None,meta_dict)
-        return rec,jobid,None
-
-
     @pyqtSlot(QtWidgets.QAction)
-    def addActionTriggered(self,action):
+    def addActionTriggered(self, action):
+        """Add new document to current folder
 
+        Args:
+            action (QAction): QAction sent by menu button.
+
+        This is a slot to the triggered signal of the Add button in the tool
+        bar, and is responsible for handling adding new document to the current
+        folder via PDF, bibtex, RIS or manual inputs.
+        """
+
+        # action.data() is used in labelling the default add action.
         if action.data() is not None:
             self.logger.debug('action.data() = %s is not None. Return.' %action.data())
             return
@@ -75,8 +95,9 @@ class MainFrameToolBarSlots:
 
         if action_text=='Add PDF File':
 
-            fname = QtWidgets.QFileDialog.getOpenFileNames(self, 'Choose a PDF file',
-         '',"PDF files (*.pdf);; All files (*)")[0]
+            fname = QtWidgets.QFileDialog.getOpenFileNames(self,
+                    'Choose a PDF file', '',
+                    "PDF files (*.pdf);; All files (*)")[0]
 
             self.logger.info('Chosen PDF file = %s' %fname)
 
@@ -86,18 +107,28 @@ class MainFrameToolBarSlots:
                         QtWidgets.QAbstractItemView.MultiSelection)
 
                 joblist=list(zip(range(len(fname)), fname))
-                t_dialog=self.threadedFuncCall2(_addPDF, joblist,
-                    'Adding PDF Files...',max_threads=1,get_results=True,
-                    close_on_finish=True)
+                #t_dialog=self.threadedFuncCall2(_addPDF, joblist,
+                    #'Adding PDF Files...',max_threads=1,get_results=True,
+                    #close_on_finish=True)
+
+                t_dialog=ThreadRunDialog(_addPDF, joblist,
+                        show_message='Adding PDF Files...',
+                        max_threads=1,
+                        get_results=True,
+                        close_on_finish=True,
+                        progressbar_style='classic',
+                        parent=self)
+
+                t_dialog.exec_()
 
                 faillist=[]
-                for recii,jobidii,meta_dictii in t_dialog:
+                for recii,jobidii,meta_dictii in t_dialog.results:
 
                     self.logger.debug('rec of t_dialog = %s. jobid = %s. meta_dict = %s'\
                             %(recii, jobidii, meta_dictii))
 
                     if recii==0:
-                        self.updateTabelData(None,meta_dictii)
+                        self.updateTableData(None,meta_dictii)
                     else:
                         faillist.append(jobidii)
 
@@ -105,15 +136,19 @@ class MainFrameToolBarSlots:
 
                 if len(fail_files)>0:
 
+                    fail_docids=[]
                     for fii in fail_files:
                         metaii=sqlitedb.DocMeta()
                         metaii['files_l']=[fii,]
-                        self.updateTabelData(None,metaii)
+                        docidii=self.updateTableData(None,metaii)
+                        fail_docids.append(docidii)
 
                     msg=FailDialog()
                     msg.setText('Oopsie.')
                     msg.setInformativeText('Failed to retrieve metadata from some files.')
                     msg.setDetailedText('\n'.join(fail_files))
+                    msg.create_fail_summary.connect(lambda: self.createFailFolder(
+                        'Add PDFs', fail_docids))
                     msg.exec_()
 
                 self.logger.warning('failed list for PDF import = %s' %faillist)
@@ -135,7 +170,7 @@ class MainFrameToolBarSlots:
                     self.doc_table.setSelectionMode(
                             QtWidgets.QAbstractItemView.MultiSelection)
                     for eii in bib_entries:
-                        self.updateTabelData(None,eii)
+                        self.updateTableData(None,eii)
                 except Exception as e:
                     self.logger.exception('Failed to parse bib file.')
 
@@ -164,7 +199,7 @@ class MainFrameToolBarSlots:
                     self.doc_table.setSelectionMode(
                             QtWidgets.QAbstractItemView.MultiSelection)
                     for eii in ris_entries:
-                        self.updateTabelData(None,eii)
+                        self.updateTableData(None,eii)
                 except Exception as e:
                     self.logger.exception('Failed to parse RIS file.')
 
@@ -182,7 +217,7 @@ class MainFrameToolBarSlots:
         elif action_text=='Add Entry Manually':
 
             dummy=sqlitedb.DocMeta()
-            self.updateTabelData(None, dummy)
+            self.updateTableData(None, dummy)
 
         return
 

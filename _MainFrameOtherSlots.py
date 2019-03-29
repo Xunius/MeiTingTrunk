@@ -1,7 +1,26 @@
+'''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+
+This part contains some functions dealing with hide/show if widgets, clipboard
+copying and clearing data of widgets.
+
+'''
+
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread
 
 
 class SettingsThread(QThread):
+    '''A separate thread for writing settings'''
     def __init__(self, setting, key, value):
         super(SettingsThread,self).__init__()
         self.setting=setting
@@ -28,6 +47,14 @@ class MainFrameOtherSlots:
 
     @pyqtSlot()
     def foldFilterButtonClicked(self):
+        '''Hide/show the filter list widget
+
+        This is a slot to the clicked signal of the fold button underneath
+        the folder tree.
+
+        It is also called when user toggle view changes in the View menu,
+        see ViewChangeTriggered() in _MainWindow.py
+        '''
 
         show_widgets=self.settings.value('view/show_widgets',[],str)
         if isinstance(show_widgets,str) and show_widgets=='':
@@ -46,6 +73,7 @@ class MainFrameOtherSlots:
             if 'Toggle Filter List' not in show_widgets:
                 show_widgets.append('Toggle Filter List')
 
+        # write change to settings
         self.setting_thread=SettingsThread(self.settings,
                 'view/show_widgets', show_widgets)
         self.setting_thread.start()
@@ -55,6 +83,17 @@ class MainFrameOtherSlots:
 
     @pyqtSlot()
     def foldTabButtonClicked(self):
+        '''Hide/show the tab pane
+
+        This is a slot to the clicked signal of the fold button to the right
+        of the doc table.
+
+        It is also called when user toggle view changes in the View menu,
+        see ViewChangeTriggered() in _MainWindow.py
+
+        Individual tabs in the tab pane can also be toggled. If all tabs
+        are toggled off, hide the tab pane as well.
+        '''
 
         show_widgets=self.settings.value('view/show_widgets',[],str)
         if isinstance(show_widgets,str) and show_widgets=='':
@@ -111,6 +150,11 @@ class MainFrameOtherSlots:
 
 
     def metaTabViewChange(self, view_name='Toggle Tab Pane'):
+        '''Hide/show the meta data tab in the tab pane
+
+        It is called when user toggle view changes in the View menu,
+        see ViewChangeTriggered() in _MainWindow.py
+        '''
 
         show_widgets=self.settings.value('view/show_widgets',[],str)
         if isinstance(show_widgets,str) and show_widgets=='':
@@ -166,6 +210,11 @@ class MainFrameOtherSlots:
 
 
     def statusbarViewChange(self):
+        '''Hide/show the status bar in the main_frame
+
+        It is called when user toggle view changes in the View menu,
+        see ViewChangeTriggered() in _MainWindow.py
+        '''
 
         show_widgets=self.settings.value('view/show_widgets',[],str)
         if isinstance(show_widgets,str) and show_widgets=='':
@@ -189,6 +238,15 @@ class MainFrameOtherSlots:
 
     @pyqtSlot()
     def clearFilterButtonClicked(self):
+        '''Hide the filter result header frame above the doc table
+
+        This is a slot to the clicked signal of the clear_filter_button
+        shown in the clear_filter_frame.
+
+        It is also called in filterTypeCombboxChange(), which is called
+        on selecting a folder. Therefore selecting/switching to a folder
+        will automatically hide the clear_filter_frame.
+        '''
 
         if self.clear_filter_frame.isVisible():
             self.clear_filter_frame.setVisible(False)
@@ -212,6 +270,15 @@ class MainFrameOtherSlots:
 
     @pyqtSlot()
     def clearDuplicateButtonClicked(self):
+        '''Hide the duplicate result header frame above the doc table
+
+        This is a slot to the clicked signal of the clear_duplicate_button
+        shown in the duplicate_result_frame.
+
+        It is also called in filterTypeCombboxChange(), which is called
+        on selecting a folder. Therefore selecting/switching to a folder
+        will automatically hide the duplicate_result_frame.
+        '''
 
         if self.duplicate_result_frame.isVisible():
             self.duplicate_result_frame.setVisible(False)
@@ -235,6 +302,15 @@ class MainFrameOtherSlots:
 
     @pyqtSlot()
     def clearSearchResButtonClicked(self):
+        '''Hide the search result header frame above the doc table
+
+        This is a slot to the clicked signal of the clear_searchres_button
+        shown in the search_res_frame.
+
+        It is also called in filterTypeCombboxChange(), which is called
+        on selecting a folder. Therefore selecting/switching to a folder
+        will automatically hide the search_res_frame.
+        '''
 
         if self.search_res_frame.isVisible():
             self.search_res_frame.setVisible(False)
@@ -258,6 +334,8 @@ class MainFrameOtherSlots:
 
     @pyqtSlot()
     def copyBibButtonClicked(self):
+        '''Copy texts in bibtex tab to clipboard'''
+
         self.bib_textedit.selectAll()
         self.bib_textedit.copy()
 
@@ -265,6 +343,10 @@ class MainFrameOtherSlots:
 
 
     def clearData(self):
+        '''Clear data from meta tab, doc table, folder tree and filter list
+
+        This is called when closing a library.
+        '''
 
         self.clearMetaTab()
         self.doc_table.model().arraydata=[]

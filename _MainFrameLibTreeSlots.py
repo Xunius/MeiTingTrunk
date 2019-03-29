@@ -78,7 +78,7 @@ class MainFrameLibTreeSlots:
                 self.search_button.setEnabled(True)
 
         # Refresh filter list
-        self.filterTypeCombboxChange(item)
+        self.filterTypeCombboxChange()
 
         return
 
@@ -205,7 +205,7 @@ class MainFrameLibTreeSlots:
 
     @pyqtSlot(QtWidgets.QTreeWidgetItem,QtWidgets.QTreeWidgetItem,bool)
     def trashFolder(self, item, newparent=None, ask=True):
-        """Put a folder into Trash
+        """Send a folder into Trash
 
         Args:
             item (QTreeWidgetItem): item of the folder to trash.
@@ -264,23 +264,28 @@ class MainFrameLibTreeSlots:
         return
 
 
-    def postTrashFolder(self,item):
+    def postTrashFolder(self, item):
+        """Update orphan doc records after folder trashing
+
+        Args:
+            item (QTreeWidgetItem): item of folder been trashed.
+        """
 
         folderid=item.data(1,0)
 
+        # get subfolders and docs in trashed folder and subfolders
         delfolderids,deldocids=sqlitedb.walkFolderTree(self.folder_dict,
                 self.folder_data,folderid)
-
+        # find orphan docs within
         orphan_docs=sqlitedb.findOrphanDocs(self.folder_data,deldocids,
                 self._trashed_folder_ids)
 
-        self.logger.info('Ids of folders to trash = %s' %delfolderids)
-        self.logger.info('Ids of docs within = %s' %deldocids)
+        self.logger.debug('Ids of folders to trash = %s' %delfolderids)
+        self.logger.debug('Ids of docs within = %s' %deldocids)
         self.logger.info('Orphan docs = %s' %orphan_docs)
 
         for idii in orphan_docs:
             self.meta_dict[idii]['deletionPending']='true'
-
             self.logger.debug('Set deletionPending to orphan doc %s %s' \
                     %(idii, self.meta_dict[idii]['deletionPending']))
 
@@ -302,6 +307,11 @@ class MainFrameLibTreeSlots:
 
 
     def delFolderFromTrash(self, item):
+        """Delete a trashed folder
+
+        Args:
+            item (QTreeWidgetItem): item of folder to be deleted
+        """
 
         choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
             'Deleting folder(s) and document within permanently?',
@@ -340,11 +350,12 @@ class MainFrameLibTreeSlots:
 
         self.logger.info('Ids of folders to clear from trash = %s' %changed_folders)
 
+        #-------------Destroy docs in folders-------------
         for fii in changed_folders:
             self.logger.info('Destroying docs in folder %s' %fii)
             self.destroyDoc(self.folder_data[fii], fii, False, False)
 
-        # del folders after all docs are destroyed
+        #-----Del folders after all docs are destroyed-----
         for fii in changed_folders:
             self.logger.warning('Deleting folder %s from folder_dict, folder_data' %fii)
             del self.folder_dict[fii]

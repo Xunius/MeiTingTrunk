@@ -175,6 +175,8 @@ class Master(QObject):
         else:
             if self.statusbar:
                 self.statusbar.showMessage('Finished.')
+            if self.progressbar:
+                self.progressbar.setVisible(False)
 
         return
 

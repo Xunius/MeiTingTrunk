@@ -1,3 +1,18 @@
+'''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+This part contains actions filterings in the filtering widget.
+
+'''
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSlot
 from lib import sqlitedb
@@ -10,7 +25,14 @@ class MainFrameFilterListSlots:
     #######################################################################
 
     @pyqtSlot(QtWidgets.QListWidgetItem)
-    def filterItemClicked(self,item):
+    def filterItemClicked(self, item):
+        """Do a doc filtering using a selected value of a selected type
+
+        Args:
+            item (QListWidgetItem): selected item in the filter list widget.
+
+        This is a slot to the filter_item_list.itemClicked signal.
+        """
 
         self.logger.info('Clicked filter item.text() = %s' %item.text())
 
@@ -46,7 +68,18 @@ class MainFrameFilterListSlots:
         return
 
 
-    def filterTypeCombboxChange(self,item):
+    @pyqtSlot()
+    def filterTypeCombboxChange(self):
+        """Change filter type and populate filter values
+
+        This is a slot to the filter_type_combbox.currentIndexChanged signal.
+        And is called everytime a folder is selected. See clickSelFolder().
+        keywords, authors, publications or tags in a folder (not desending
+        into sub-folders) are collected, depending on the selected filter
+        type, and entries are added to the filter list.
+
+        """
+
         # clear current filtering first
         self.clearFilterButtonClicked()
 
