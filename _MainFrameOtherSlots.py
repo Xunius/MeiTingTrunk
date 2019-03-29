@@ -237,38 +237,6 @@ class MainFrameOtherSlots:
 
 
     @pyqtSlot()
-    def clearFilterButtonClicked(self):
-        '''Hide the filter result header frame above the doc table
-
-        This is a slot to the clicked signal of the clear_filter_button
-        shown in the clear_filter_frame.
-
-        It is also called in filterTypeCombboxChange(), which is called
-        on selecting a folder. Therefore selecting/switching to a folder
-        will automatically hide the clear_filter_frame.
-        '''
-
-        if self.clear_filter_frame.isVisible():
-            self.clear_filter_frame.setVisible(False)
-
-        if not self.doc_table.isVisible():
-            self.doc_table.setVisible(True)
-
-            current_folder=self._current_folder
-            if current_folder:
-                folder,folderid=current_folder
-
-                # TODO: keep a record of previous sortidx?
-                if folder=='All' and folderid=='-1':
-                    self.loadDocTable(None,sortidx=4,sel_row=0)
-                else:
-                    self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
-                #self.doc_table.selectRow(0)
-
-        return
-
-
-    @pyqtSlot()
     def clearDuplicateButtonClicked(self):
         '''Hide the duplicate result header frame above the doc table
 

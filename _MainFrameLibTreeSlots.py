@@ -41,6 +41,15 @@ class MainFrameLibTreeSlots:
         folder=item.data(0,0)
         folderid=item.data(1,0)
 
+        # NOTE that this hiding is necessary, although it is called via
+        # filterTypeCombboxChange() -> clearFilterButtonClicked().
+        # Because in that case, the loadDocTable() will be called twice,
+        # if the clear_filter_frame was visible before this clickSelFolder()
+        # call. If I remove loadDocTable() and leave it in the
+        # clearFilterButtonClicked(), it would be less transparent.
+        if self.clear_filter_frame.isVisible():
+            self.clear_filter_frame.setVisible(False)
+
         self.logger.info('Selected folder = %s. folderid = %s' \
                 %(folder, folderid))
 
