@@ -1,19 +1,18 @@
-'''Utitlity functions for annotation extraction.
-
-
-# Copyright 2016 Guang-zhi XU
-#
-# This file is distributed under the terms of the
-# LGPLv3 licence. See the LICENSE file for details.
-# You may use, distribute and modify this code under the
-# terms of the LGPLv3 license.
-
-
-Update time: 2016-02-19 14:33:33.
 '''
+MeiTing Trunk
 
+An open source reference management tool developed in PyQt5 and Python3.
 
+Copyright 2018-2019 Guang-zhi XU
 
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+Utitlity functions for annotation extraction.
+
+'''
 
 from datetime import datetime
 from PyPDF2.generic import *
@@ -31,19 +30,15 @@ def getRGBcolor(color,verbose=True):
     rgb=tuple(map(ord,color.decode('hex')))
     return [float(ii)/255 for ii in rgb]
 
-    
-
 
 def floatArray(lst):
     return ArrayObject([FloatObject(i) for i in lst])
-
 
 
 def now():
     # Python timezone handling is a messs, so just use UTC
     return TextStringObject(datetime.utcnow().\
             strftime("D:%Y%m%d%H%M%SZ00'00"))
-
 
 
 def _baseAnno(rect, contents=None, author=None, subject=None,
@@ -67,7 +62,7 @@ def _baseAnno(rect, contents=None, author=None, subject=None,
             })
 
     # Whether to add an explicit popup when adding to page
-    retval.popup = False  
+    retval.popup = False
     if contents is not None:
         retval[NameObject('/Contents')] = TextStringObject(contents)
     if author is not None:
@@ -81,14 +76,13 @@ def _baseAnno(rect, contents=None, author=None, subject=None,
     return retval
 
 
-
 def _popupAnnotation(parent, rect=None):
     '''Create a 'Popup' annotation connected to parent
     (an indirect object).
     '''
 
     if rect is None:
-        # Make Golden ratio rectangle lined up at 
+        # Make Golden ratio rectangle lined up at
         # right-hand side of parent
         _, _, x, y = parent.getObject()['/Rect']
         rect = [x, y-100, x+162, y]
@@ -104,14 +98,13 @@ def _popupAnnotation(parent, rect=None):
     return retval
 
 
-
 def createHighlight(rect, contents=None, author=None,\
                          subject=None, cdate=None, color=None,\
                          alpha=1, flag=4):
     '''Create a Highlight annotation given rect.
 
     <rect>: list, coordinates of highlighted rectangles:
-            [x0,y0,x1,y1], 
+            [x0,y0,x1,y1],
             where (x0,y0) is the lower left corner, (x1,y1) the upper
             right corner.
 
@@ -149,7 +142,6 @@ def createHighlight(rect, contents=None, author=None,\
     return retval
 
 
-
 def createNote(rect, contents=None, author=None, subject=None,\
                     cdate=None, color=None, alpha=1, flag=4,\
                     icon=None, open_=True, state=None, state_model=None):
@@ -176,7 +168,7 @@ def createNote(rect, contents=None, author=None, subject=None,\
 
     Update time: 2016-02-19 14:39:13.
     '''
-    
+
     if color is None:
         color=YELLOW
     else:
@@ -202,9 +194,8 @@ def createNote(rect, contents=None, author=None, subject=None,\
     return retval
 
 
-
 def addAnnotation(page, outpdf, anno):
-    """Add the annotation to the output PDF. 
+    """Add the annotation to the output PDF.
 
     """
     # We need to make an indirect reference, or Acrobat will get huffy.

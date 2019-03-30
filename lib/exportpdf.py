@@ -1,14 +1,17 @@
-'''Export PDF with annotations from Mendeley.
+'''
+MeiTing Trunk
 
+An open source reference management tool developed in PyQt5 and Python3.
 
-# Copyright 2016 Guang-zhi XU
-#
-# This file is distributed under the terms of the
-# GPLv3 licence. See the LICENSE file for details.
-# You may use, distribute and modify this code under the
-# terms of the GPLv3 license.
+Copyright 2018-2019 Guang-zhi XU
 
-Update time: 2016-04-12 22:09:38.
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+Export PDFs with annotations. This is used in importing Mendeley data.
+
 '''
 
 import os
@@ -19,20 +22,15 @@ import logging
 LOGGER=logging.getLogger(__name__)
 
 
-def exportPdf(fin,abpath_out,annotations):
+def exportPdf(fin, abpath_out, annotations):
     '''Export PDF with annotations.
 
-    <fin>: string, absolute path to input PDF file.
-    <outdir>: string, absolute path to the output directory.
-    <annotations>: FileAnno obj.
-
-    Update time: 2016-02-19 14:32:56.
+    Args:
+        fin (str): abspath to input PDF file.
+        abpath_out (str): abspath to output PDF file.
+        annotations (dict): annotation info. See import_mendeley.py
+                            getHighlights() for more info.
     '''
-
-    #---------------Skip unlinked files---------------
-    #assert annotations.hasfile, 'no file of %s' %fin
-    #if not annotations.hasfile:
-        #return
 
     try:
         inpdf = PyPDF2.PdfFileReader(open(fin, 'rb'))
@@ -73,7 +71,6 @@ def exportPdf(fin,abpath_out,annotations):
     pages=range(1,inpdf.getNumPages()+1)
 
     for pii in pages:
-
         inpg = inpdf.getPage(pii-1)
 
         #----------------Process highlights----------------

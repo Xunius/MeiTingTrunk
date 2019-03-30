@@ -1,3 +1,19 @@
+'''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+Parse ris files into dict format, and export DocMeta dict to ris file.
+
+'''
+
 import os
 import re
 import logging
@@ -59,22 +75,6 @@ KEYWORD_DICT={'title': 'TI',\
               'editor': 'ED'}
 
 
-def splitFields(record, key, sep=',|;'):
-    """
-    Split keyword field into a list.
-
-    :param record: the record.
-    :type record: dict
-    :param sep: pattern used for the splitting regexp.
-    :type record: string, optional
-    :returns: dict -- the modified record.
-
-    """
-    if key in record:
-        record[key] = [i.strip() for i in re.split(sep, record[key].replace('\n', ''))]
-
-    return record
-
 
 def splitNames(entry):
 
@@ -92,6 +92,13 @@ def splitNames(entry):
 
 
 def readRISFile(filename):
+    """Read and parse RIS file
+
+    Args:
+        filename (str): abspath to ris file.
+
+    Returns: results (list): list of dicts of meta data.
+    """
 
     filename=os.path.abspath(filename)
     if not os.path.exists(filename):
@@ -101,11 +108,9 @@ def readRISFile(filename):
     with open(filename,'r') as fin:
 
         entries=readris(fin)
-
         LOGGER.info('Read in RIS file: %s' %filename)
 
         for eii in entries:
-
             #eii=altKeys(eii,ALT_KEYS)
 
             # type
@@ -193,18 +198,38 @@ def readRISFile(filename):
     return results
 
 
-def metaDictToRIS(jobid,metadict,path_prefix):
+def metaDictToRIS(jobid, metadict, path_prefix):
+    """A wrapper, export meta data dict to RIS format
+
+    Args:
+        jobid (int): job id.
+        metadict (dict): meta data dict.
+        path_prefix (str): path prefix to prepend to attachment files.
+
+    Returns:
+        rec (int): 0 if success, 1 otherwise.
+        jobid (int): input jobid.
+        docid (int): 'id' value in <metadict>
+    """
 
     try:
         text=parseMeta(metadict,path_prefix)
         return 0,jobid,text,metadict['id']
-    except Exception as e:
+    except Exception:
         LOGGER.exception('Failed to write to RIS format. Jobid = %s. Doc id = %s'\
                 %(str(jobid), metadict['id']))
         return 1,jobid,'',metadict['id']
 
 
-def parseMeta(metadict,path_prefix):
+def parseMeta(metadict, path_prefix):
+    """Export meta data dict to RIS format
+
+    Args:
+        metadict (dict): meta data dict.
+        path_prefix (str): path prefix to prepend to attachment files.
+
+    Returns: string (str): RIS text.
+    """
 
     def getField(doc,field,default=''):
         return doc[field] or default

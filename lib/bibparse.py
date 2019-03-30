@@ -1,3 +1,20 @@
+'''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+Parse bibtex files into dict format, and export DocMeta dict to bibtex
+file.
+
+'''
+
 import os
 import re
 import logging
@@ -16,6 +33,7 @@ try:
 except:
     from tools import parseAuthors
 
+# replace dict keys
 ALT_KEYS={
         'keyword': 'keywords_l',
         'tag': 'tags_l',
@@ -26,6 +44,7 @@ ALT_KEYS={
 
 INV_ALT_KEYS=dict([(vv,kk) for kk,vv in ALT_KEYS.items()])
 
+# for testing only
 OMIT_KEYS=[
         'read', 'favourite', 'added', 'confirmed', 'firstNames_l',
         'lastName_l', 'deletionPending', 'folders_l', 'type', 'id'
@@ -36,14 +55,16 @@ LOGGER=logging.getLogger(__name__)
 
 
 def splitFields(record, key, sep=',|;'):
-    """
-    Split keyword field into a list.
+    """Split keyword field into a list
 
-    :param record: the record.
-    :type record: dict
-    :param sep: pattern used for the splitting regexp.
-    :type record: string, optional
-    :returns: dict -- the modified record.
+    Args:
+        record (dict): record dict.
+        key (str): key in record dict to split its value.
+
+    Kwargs:
+        sep (str): pattern used for the splitting regexp.
+
+    Returns: record (dict): the modified record
 
     """
     if key in record:
@@ -54,18 +75,22 @@ def splitFields(record, key, sep=',|;'):
 
 def getPublication(record):
     '''Use journal field and publication
+
     maybe just for ARTICLE type??
     '''
     if 'journal' in record and 'publication' not in record:
         record['publication']=record['journal']
+
     return record
 
 
 def customizations(record):
     """Use some functions delivered by the library
 
-    :param record: a record
-    :returns: -- customized record
+    Args:
+        record (dict): record dict.
+
+    Returns: record (dict): the modified record
     """
     record = bibcus.type(record)
     record = bibcus.author(record)
@@ -83,6 +108,14 @@ def customizations(record):
 
 
 def splitNames(entry):
+    """Split authors list into a list of firstnames and a list of lastnames
+
+    Args:
+        entry (dict): meta data dict.
+
+    Returns: entry (dict): meta data dict with a new 'firstNames_l' and
+                           'lastName_l' key
+    """
 
     firstnames=[]
     lastnames=[]
@@ -108,6 +141,14 @@ def altKeys(entry_dict, alt_dict):
 
 
 def readBibFile(bibfile):
+    """Read and parse bibtex file.
+
+    Args:
+        bibfile (str): abspath to input bibtex file.
+
+    Returns: results (list): DocMeta dicts, each for an parsed entry in the
+                             bibtex file.
+    """
 
     bibfile=os.path.abspath(bibfile)
     if not os.path.exists(bibfile):
@@ -138,7 +179,19 @@ def readBibFile(bibfile):
     return results
 
 
-def toOrdinaryDict(metadict,alt_dict,omit_keys,path_prefix):
+def toOrdinaryDict(metadict, alt_dict, omit_keys, path_prefix):
+    """Convert a DocMeta dict to an ordinary dict for bibtex export
+
+    Args:
+        metadict (DocMeta): meta dict of a doc.
+        alt_dict (dict): dict for key changes.
+        omit_keys (list): keys to omit in the converted dict.
+        path_prefix (str): folder path to prepend to attachment file paths.
+
+    Returns: result (dict): standard python dict containing meta data copied
+                            from input <metadict> with a format suitable
+                            for bibtex export.
+    """
 
     result={}
 
@@ -183,7 +236,22 @@ def toOrdinaryDict(metadict,alt_dict,omit_keys,path_prefix):
     return result
 
 
-def metaDictToBib(jobid,metadict,omit_keys,path_prefix):
+def metaDictToBib(jobid, metadict, omit_keys, path_prefix):
+    """Export meta data to bibtex format
+
+    Args:
+        jobid (int): id of job.
+        metadict (DocMeta): meta dict of a doc.
+        alt_dict (dict): dict for key changes.
+        omit_keys (list): keys to omit in the converted dict.
+        path_prefix (str): folder path to prepend to attachment file paths.
+
+    Returns:
+        rec (int): 0 if successful, 1 otherwise.
+        jobid (int): the input jobid as it is.
+        dbtext (str): formated bibtex entry, '' if <rec>==1.
+        docid (int): id of the processed document.
+    """
 
     try:
         alt_dict=INV_ALT_KEYS
@@ -194,14 +262,12 @@ def metaDictToBib(jobid,metadict,omit_keys,path_prefix):
         writer=BibTexWriter()
         writer.indent='    '
         writer.comma_first=False
-
         dbtext=writer.write(db)
 
         return 0,jobid,dbtext,metadict['id']
 
-    except Exception as e:
+    except Exception:
         LOGGER.exception('Failed to write to bibtex')
-
         return 1,jobid,'',metadict['id']
 
 

@@ -1,6 +1,18 @@
-'''Create empty sqlite data file and copy over contents
-
 '''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+Import data from Mendeley.
+'''
+
 
 import sys
 import os
@@ -23,15 +35,11 @@ from . import sqlitedb
 from . import exportpdf
 from bs4 import BeautifulSoup
 
-FILE_OUT_NAME='../New_Folder/men.sqlite'
-FILE_IN_NAME='../mendeley.sqlite'
-#STORAGE_FOLDER='~/Documents/MTT/'
-#LIB_NAME='mendeley'
-RENAME_FILE=True
 
 LOGGER=logging.getLogger(__name__)
 
 
+# columns to read from Mendeley database
 READ_DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',
 'deduplicated', 'favourite', 'note',
@@ -48,6 +56,7 @@ READ_DOC_ATTRS=[\
 'internationalUserType', 'genre',
 'institution', 'lastUpdate', 'legalStatus', 'length', 'medium', 'isbn']
 
+# columns to create in output sqlite
 WRITE_DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',
 'deduplicated', 'favourite', 'note',
@@ -88,12 +97,8 @@ NOTE_EXCLUDE_PATTERNS=[
         ]
 
 
-#----------Get a list of docids from a folder--------------
-def getDocIds(db,verbose=True):
-    '''Get a list of docids from a folder
-
-    Update time: 2018-07-28 20:11:09.
-    '''
+def getDocIds(db):
+    '''Get a list of docids from a folder'''
 
     query=\
     '''SELECT Documents.id
@@ -104,6 +109,7 @@ def getDocIds(db,verbose=True):
     data=ret.fetchall()
     docids=[ii[0] for ii in data]
     docids.sort()
+
     return docids
 
 
@@ -132,6 +138,17 @@ def converturl2abspath(url):
 
 
 def selByDocid(cursor, table, column, docid):
+    """Perform SELECT query on given column(s) filtered by docid
+
+    Args:
+        cursor (sqlite connection cursor): sqlite connection cursor.
+        table (str): table name.
+        column (str or list/tuple): column name or names.
+        docid (int): doc id.
+
+    Returns: list of column values. If <column> is str, a list with one element.
+    """
+
     if isinstance(column, str):
         cols=column
         single=True
@@ -170,11 +187,16 @@ def getUserName(db):
     return ' '.join(filter(None,ret[0]))
 
 
-def getFilePath(db,docid,verbose=True):
-    '''Get file path of PDF(s) using documentId
+def getFilePath(db, docid):
+    """Get file path of PDF(s) using documentId
 
-    Return <pth>: None or a LIST of file paths. If a single path, a len-1 list.
-    '''
+    Args:
+        db (sqlite connection): connection to sqlite database.
+        docid (int): doc id
+
+    Returns: pth (list or None): None if no path is found. A list of file paths
+             otherwise.
+    """
 
     query=\
     '''SELECT Files.localUrl
@@ -195,19 +217,21 @@ def getFilePath(db,docid,verbose=True):
         return pth
 
 
-#----------Extract highlights coordinates and related meta data-------
-def getHighlights(db,filterdocid,results=None):
+def getHighlights(db, filterdocid, results=None):
     '''Extract highlights coordinates and related meta data.
 
-    <db>: sqlite3.connection to Mendeley sqlite database.
-    <filterdocid>: int, id of document to query.
-    <results>: dict or None, optional dictionary to hold the results. If None,
-               create a new empty dict.
+    Args:
+        db (sqlite connection): connection to Mendeley sqlite database.
+        filterdocid (int): doc id .
+    Kwargs:
+        results (dict or None): dict to store results. If None, create an
+                                empty dict.
 
-    Return: <results>: dictionary containing the query results, with
-            the following structure:
+    Returns:
+        results (dict): dictionary containing the query results, with the
+                        following structure:
 
-            results=
+        results=
             {
             path1:
                 {'highlights': {page1: [hl1, hl2,...],
@@ -236,7 +260,6 @@ def getHighlights(db,filterdocid,results=None):
                         'path':pth
                         }
 
-    Update time: 2019-03-27 19:01:21.
     '''
 
     # For Mendeley versions newer than 1.16.1 (include), with highlight colors
@@ -335,20 +358,19 @@ def getHighlights(db,filterdocid,results=None):
 
 
 #-------------------Get sticky notes-------------------
-def getNotes(db,filterdocid,results=None):
+def getNotes(db, filterdocid, results=None):
     '''Extract notes and related meta data
 
-    <db>: sqlite3.connection to Mendeley sqlite database.
-    <filterdocid>: int, id of document to query.
-    <results>: dict or None, optional dictionary to hold the results. If None,
-               create a new empty dict.
+    Args:
+        db (sqlite connection): connection to Mendeley sqlite database.
+        filterdocid (int): doc id .
+    Kwargs:
+        results (dict or None): dict to store results. If None, create an
+                                empty dict.
 
-    Return: <results>: dictionary containing the query results. See
-            more in the doc of getHighlights()
-
-    Update time: 2016-04-12 20:39:15.
-    Update time: 2018-06-27 21:52:04.
-    Update time: 2018-07-28 20:01:40.
+    Returns:
+        results (dict): dictionary containing the query results. See
+                        getHighlights() for more details.
     '''
 
     query=\
@@ -414,20 +436,19 @@ def getNotes(db,filterdocid,results=None):
 
 
 #-------------------Get side-bar notes-------------------
-def getDocNotes(db,filterdocid,results=None):
+def getDocNotes(db, filterdocid, results=None):
     '''Extract side-bar notes and related meta data
 
-    <db>: sqlite3.connection to Mendeley sqlite database.
-    <filterdocid>: int, id of document to query.
-    <results>: dict or None, optional dictionary to hold the results. If None,
-               create a new empty dict.
+    Args:
+        db (sqlite connection): connection to Mendeley sqlite database.
+        filterdocid (int): doc id .
+    Kwargs:
+        results (dict or None): dict to store results. If None, create an
+                                empty dict.
 
-    Return: <results>: dictionary containing the query results. with
-            See the doc in getHighlights().
-
-    Update time: 2016-04-12 20:44:38.
-    Update time: 2018-06-27 21:56:51.
-    Update time: 2018-07-28 20:02:10.
+    Returns:
+        results (dict): dictionary containing the query results. See
+                        getHighlights() for more details.
     '''
 
     # Some versions of Mendeley saves notes in DocumentsNotes
@@ -552,6 +573,26 @@ def getDocNotes(db,filterdocid,results=None):
 
 
 def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
+    """Prepare for copying Mendeley data
+
+    Args:
+        jobid (int): job id.
+        file_in_path (str): abspath of Mendeley sqlite database file.
+        file_out_path (str): abspath of output sqlite database file.
+
+    Returns:
+        rec (int): 0 for success, 1 otherwise.
+        jobid (int): the input jobd returned as it is.
+        dbin (sqlite connection): connection to sqlite at <file_in_path>.
+        dbout (sqlite connection): connection to sqlite at <file_out_path>.
+        docids (list): list of int doc ids in Mendeley sqlite.
+        lib_folder (str): path to a newly created folder to store PDF files.
+        lib_name (str): name of the output library.
+
+    In this function, an empty sqlite database is created, and folder info
+    obtained from Mendeley database are copied over. A list of doc ids is
+    get from Mendeley, used for data transfer in importMendeleyCopyData().
+    """
 
     try:
         #--------------Connect input database--------------
@@ -562,6 +603,7 @@ def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
             LOGGER.info('Connected to database %s' %file_in_path)
         except:
             LOGGER.exception('Failed to connect to database %s' %file_in_path)
+            return 1, jobid, None, None, None, None, None
 
         cin=dbin.cursor()
 
@@ -571,9 +613,7 @@ def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
         cout=dbout.cursor()
 
         lib_folder=os.path.join(storage_folder,lib_name)
-        #file_folder=os.path.join(lib_folder,'_collections')
         rel_lib_folder=os.path.join('', lib_name) # relative to storage folder
-        #rel_file_folder=os.path.join('','_collections')
 
         LOGGER.debug('storage_folder = %s' %storage_folder)
         LOGGER.debug('lib_name = %s' %lib_name)
@@ -584,7 +624,6 @@ def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
         query='''SELECT id, name, parentId
         FROM Folders
         '''
-
         ret=cin.execute(query).fetchall()
 
         #------------If Default in folder list------------
@@ -617,6 +656,27 @@ def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
 
 def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
         rename_file, ii, docii):
+    """Copy document data from Mendeley and commit to output sqlite
+
+    Args:
+        jobid (int): job id.
+        dbin (sqlite connection): connection to sqlite at <file_in_path>.
+        dbout (sqlite connection): connection to sqlite at <file_out_path>.
+        lib_folder (str): path to a newly created folder to store PDF files.
+        lib_name (str): name of the output library.
+        rename_file (bool): whether to rename attachment PDF files when copying.
+        ii (int): index of a doc id in the doc id list. This is used as the
+                  doc id in the output sqlite.
+        docii (int or None): if int, id of the copied doc. If None, call
+                             commit() on <dbout> and close() on <dbin>.
+
+    Returns:
+        rec (int): 0 if success copy. 1 if failed. 2 if failed to export
+                   annotations in the attachment PDF(s).
+        jobid (int): input jobid.
+        file_fail (str): paths of PDF files that failed to get their
+                         annotations exported.
+    """
 
     if docii is None:
         # this signals db commit
@@ -628,7 +688,6 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
     cout=dbout.cursor()
     cin=dbin.cursor()
 
-    #lib_folder=os.path.join(storage_folder,lib_name)
     file_folder=os.path.join(lib_folder,'_collections')
     rel_lib_folder=os.path.join('', lib_name) # relative to storage folder
     rel_file_folder=os.path.join('','_collections')
@@ -714,12 +773,6 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
         metaii=tuple([meta_dictii[jj] for jj in WRITE_DOC_ATTRS])
         cout.execute(query, metaii)
 
-        #---------------Fetch pdf highlights and notes---------
-        annotations={}
-        annotations = getHighlights(dbin,docii,annotations)
-        annotations = getNotes(dbin,docii,annotations)
-        annotations = getDocNotes(dbin,docii,annotations)
-
         for tagii in tags:
             query='''INSERT INTO DocumentTags (did, tag)
             VALUES (?, ?)'''
@@ -755,6 +808,12 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
             query='''INSERT INTO DocumentUrls (did, url)
             VALUES (?, ?)'''
             cout.execute(query, (ii, urlii))
+
+        #---------------Fetch pdf highlights and notes---------
+        annotations={}
+        annotations = getHighlights(dbin,docii,annotations)
+        annotations = getNotes(dbin,docii,annotations)
+        annotations = getDocNotes(dbin,docii,annotations)
 
         #------------------Get file paths------------------
         query='''SELECT Files.localUrl
@@ -834,6 +893,7 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
 
 
 def importMendeley(file_in_path, file_out_path, rename_file):
+    '''For debug'''
 
     #--------------Connect input database--------------
     dbfin=os.path.abspath(file_in_path)
@@ -1048,6 +1108,8 @@ def importMendeley(file_in_path, file_out_path, rename_file):
 if __name__=='__main__':
 
     #importMendeley(FILE_IN_NAME, FILE_OUT_NAME, True)
+    FILE_OUT_NAME='../New_Folder/men.sqlite'
+    FILE_IN_NAME='../mendeley.sqlite'
     rec, jobid, dbin, dbout, docids, lib_folder, lib_name=\
     importMendeleyPreprocess(0, FILE_IN_NAME, FILE_OUT_NAME)
 

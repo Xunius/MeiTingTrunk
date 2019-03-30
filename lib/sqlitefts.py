@@ -1,7 +1,26 @@
+'''
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+
+Perform searches in sqlite database.
+
+'''
+
 import sqlite3
 import logging
 
 LOGGER=logging.getLogger(__name__)
+
+
 
 #######################################################################
 #                             fts5 search NOT IN USE                  #
@@ -422,6 +441,22 @@ def searchMultipleLike(db, text, field_list, folderid, desend=False):
     return ret
 
 def searchMultipleLike2(db, text, field_list, folderid, desend=False):
+    """Combined sqlite searches in multiple tables
+
+    Args:
+        db (sqlite connection): sqlite connection.
+        text (str): search text.
+        field_list (list): list of fields to search, including 'Authors',
+                          'Title', 'Keywords', 'Tags', 'Notes', 'Publication',
+                          'Abstract'.
+        folderid (str): id of folder, search in done within docs in this folder.
+
+    Kwargs:
+        desend (bool): whether to include subfolders (by walking done folder
+                       tree) of given folder.
+
+    Returns: rec (list): list of doc ids matching search.
+    """
 
     cin=db.cursor()
 

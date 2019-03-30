@@ -1,7 +1,19 @@
-'''Sqlite database read and write functions.
+'''
+MeiTing Trunk
 
-Author: guangzhi XU (xugzhi1987@gmail.com; guangzhi.xu@outlook.com)
-Update time: 2018-09-27 19:44:32.
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+
+
+In-memory meta data dict (DocMeta) definition.
+Sqlite database read and write functions.
+
 '''
 
 import os
@@ -44,6 +56,14 @@ LOGGER=logging.getLogger(__name__)
 
 
 class DocMeta(MutableMapping):
+    '''A custom dict definition storing meta data of a document
+
+    Allow only a given list of keys and restrict keys to str type.
+    Give default values to keys.
+    Some values are returned in a getter manner.
+
+    keys ending with '_l' suffix denotes a list value, e.g. 'authors_l'.
+    '''
 
     def __init__(self, *args, **kwargs):
         # set defaults
@@ -121,20 +141,31 @@ class DocMeta(MutableMapping):
 
 
 def readSqlite(dbin):
+    """Read sqlite data
+
+    Args:
+        dbin (sqlite connection): connection to sqlite.
+
+    Returns:
+        meta (dict): meta data of all documents. keys: docid,
+            values: DocMeta dict.
+        folder_data (dict): documents in each folder. keys: folder id in str,
+            values: list of doc ids.
+        folder_dict (dict): folder structure info. keys: folder id in str,
+            values: (foldername, parentid) tuple.
+    """
 
     #-------------------Get folders-------------------
     folder_dict=getFolders(dbin)
-
     LOGGER.debug('Got %d folders from database.' %len(folder_dict))
 
     #-------------------Get metadata-------------------
-    cursor=dbin.execute('SELECT * FROM Documents')
-    names=list(map(lambda x:x[0], cursor.description))
-
     meta={}
 
     # this is when I tried fts5 tables in sqlite where 'rowid' was hardwared
     # by sqlite, and eventually switched back to normal table.
+    cursor=dbin.execute('SELECT * FROM Documents')
+    names=list(map(lambda x:x[0], cursor.description))
     query='''SELECT DISTINCT %s
     FROM Documents
     ''' %('id' if 'id' in names else 'rowid')
@@ -180,7 +211,23 @@ def readSqlite(dbin):
     return meta, folder_data, folder_dict
 
 
-def fetchField(db,query,values,ncol=1,ret_type='str'):
+def fetchField(db, query, values, ncol=1, ret_type='str'):
+    """Query columns from sqlite and do some formatting
+
+    Args:
+        db (sqlite connection): sqlite connection.
+        query (str): SELECT statement template.
+        values (tuple): value list used in sqlite execute.
+
+    Kwargs:
+        ncol (int): number of columns queried in <query>.
+        ret_type (str): if 'str' and ncol==1, return a single string.
+                        if 'str' and ncol>1, return a list of strings.
+                        if 'list', return a list.
+
+    Returns: aa: column values. See ret_type.
+    """
+
     if ret_type not in ['str','list']:
         raise Exception("<ret_type> is one of ['str','list'].")
 
@@ -208,8 +255,14 @@ def fetchField(db,query,values,ncol=1,ret_type='str'):
 
 
 def getMetaData(db, did):
-    '''Get meta-data of a doc by docid.
-    '''
+    """Get meta data of a given document from sqlite
+
+    Args:
+        db (sqlite connection): sqlite connection.
+        did (int): id of doc.
+
+    Returns: result (DocMeta): meta data dict.
+    """
 
     cursor=db.execute('SELECT * FROM Documents')
     names=list(map(lambda x:x[0], cursor.description))
@@ -323,7 +376,16 @@ def getMetaData(db, did):
     return result
 
 
-def zipAuthors(firstnames,lastnames):
+def zipAuthors(firstnames, lastnames):
+    """Create author name list from lists of first names and last names.
+
+    Args:
+        firstnames (list): list of first names.
+        lastnames (list): list of last names.
+
+    Returns: authors (list): author names list.
+
+    """
 
     if len(firstnames)!=len(lastnames):
         LOGGER.error('Length of firstname and lastname dont match.')
@@ -345,6 +407,16 @@ def zipAuthors(firstnames,lastnames):
 
 
 def getSubFolders(folder_dict, folderid):
+    """Get all subfolders of a give folder
+
+    Args:
+        folder_dict (dict): folder structure info. keys: folder id in str,
+            values: (foldername, parentid) tuple.
+        folderid (str): id of given folder.
+
+    Returns: results (list): list of folder ids. Subfolders walked from given
+             folder.
+    """
 
     results=[kk for kk,vv in folder_dict.items() if vv[1]==folderid]
 
@@ -359,6 +431,15 @@ def getSubFolders(folder_dict, folderid):
 
 
 def getTrashedFolders(folder_dict):
+    """Get all folders inside Trash
+
+    Args:
+        folder_dict (dict): folder structure info. keys: folder id in str,
+            values: (foldername, parentid) tuple.
+
+    Returns: results (list): list of folder ids. Subfolders walked from the
+             Trash (id='-3') folder.
+    """
     '''
     results=[kk for kk,vv in folder_dict.items() if vv[1]=='-3']
 
@@ -383,7 +464,30 @@ def getTrashedFolders(folder_dict):
     return results
 
 
-def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
+def walkFolderTree(folder_dict, folder_data, folderid, docids=None,
+        folderids=None):
+    """Get subfolders walked from a given folder and all docs within
+
+    Args:
+        folder_dict (dict): folder structure info. keys: folder id in str,
+            values: (foldername, parentid) tuple.
+        folder_data (dict): documents in each folder. keys: folder id in str,
+            values: list of doc ids.
+        folderid (str): id of folder to start the walk.
+
+    Kwargs:
+        docids (list): list storing the doc ids in folders visited during the
+                       walk. If None, create an empty list.
+        folderids (list): list storing the ids of folders visited during the
+                       walk. If None, create an empty list.
+
+    Returns:
+        docids (list): list storing the doc ids in folders visited during the
+                       walk.
+        folderids (list): list storing the ids of folders visited during the
+                       walk.
+
+    """
 
     if docids is None:
         docids=[]
@@ -404,7 +508,21 @@ def walkFolderTree(folder_dict,folder_data,folderid,docids=None,folderids=None):
     return folderids,docids
 
 
-def findOrphanDocs(folder_data,docids,trashed_folder_ids):
+def findOrphanDocs(folder_data, docids, trashed_folder_ids):
+    """Identify orphan docs from a given list of doc ids
+
+    Args:
+        folder_data (dict): documents in each folder. keys: folder id in str,
+            values: list of doc ids.
+        docids (list): list of doc ids, within which orphan docs are searched.
+        trashed_folder_ids (list): list of ids of folders inside Trash.
+
+    Returns: result (list): list of orphan doc ids.
+
+    Orphan docs are defined as those that ONLY appear in Trash, or folder(s)
+    inside Trash.
+    """
+
     idsinfolders=[]
 
     for kk,vv in folder_data.items():
@@ -420,12 +538,15 @@ def findOrphanDocs(folder_data,docids,trashed_folder_ids):
 
 
 def findOrphanDocs2(db):
+    '''Find orphan docs from sqlite data
+
+    Not in use.
+    '''
 
     cin=db.cursor()
     query='''SELECT rowid FROM Documents
     WHERE Documents.deletionPending='true'
     '''
-
     ret=cin.execute(query)
     ret=[ii[0] for ii in ret]
 
@@ -435,6 +556,14 @@ def findOrphanDocs2(db):
 
 
 def getFolders(db):
+    """Read folder info from sqlite
+
+    Args:
+        db (sqlite connection): sqlite connection.
+
+    Returns: df (dict): folder structure info. keys: folder id in str,
+            values: (foldername, parentid) tuple.
+    """
 
     #-----------------Get all folders-----------------
     query='''SELECT id, name, parentId
@@ -450,7 +579,20 @@ def getFolders(db):
     return df
 
 
-def fetchMetaData(meta_dict,key,docids,unique,sort):
+def fetchMetaData(meta_dict, key, docids, unique, sort):
+    """Get the meta data values of a given key within a list of docs
+
+    Args:
+        meta_dict (dict): meta data of all documents. keys: docid,
+            values: DocMeta dict.
+        key (str): key in DocMeta to get value.
+        docids (list): list of doc ids within which search is done.
+        unique (bool): remove duplicate or not.
+        sort (bool): sort result list or not.
+
+    Returns: result (list): list of values.
+
+    """
     if not isinstance(docids, (tuple,list)):
         docids=[docids,]
 
@@ -473,7 +615,24 @@ def fetchMetaData(meta_dict,key,docids,unique,sort):
     return result
 
 
-def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
+def filterDocs(meta_dict, folder_data, filter_type, filter_text,
+        current_folder):
+    """Filter docs using a given filter text
+
+    Args:
+        meta_dict (dict): meta data of all documents. keys: docid,
+            values: DocMeta dict.
+        folder_data (dict): documents in each folder. keys: folder id in str,
+            values: list of doc ids.
+        filter_type (str): defines the field of the filter_text.
+        filter_text (str): filtering text.
+        current_folder (str): id of folder. Docs are selected from docs in
+                              this folder.
+
+    Returns: results (list): ids of docs within folder given by
+             <current_folder>, containing the text <filter_text> in the field
+             defined by <filter_type>.
+    """
 
     results=[]
     if current_folder=='-1':
@@ -510,55 +669,86 @@ def filterDocs(meta_dict,folder_data,filter_type,filter_text,current_folder):
     return results
 
 
-#-------------------Get subfolders of a given folder-------------------
-def getChildFolders(df,folderid,verbose=True):
-    '''Get subfolders of a given folder
+def getChildFolders(folder_dict, folderid):
+    """Get child folders of a given folder
 
-    <df>: dict, key: folderid, value: (folder_name, parent_id).
-    <folderid>: int, folder id
-    '''
+    Args:
+        folder_dict (dict): folder structure info. keys: folder id in str,
+            values: (foldername, parentid) tuple.
+        folderid (str): id of given folder.
+
+    Returns: results (list): list of ids of child folders.
+
+    NOTE: different from getSubFolders() that this only get direct child
+    folders of a given folder, while getSubFolders() walks done the folder
+    tree.
+    """
+
     results=[]
-    for idii in df:
-        fii,pii=df[idii]
+    for idii in folder_dict:
+        fii,pii=folder_dict[idii]
         if pii==folderid:
             results.append(idii)
     results.sort()
     return results
 
 
-#-------------Get folder tree structure of a given folder-------------
-def getFolderTree(df,folderid,verbose=True):
-    '''Get folder tree structure of a given folder
+def getFolderTree(folder_dict, folderid):
+    """Get a str representation of a given folder in the folder tree
 
-    <df>: dict, key: folderid, value: (folder_name, parent_id).
-    <folderid>: int, folder id
-    '''
+    Args:
+        folder_dict (dict): folder structure info. keys: folder id in str,
+            values: (foldername, parentid) tuple.
+        folderid (str): id of given folder.
 
-    getFolderName=lambda df,id: df[id][0]
-    getParentId=lambda df,id: df[id][1]
+    Returns:
+        folderid (str): input folder id.
+        folder (str): path of the given folder in the tree.
+    """
 
-    folder=getFolderName(df,folderid)
+    getFolderName=lambda folder_dict,id: folder_dict[id][0]
+    getParentId=lambda folder_dict,id: folder_dict[id][1]
+
+    folder=getFolderName(folder_dict,folderid)
 
     #------------Back track tree structure------------
     cid=folderid
     while True:
-        pid=str(getParentId(df,cid))
+        pid=str(getParentId(folder_dict,cid))
         if pid=='-1':
             break
         else:
-            pfolder=getFolderName(df,pid)
-            #folder=u'%s/%s' %(pfolder,folder)
+            pfolder=getFolderName(folder_dict,pid)
             folder=os.path.join(pfolder,folder)
         cid=pid
 
     return folderid,folder
 
 
-def renameFile(fname,meta_dict,replace_space=False):
-    '''Rename file on export.
+def renameFile(fname, meta_dict, replace_space=False):
+    """Rename a attachment file using meta data
 
-    Temp func, need to enable formatting later
-    '''
+    Args:
+        fname (str): abspath of a file.
+        meta_dict (DocMeta): meta data dict.
+
+    Kwargs:
+        replace_space (bool): whether to replace spaces in file name with some
+                              symbol.
+
+    Returns: fname2 (str): renamed file name. NOTE this doesn't include folder
+                           path, ONLY file name.
+
+    The file name is constrcuted from meta data in the format:
+
+        Author_year_title.ext
+
+    If the renamed abspath is too long (>255-6), the title field is cropped.
+    If a doc contains more than 1 attachment files, an int index is appended
+    before extension to distinguish them.
+    Chars that are invalid in Linux, Mac or Win are removed, such as ':', '?'.
+    """
+
     dirjj,filenamejj=os.path.split(fname)
     basename,ext=os.path.splitext(filenamejj)
 
@@ -608,21 +798,34 @@ def renameFile(fname,meta_dict,replace_space=False):
     return fname2
 
 
-def saveFoldersToDatabase(db,folder_ids,folder_dict,folder_data,lib_folder):
+def saveFoldersToDatabase(db, folder_ids, folder_dict, folder_data,
+        lib_folder):
+    """Save folder changes to sqlite
+
+    Args:
+        db (sqlite connection): connection to sqlite.
+        folder_ids (list): list of ids (in str) of folders to save.
+        folder_dict (dict): folder structure info. keys: folder id in str,
+            values: (foldername, parentid) tuple.
+        folder_data (dict): documents in each folder. keys: folder id in str,
+            values: list of doc ids.
+        lib_folder (str): abspath to the folder of the library. By design
+                          this should point to the folder CONTAINING the
+                          sqlite database file.
+
+    Returns: 0
+    """
 
     cout=db.cursor()
     folder_ids=list(set(folder_ids))
-
     LOGGER.info('Saving folders with ids = %s' %folder_ids)
 
     for idii in folder_ids:
 
         folder=folder_dict.get(idii)
-
         if folder is None:
             # deleting folder
             LOGGER.info('Deleting folder with id = %s' %idii)
-
             query='''
             DELETE FROM Folders WHERE Folders.id=?
             '''
@@ -638,17 +841,27 @@ def saveFoldersToDatabase(db,folder_ids,folder_dict,folder_data,lib_folder):
 
             query='''INSERT OR REPLACE INTO Folders (id, name, parentId, path) \
                      VALUES (?,?,?,?)'''
-
             cout.execute(query, (idii, nameii, pidii, pathii))
 
     db.commit()
-
     LOGGER.info('Done saving folders')
 
     return 0
 
 
 def createNewDatabase(file_path):
+    """Create a new sqlite database for a new library
+
+    Args:
+        file_path (str): abspath of the sqlite database file.
+
+    Returns:
+        dbout (sqlite connection): connection to the new sqlite database.
+        dirname (str): abspath to the folder containing the sqlite database,
+                       ie dir part of <file_path>.
+        lib_name (str): library name, taken as the file name of <file_path>
+                        without extension.
+    """
 
     # make sure has .sqlite ext
     dirname,filename=os.path.split(file_path)
@@ -803,7 +1016,27 @@ def createNewDatabase(file_path):
     return dbout, dirname, lib_name
 
 
-def metaDictToDatabase(db,docid,meta_dict,lib_folder,rename_files):
+def metaDictToDatabase(db, docid, meta_dict, lib_folder, rename_files):
+    """Save document changes to sqlite
+
+    Args:
+        db (sqlite connection): sqlite connection.
+        docid (int): id of doc to save changes.
+        meta_dict (DocMeta): meta data dict.
+        lib_folder (str): abspath to the folder of the library. By design
+                          this should point to the folder CONTAINING the
+                          sqlite database file.
+        rename_files (bool): whether to rename attachment files when saving.
+
+    Returns: rec (int): 0 if success, None otherwise.
+
+    3 types of changes are handled in this function:
+        * insertion: <docid> is not found in sqlite, addToDatabase() is called.
+        * deletion: <docid> in in sqlite, and <meta_dict> is None,
+                    delDocFromDatabase() is called.
+        * update: <docid> is in sqlite, and <meta_dict> is not None,
+                  updateToDatabase() is called.
+    """
 
     query='''SELECT DISTINCT rowid
     FROM Documents
@@ -814,23 +1047,17 @@ def metaDictToDatabase(db,docid,meta_dict,lib_folder,rename_files):
     if docid in docids:
 
         if meta_dict is None:
-
             LOGGER.info('docid %s in database. New meta=None. Deleting...' %docid)
-
-            rec=delDocFromDatabase(db,docid)
-
+            rec=delDocFromDatabase(db,docid,lib_folder)
         else:
             LOGGER.info('docid %s in database. Updating...' %docid)
-
             rec=updateToDatabase(db,docid,meta_dict,lib_folder,rename_files)
     else:
         if meta_dict is None:
             LOGGER.info('docid %s not in database. New meta=None. Ignore.' %docid)
             rec=0
-
         else:
             LOGGER.info('docid %s not in database. Inserting...' %docid)
-
             rec=addToDatabase(db,docid,meta_dict,lib_folder,rename_files)
 
     LOGGER.info('Done updating doc to database.')
@@ -838,7 +1065,18 @@ def metaDictToDatabase(db,docid,meta_dict,lib_folder,rename_files):
     return rec
 
 
-def insertToDocuments(db,docid,meta_dict,action):
+def insertToDocuments(db, docid, meta_dict, action):
+    """Insert or update columns in the Documents table
+
+    Args:
+        db (sqlite connection): sqlite connection.
+        docid (int): id of doc to save changes.
+        meta_dict (DocMeta): meta data dict.
+        action (str): if 'insert', use 'INSERT OR IGNORE' sqlite statement.
+                      if 'replace', use 'REPLACE INTO' sqlite statement.
+
+    Returns: 0
+    """
 
     cout=db.cursor()
     #--------------Update Documents table--------------
@@ -870,6 +1108,16 @@ def insertToDocuments(db,docid,meta_dict,action):
 
 
 def insertToTable(db, table, columns, values):
+    """Insert columns in a given table
+
+    Args:
+        db (sqlite connection): sqlite connection.
+        table (str): table name.
+        columns (list): column names.
+        values (list or tuple): new values to save to columns.
+
+    Returns: 0
+    """
 
     if len(values)>0:
         cout=db.cursor()
@@ -885,18 +1133,44 @@ def insertToTable(db, table, columns, values):
 
 
 def delFromTable(db, table, docid):
+    """Delete table rows matching given doc id
+
+    Args:
+        db (sqlite connection): sqlite connection.
+        table (str): table name.
+        docid (int): doc id.
+
+    Returns: 0
+    """
 
     cout=db.cursor()
     query='DELETE FROM %s WHERE (%s.did=?)' %(table,table)
     cout.execute(query, (docid,))
     db.commit()
-
     LOGGER.debug('Deleted old rows in table %s with docid = %s' %(table,docid))
 
     return 0
 
 
 def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
+    """Insert or update columns in the DocumentsFiles table
+
+    Args:
+        db (sqlite connection): sqlite connection.
+        docid (int): id of doc to save changes.
+        meta_dict (DocMeta): meta data dict.
+        lib_folder (str): abspath to the folder of the library. By design
+                          this should point to the folder CONTAINING the
+                          sqlite database file.
+        rename_files (bool): whether to rename attachment files when saving.
+
+    Returns: 0
+
+    The path of each attachment file of the give doc is renamed if required,
+    and copied to a specified folder corresponding to the library.
+    A relative file path, relative to <lib_folder>, is obtained, and saved
+    to sqlite.
+    """
 
     cout=db.cursor()
     _,lib_name=os.path.split(lib_folder)
@@ -905,9 +1179,9 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
 
     abs_file_folder=os.path.join(lib_folder,'_collections')
     rel_file_folder=os.path.join('','_collections')
-    print('# <insertToDocumentFiles>: lib_name=' , lib_name)
-    print('# <insertToDocumentFiles>: abs_file_folder=' , abs_file_folder)
-    print('# <insertToDocumentFiles>: rel_file_folder=' , rel_file_folder)
+    LOGGER.debug('lib_name = %s' %lib_name)
+    LOGGER.debug('abs_file_folder = %s' %abs_file_folder)
+    LOGGER.debug('rel_file_folder = %s' %rel_file_folder)
 
     if not os.path.exists(abs_file_folder):
         os.makedirs(abs_file_folder)
@@ -942,15 +1216,15 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
             rel_fii=os.path.join(rel_file_folder,filename)
             cout.execute(query,(docid,rel_fii))
 
-            print('# <insertToDocumentFiles>: newabsii=',newabsii)
-            print('# <insertToDocumentFiles>: rel_fii=',rel_fii)
+            LOGGER.debug('new abspath = %s' %newabsii)
+            LOGGER.debug('new relpath = %s' %rel_fii)
 
             #if not os.path.exists(newabsii):
             # check if fii is abspath or relpath
             if os.path.isabs(fii):
                 try:
                     shutil.copy(fii,newabsii)
-                    print('# <insertToDocumentFiles>: copy file',fii,'->',newabsii)
+                    LOGGER.info('copy file %s -> %s' %(fii,newabsii))
                 except:
                     LOGGER.exception('Failed to copy file %s to %s' %(fii,newabsii))
 
@@ -968,20 +1242,31 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
     return 0
 
 
-def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
+def addToDatabase(db, docid, meta_dict, lib_folder, rename_files):
+    """Add new document to sqlite
+
+    Args:
+        db (sqlite connection): sqlite connection.
+        docid (int): id of doc to save changes.
+        meta_dict (DocMeta): meta data dict.
+        lib_folder (str): abspath to the folder of the library. By design
+                          this should point to the folder CONTAINING the
+                          sqlite database file.
+        rename_files (bool): whether to rename attachment files when saving.
+
+    Returns: rec (int): 0 if success, None otherwise.
+    """
 
     LOGGER.info('Adding doc to database. docid = %s' %docid)
 
     #--------------Update Documents table--------------
     rec=insertToDocuments(db, docid, meta_dict, 'insert')
-
     LOGGER.debug('rec of insertToDocuments = %s' %rec)
 
     #------------------Update authors------------------
     firsts=meta_dict['firstNames_l']
 
     if len(firsts)>0:
-
         lasts=meta_dict['lastName_l']
         rec=insertToTable(db, 'DocumentContributors',
                 ('did', 'contribution', 'firstNames', 'lastName'),
@@ -989,26 +1274,22 @@ def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
                     ('DocumentAuthor',)*len(firsts),
                     firsts, lasts))
                 )
-
         LOGGER.debug('rec of insertToDocumentAuthors = %s' %rec)
 
     #-------------------Update files-------------------
     rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files)
-
     LOGGER.debug('rec of insertToDocumentFiles = %s' %rec)
 
     #------------------Update folder------------------
     rec=insertToTable(db, 'DocumentFolders',
             ('did', 'folderid'),
             [(docid,fii[0]) for fii in meta_dict['folders_l']])
-
     LOGGER.debug('rec of insertDocumentFolders = %s' %rec)
 
     #-----------------Update keywords-----------------
     rec=insertToTable(db, 'DocumentKeywords',
             ('did', 'text'),
             [(docid, kii) for kii in meta_dict['keywords_l']])
-
     LOGGER.debug('rec of insertDocumentKeywords = %s' %rec)
 
     #-------------------Update notes-------------------
@@ -1019,21 +1300,18 @@ def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
                 ('did', 'note', 'modifiedTime', 'createdTime'),
                 [(docid, notes, ctime, ctime)]
                 )
-
     LOGGER.debug('rec of insertDocumentNotes = %s' %rec)
 
     #-----------------Update tags-----------------
     rec=insertToTable(db, 'DocumentTags',
             ('did', 'tag'),
             [(docid, kii) for kii in meta_dict['tags_l']])
-
     LOGGER.debug('rec of insertDocumentTags = %s' %rec)
 
     #-------------------Update urls-------------------
     rec=insertToTable(db, 'DocumentUrls',
             ('did', 'url'),
             [(docid, kii) for kii in meta_dict['urls_l']])
-
     LOGGER.debug('rec of insertDocumentUrls = %s' %rec)
 
     LOGGER.info('Done adding doc to database.')
@@ -1041,10 +1319,22 @@ def addToDatabase(db,docid,meta_dict,lib_folder,rename_files):
     return 0
 
 
-def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
+def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files):
+    """Save changes of existing document to sqlite
+
+    Args:
+        db (sqlite connection): sqlite connection.
+        docid (int): id of doc to save changes.
+        meta_dict (DocMeta): meta data dict.
+        lib_folder (str): abspath to the folder of the library. By design
+                          this should point to the folder CONTAINING the
+                          sqlite database file.
+        rename_files (bool): whether to rename attachment files when saving.
+
+    Returns: rec (int): 0 if success, None otherwise.
+    """
 
     cout=db.cursor()
-
     LOGGER.info('Updating doc to database. docid = %s' %docid)
 
     #----------Get a meta_dict from database----------
@@ -1053,7 +1343,6 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
     #------------------Update folders------------------
     folders=meta_dict['folders_l']
     old_folders=old_meta['folders_l']
-
     LOGGER.debug('previous folders = %s. current folders = %s'\
             %(old_folders, folders))
 
@@ -1061,7 +1350,6 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
         del_folders=list(set(old_folders).difference(folders))
         new_folders=list(set(folders).difference(old_folders))
-
         LOGGER.debug('Need to update folders.')
         LOGGER.debug('del folders = %s. new folders = %s'\
                 %(del_folders, new_folders))
@@ -1077,18 +1365,15 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
 
             query='''INSERT OR IGNORE INTO DocumentFolders (did, folderid)
             VALUES (?,?)'''
-
             cout.execute(query, (docid, int(fii[0])))
 
     #--------------Update Documents table--------------
     rec=insertToDocuments(db, docid, meta_dict, 'replace')
-
     LOGGER.debug('rec of insertToDocuments = %s' %rec)
 
     #------------------Update authors------------------
     if old_meta['authors_l']!=meta_dict['authors_l']:
         # order change is also a change
-
         LOGGER.debug('Need to update authors.')
 
         #----------------Remove old authors----------------
@@ -1098,7 +1383,6 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
         firsts=meta_dict['firstNames_l']
 
         if len(firsts)>0:
-
             lasts=meta_dict['lastName_l']
             rec=insertToTable(db, 'DocumentContributors',
                     ('did', 'contribution', 'firstNames', 'lastName'),
@@ -1106,29 +1390,24 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
                         ('DocumentAuthor',)*len(firsts),
                         firsts, lasts))
                     )
-
             LOGGER.debug('rec of insertToDocumentAuthors = %s' %rec)
 
     #-------------------Update files-------------------
     if set(old_meta['files_l']) != set(meta_dict['files_l']):
 
         LOGGER.debug('Need to update files.')
-
         delFromTable(db, 'DocumentFiles', docid)
         rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files)
-
         LOGGER.debug('rec of insertToDocumentFiles=%s' %rec)
 
     #-----------------Update keywords-----------------
     if set(old_meta['keywords_l']) != set(meta_dict['keywords_l']):
 
         LOGGER.debug('Need to update keywords.')
-
         delFromTable(db, 'DocumentKeywords', docid)
         rec=insertToTable(db, 'DocumentKeywords',
                 ('did', 'text'),
                 [(docid, kii) for kii in meta_dict['keywords_l']])
-
         LOGGER.debug('rec of insertDocumentKeywords = %s' %rec)
 
     #-------------------Update notes-------------------
@@ -1156,7 +1435,6 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
                     ('did', 'note', 'modifiedTime', 'createdTime'),
                     [(docid, notes, mtime, ctime)]
                     )
-
             LOGGER.debug('rec of insertDocumentNotes = %s' %rec)
         else:
             delFromTable(db, 'DocumentNotes', docid)
@@ -1170,7 +1448,6 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
         rec=insertToTable(db, 'DocumentTags',
                 ('did', 'tag'),
                 [(docid, kii) for kii in meta_dict['tags_l']])
-
         LOGGER.debug('rec of insertDocumentTags = %s' %rec)
 
     #-------------------Update urls-------------------
@@ -1182,7 +1459,6 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
         rec=insertToTable(db, 'DocumentUrls',
                 ('did', 'url'),
                 [(docid, kii) for kii in meta_dict['urls_l']])
-
         LOGGER.debug('rec of insertDocumentUrls = %s' %rec)
 
     LOGGER.info('Done updating doc to database.')
@@ -1190,10 +1466,20 @@ def updateToDatabase(db,docid,meta_dict,lib_folder,rename_files):
     return 0
 
 
-def delDocFromDatabase(db,docid):
+def delDocFromDatabase(db, docid, lib_folder):
+    """Delete existing document from sqlite
+
+    Args:
+        db (sqlite connection): sqlite connection.
+        docid (int): id of doc to delete.
+        lib_folder (str): abspath to the folder of the library. By design
+                          this should point to the folder CONTAINING the
+                          sqlite database file.
+
+    Returns: rec (int): 0 if success, None otherwise.
+    """
 
     cout=db.cursor()
-
     LOGGER.info('Deleting doc %s from database' %docid)
 
     #--------------del Documents table--------------
@@ -1213,15 +1499,15 @@ def delDocFromDatabase(db,docid):
     FROM DocumentFiles
     WHERE (DocumentFiles.did=?)
     '''
-
     old_files=fetchField(db, query_files, (docid,), 1, 'list')
-
     delFromTable(db, 'DocumentFiles', docid)
 
     for fii in old_files:
-        if os.path.exists(fii):
-            LOGGER.info('Deleting file from disk %s' %fii)
-            os.remove(fii)
+        # prepend folder path
+        absii=os.path.join(lib_folder,fii)
+        if os.path.exists(absii):
+            LOGGER.info('Deleting file from disk %s' %absii)
+            os.remove(absii)
 
     #-----------------del keywords-----------------
     delFromTable(db, 'DocumentKeywords', docid)
