@@ -1,4 +1,9 @@
 '''
+This part contains functions handling actions triggered from the tool bar
+buttons or search bar, including adding new doc, new folder, duplicate checking
+and searching.
+
+
 MeiTing Trunk
 
 An open source reference management tool developed in PyQt5 and Python3.
@@ -9,11 +14,6 @@ This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
 You may use, distribute and modify this code under the
 terms of the GPLv3 license.
-
-
-This part contains functions handling actions triggered from the tool bar
-buttons or search bar, including adding new doc, new folder, duplicate checking
-and searching.
 '''
 
 from PyQt5.QtCore import Qt, pyqtSlot

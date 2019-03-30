@@ -1,6 +1,9 @@
 '''
-MeiTing Trunk
+This part contains some functions dealing with hide/show if widgets, clipboard
+copying and clearing data of widgets.
 
+
+MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
 Copyright 2018-2019 Guang-zhi XU
@@ -9,11 +12,6 @@ This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
 You may use, distribute and modify this code under the
 terms of the GPLv3 license.
-
-
-This part contains some functions dealing with hide/show if widgets, clipboard
-copying and clearing data of widgets.
-
 '''
 
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread

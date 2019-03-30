@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''
-MeiTing Trunk
+'''Main GUI entrance.
 
+
+MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
 Copyright 2018-2019 Guang-zhi XU

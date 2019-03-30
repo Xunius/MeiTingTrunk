@@ -1,16 +1,4 @@
 '''
-MeiTing Trunk
-
-An open source reference management tool developed in PyQt5 and Python3.
-
-Copyright 2018-2019 Guang-zhi XU
-
-This file is distributed under the terms of the
-GPLv3 licence. See the LICENSE file for details.
-You may use, distribute and modify this code under the
-terms of the GPLv3 license.
-
-
 This is the header of the MainFrame class definition. The entire class def
 is split into a few files:
 
@@ -38,6 +26,18 @@ is split into a few files:
 * _MainFrameMetaTabSlots.py: actions in the meta data tab.
 * _MainFrameOtherSlots.py: some functions dealing with hide/show if widgets,
                            clipboard copying and clearing data of widgets.
+
+
+MeiTing Trunk
+
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
 '''
 
 

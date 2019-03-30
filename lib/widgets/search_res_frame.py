@@ -7,7 +7,7 @@ from PyQt5.QtGui import QBrush, QColor, QIcon, QCursor, QFont, \
 from PyQt5.QtWidgets import QDialogButtonBox
 import resources
 from .. import sqlitefts
-from ..tools import iterItems
+from ..tools import iterTreeWidgetItems
 
 
 LOGGER=logging.getLogger(__name__)
@@ -386,7 +386,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
         root=self.tree.invisibleRootItem()
 
         # set all widgetitems with selected docids selected.
-        for item in iterItems(self.tree, root):
+        for item in iterTreeWidgetItems(self.tree, root):
             idii=item.data(5,0)
             if idii in docids:
                 # I thought this would results in endless loop, but it doesn't!

@@ -1,16 +1,4 @@
 '''
-MeiTing Trunk
-
-An open source reference management tool developed in PyQt5 and Python3.
-
-Copyright 2018-2019 Guang-zhi XU
-
-This file is distributed under the terms of the
-GPLv3 licence. See the LICENSE file for details.
-You may use, distribute and modify this code under the
-terms of the GPLv3 license.
-
-
 This part contains methods that load data into various widgets.
 
 loadLibTree() is the major entrance of data loaded from sqlite.
@@ -82,6 +70,16 @@ Upon selecting a row in doc table, the meta data tab is populated, in
 loadMetaTab(). Note texts are loaded in loadNoteTab(), and bibtex string
 is loaded in loadBibTab().
 
+
+MeiTing Trunk
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
 '''
 
 from PyQt5 import QtWidgets

@@ -1,6 +1,9 @@
 '''
-MeiTing Trunk
+This part contains methods dealing with actions on documents in the doc table,
+including selection, right clicking menu, deletion, opening.
 
+
+MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
 Copyright 2018-2019 Guang-zhi XU
@@ -9,11 +12,8 @@ This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
 You may use, distribute and modify this code under the
 terms of the GPLv3 license.
-
-This part contains methods dealing with actions on documents in the doc table,
-including selection, right clicking menu, deletion, opening.
-
 '''
+
 import os
 import subprocess
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, pyqtSlot, QModelIndex

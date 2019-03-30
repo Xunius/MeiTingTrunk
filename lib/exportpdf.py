@@ -1,6 +1,8 @@
 '''
-MeiTing Trunk
+Export PDFs with annotations. This is used in importing Mendeley data.
 
+
+MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
 Copyright 2018-2019 Guang-zhi XU
@@ -9,9 +11,6 @@ This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
 You may use, distribute and modify this code under the
 terms of the GPLv3 license.
-
-Export PDFs with annotations. This is used in importing Mendeley data.
-
 '''
 
 import os

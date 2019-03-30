@@ -1,6 +1,10 @@
 '''
-MeiTing Trunk
+Handles data updating, including updates of the in-memory data dictionary from
+editings in  the meta data tabs and from DOI querying; adding docs to folders,
+and saving the in-memory data to sqlite database.
 
+
+MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
 Copyright 2018-2019 Guang-zhi XU
@@ -9,11 +13,6 @@ This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
 You may use, distribute and modify this code under the
 terms of the GPLv3 license.
-
-Handles data updating, including updates of the in-memory data dictionary from
-editings in  the meta data tabs and from DOI querying; adding docs to folders,
-and saving the in-memory data to sqlite database.
-
 '''
 
 from datetime import datetime

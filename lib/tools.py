@@ -1,7 +1,16 @@
-'''General purpose functions.
+'''
+General purpose functions.
 
-Author: guangzhi XU (xugzhi1987@gmail.com; guangzhi.xu@outlook.com)
-Update time: 2018-09-29 21:20:32.
+
+MeiTing Trunk
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
 '''
 
 import os
@@ -20,41 +29,49 @@ except:
 
 LOGGER=logging.getLogger(__name__)
 
+
 def getMinSizePolicy():
     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
             QtWidgets.QSizePolicy.Minimum)
     return sizePolicy
+
 
 def getXMinYExpandSizePolicy():
     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
             QtWidgets.QSizePolicy.Expanding)
     return sizePolicy
 
+
 def getXExpandYMinSizePolicy():
     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Minimum)
     return sizePolicy
+
 
 def getXExpandYExpandSizePolicy():
     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Expanding)
     return sizePolicy
 
+
 def getHSpacer():
     h_spacer = QtWidgets.QSpacerItem(0,0,QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Minimum)
     return h_spacer
+
 
 def getVSpacer():
     v_spacer = QtWidgets.QSpacerItem(0,0,QtWidgets.QSizePolicy.Minimum,
             QtWidgets.QSizePolicy.Expanding)
     return v_spacer
 
+
 def getHLine(parent=None):
     h_line = QtWidgets.QFrame(parent)
     h_line.setFrameShape(QtWidgets.QFrame.HLine)
     h_line.setFrameShadow(QtWidgets.QFrame.Sunken)
     return h_line
+
 
 def getVLine(parent=None):
     v_line = QtWidgets.QFrame(parent)
@@ -64,6 +81,7 @@ def getVLine(parent=None):
 
 
 class WorkerThread(QThread):
+    '''NOT IN USE'''
 
     jobdone_signal=pyqtSignal()
     def __init__(self,func,jobqueue,outqueue,parent=None):
@@ -89,6 +107,7 @@ class WorkerThread(QThread):
 
 
 class Worker(QObject):
+    '''NOT IN USE'''
     sgnFinished = pyqtSignal()
 
     def __init__(self, parent, func, jobq, outq):
@@ -125,7 +144,9 @@ class Worker(QObject):
 
         self.sgnFinished.emit()
 
+
 class Client(QObject):
+    '''NOT IN USE'''
     clientDone = pyqtSignal()
 
     def __init__(self, parent, func, jobq, outq, callback):
@@ -155,16 +176,28 @@ class Client(QObject):
         self.clientDone.emit()
 
 
-def parseAuthors(textlist):
+def parseAuthors(authorlist):
+    """Parse a list of author names
+
+    Args:
+        authorlist (list): list of author names: ['firname, lastname', ...]
+
+    Returns:
+        firstnames (list): list of first names.
+        lastnames (list): list of last names.
+        authorlist (list): list of author names.
+
+    """
     firstnames=[]
     lastnames=[]
-    for nii in textlist:
+    for nii in authorlist:
         nii=nii.split(',',1)
         lastnames.append(nii[0] if len(nii)>1 else nii[0])
         firstnames.append(nii[1] if len(nii)>1 else '')
-    authors=sqlitedb.zipAuthors(firstnames,lastnames)
+    #authors=sqlitedb.zipAuthors(firstnames,lastnames)
 
-    return firstnames,lastnames,authors
+    return firstnames,lastnames,authorlist
+
 
 def removeInvalidPathChar(path):
     '''Make dir and remove invalid windows path characters
@@ -184,7 +217,23 @@ def removeInvalidPathChar(path):
     return path
 
 
-def fuzzyMatch(jobid,id1,id2,dict1,dict2):
+def fuzzyMatch(jobid, id1, id2, dict1, dict2):
+    """Compute similarity score between 2 docs using fuzzy matching
+
+    Args:
+        jobid (int): job id.
+        id1 (int): id of doc 1.
+        id2 (int): id of doc 2.
+        dict1 (DocMeta): meta data dict of doc 1.
+        dict2 (DocMeta): meta data dict of doc 2.
+
+    Returns:
+        rec (int): 0 for success.
+        jobid (int): input jobid.
+        match_result (tuple): in the format ((id1, id2), score). Where score
+                              is an int in [0,100], higher means more similar.
+
+    """
 
     authors1=dict1['authors_l'] or ''
     authors2=dict2['authors_l'] or ''
@@ -224,7 +273,15 @@ def fuzzyMatch(jobid,id1,id2,dict1,dict2):
 
 
 def dfsCC(edges):
-    '''Get connected components in undirected graph
+    '''Get connected components in undirected graph using DFS
+
+    Args:
+        edges (list): list of vertices.
+
+    Returns:
+        ccs.values (list): list of connected components, in the format:
+            [(v1, v2, ...), (v3, v4, ...) ...],
+            each tuple is a connected component.
     '''
 
     def explore(v,cc):
@@ -257,7 +314,18 @@ def dfsCC(edges):
 
     return list(ccs.values())
 
+
 def createFolderTree(folder_dict,parent):
+    """Create a folder tree using QTreeWidget
+
+    Args:
+        folder_dict (dict): folder structure info. keys: folder id in str,
+            values: (foldername, parentid) tuple.
+        parent (QWidget): parent of QTreeWidget.
+
+    Returns:
+        folder_tree (QTreeWidget): QTreeWidget with the folder structure.
+    """
 
     def addFolder(parent,folderid,folder_dict):
 
@@ -319,6 +387,15 @@ def createFolderTree(folder_dict,parent):
 
 
 def iterTreeWidgetItems(treewidget, root=None):
+    """Iterate through all items in a QTreeWidget
+
+    Args:
+        treewidget (QTreeWidget): QTreeWidget to Iterate.
+        root (None or QTreeWidgetItem): start point.
+    Returns:
+        yield each item found.
+    """
+
     if root is None:
         root=treewidget.invisibleRootItem()
 
@@ -332,13 +409,15 @@ def iterTreeWidgetItems(treewidget, root=None):
                 stack.append(child)
 
 
-
 def autoRename(abpath):
     '''Auto rename a file to avoid overwriting an existing file
 
-    <abpath>: str, absolute path to a folder or a file to rename.
+    Args:
+        abpath (str): absolute path to a folder or a file to rename.
 
-    Return <newname>: str, new file path.
+    Returns:
+        newname (str): new file path.
+
     If no conflict found, return <abpath>;
     If conflict with existing file, return renamed file path,
     by appending "_(n)".
@@ -385,17 +464,5 @@ def autoRename(abpath):
 
     newname=os.path.join(folder,newname)
     return newname
-
-
-def iterItems(treewidget, root):
-    if root is not None:
-        stack = [root]
-        while stack:
-            parent = stack.pop(0)
-            for row in range(parent.childCount()):
-                child = parent.child(row)
-                yield child
-                if child.childCount()>0:
-                    stack.append(child)
 
 

@@ -1,6 +1,8 @@
 '''
-MeiTing Trunk
+This part contains actions filterings in the filtering widget.
 
+
+MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
 Copyright 2018-2019 Guang-zhi XU
@@ -9,10 +11,8 @@ This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
 You may use, distribute and modify this code under the
 terms of the GPLv3 license.
-
-This part contains actions filterings in the filtering widget.
-
 '''
+
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSlot
 from lib import sqlitedb

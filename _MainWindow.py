@@ -1,4 +1,9 @@
 '''
+Defines the main window GUI including the title bar, and database
+controls (creation, opening, saving, closing and switching).
+Also defines default settings and loading of settings.
+
+
 MeiTing Trunk
 
 An open source reference management tool developed in PyQt5 and Python3.
@@ -9,11 +14,6 @@ This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
 You may use, distribute and modify this code under the
 terms of the GPLv3 license.
-
-
-Defines the main window GUI including the title bar, and database
-controls (creation, opening, saving, closing and switching).
-Also defines default settings and loading of settings.
 '''
 
 import os
@@ -285,11 +285,18 @@ New session started
     def closeEvent(self,event):
 
         if self.is_loaded:
-            choice=QtWidgets.QMessageBox.question(self, 'Confirm Close',
-                    'Save and close?',
-                    QtWidgets.QMessageBox.Yes |\
-                    QtWidgets.QMessageBox.Discard |\
-                    QtWidgets.QMessageBox.Cancel)
+            if len(self.main_frame.changed_folder_ids) +\
+                    len(self.main_frame.changed_folder_ids)>0:
+                choice=QtWidgets.QMessageBox.question(self, 'Confirm Close',
+                        'Save changes and close?',
+                        QtWidgets.QMessageBox.Yes |\
+                        QtWidgets.QMessageBox.Discard |\
+                        QtWidgets.QMessageBox.Cancel)
+            else:
+                choice=QtWidgets.QMessageBox.question(self, 'Confirm Close',
+                        'Close MeiTing Trunk?',
+                        QtWidgets.QMessageBox.Yes |\
+                        QtWidgets.QMessageBox.Cancel)
         else:
             choice=QtWidgets.QMessageBox.Discard
 

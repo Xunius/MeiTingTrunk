@@ -1,6 +1,9 @@
 '''
-MeiTing Trunk
+In-memory meta data dict (DocMeta) definition.
+Sqlite database read and write functions.
 
+
+MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
 Copyright 2018-2019 Guang-zhi XU
@@ -9,11 +12,6 @@ This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
 You may use, distribute and modify this code under the
 terms of the GPLv3 license.
-
-
-In-memory meta data dict (DocMeta) definition.
-Sqlite database read and write functions.
-
 '''
 
 import os
@@ -397,7 +395,7 @@ def zipAuthors(firstnames, lastnames):
         fii=firstnames[ii]
         lii=lastnames[ii]
         if fii!='' and lii!='':
-            authors.append('%s, %s' %(lii,fii))
+            authors.append('%s, %s' %(lii.strip(),fii.strip()))
         elif fii=='' and lii!='':
             authors.append(lii)
         elif fii!='' and lii=='':
