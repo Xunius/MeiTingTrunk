@@ -309,7 +309,7 @@ New session started
         elif choice==QtWidgets.QMessageBox.Cancel:
             event.ignore()
         elif choice==QtWidgets.QMessageBox.Discard:
-            self.closeDatabaseTriggered(ask=False)
+            #self.closeDatabaseTriggered(ask=False)
             self.logger.info('settings.sync()')
             self.settings.sync()
             event.accept()

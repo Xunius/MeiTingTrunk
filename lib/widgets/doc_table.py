@@ -1,6 +1,7 @@
 '''
-MeiTing Trunk
+Widget for the doc table: a table model and a headerview.
 
+MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
 Copyright 2018-2019 Guang-zhi XU
@@ -18,7 +19,6 @@ from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, pyqtSignal,\
         pyqtSlot, QMimeData, QByteArray
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont
-import resources
 
 
 LOGGER=logging.getLogger(__name__)
@@ -27,6 +27,16 @@ LOGGER=logging.getLogger(__name__)
 
 class TableModel(QAbstractTableModel):
     def __init__(self, parent, datain, headerdata, settings):
+        '''
+        Args:
+            parent (QWidget): parent widget.
+            datain (list): data for the table, a list of lists, each
+                           element list for a row. Created by
+                           _MainFrameLoadData.prepareDocs().
+            headerdata (list): table column names.
+            settings (QSettings): application settings. See _MainWindow.py
+        '''
+
         QAbstractTableModel.__init__(self, parent)
 
         self.ncol=len(headerdata)

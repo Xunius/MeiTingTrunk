@@ -235,12 +235,8 @@ class MainFrameDataSlots:
         mtime=datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         self.logger.info('Save called. %s' %mtime)
 
-        self.status_bar.setVisible(True)
-        self.status_bar.showMessage('Saving. Please standby ...')
-        # progressbar doesn't work in the main thread?
-        self.progressbar.setVisible(True)
-        self.progressbar.setMaximum(0)
-        QtWidgets.QApplication.processEvents()
+        if len(self.changed_folder_ids)==0 and len(self.changed_doc_ids)==0:
+            return
 
         # remove duplicates
         self.changed_folder_ids=list(set(self.changed_folder_ids))
@@ -248,6 +244,13 @@ class MainFrameDataSlots:
 
         self.logger.debug('Folders to save: %s' %self.changed_folder_ids)
         self.logger.debug('Docs to save: %s' %self.changed_doc_ids)
+
+        self.status_bar.setVisible(True)
+        self.status_bar.showMessage('Saving. Please standby ...')
+        # progressbar doesn't work in the main thread?
+        self.progressbar.setVisible(True)
+        self.progressbar.setMaximum(0)
+        QtWidgets.QApplication.processEvents()
 
         #----------------Save folders first----------------
         if len(self.changed_folder_ids)>0:

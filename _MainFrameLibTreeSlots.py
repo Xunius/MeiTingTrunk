@@ -19,7 +19,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QCursor, QBrush, QColor, QIcon
 from lib import sqlitedb
-from lib.tools import iterItems
+from lib.tools import iterTreeWidgetItems
 
 
 
@@ -403,7 +403,7 @@ class MainFrameLibTreeSlots:
 
         ori_color=QBrush(QColor(255,255,255))
         root=self.libtree.invisibleRootItem()
-        for item in iterItems(self.libtree, root):
+        for item in iterTreeWidgetItems(self.libtree, root):
             item.setBackground(0, ori_color)
 
         return
