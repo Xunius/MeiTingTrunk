@@ -59,6 +59,7 @@ class TableModel(QAbstractTableModel):
         self.check_sec_indices=[self.headerdata.index(kk) for kk
                 in self.check_section.keys()]
 
+
     def rowCount(self,p):
         return len(self.arraydata)
 
@@ -70,10 +71,12 @@ class TableModel(QAbstractTableModel):
     def data(self, index, role):
         if not index.isValid():
             return QVariant()
+
         #if role == Qt.BackgroundRole:
             #if index.row()%2==0:
                 #return QBrush(QColor(230,230,249))
                 #pass
+
         if role == Qt.FontRole:
             font=self.settings.value('display/fonts/doc_table',QFont)
             if self.arraydata[index.row()][9] in [None, 'false']:
@@ -81,12 +84,14 @@ class TableModel(QAbstractTableModel):
             else:
                 font.setBold(False)
             return font
+
         if role==Qt.DisplayRole:
             if index.column() in self.icon_sec_indices:
                 return
             elif index.column()==self.headerdata.index('added'):
                 added=self.arraydata[index.row()][index.column()]
                 if added:
+                    # convert time to str
                     added=int(added[:10])
                     added=datetime.fromtimestamp(added)
                     if added.year==datetime.today().year:
@@ -98,6 +103,7 @@ class TableModel(QAbstractTableModel):
                     return
             else:
                 return QVariant(self.arraydata[index.row()][index.column()])
+
         if role==Qt.EditRole:
             return QVariant(self.arraydata[index.row()][index.column()])
 
@@ -126,8 +132,8 @@ class TableModel(QAbstractTableModel):
                 self.arraydata[index.row()][index.column()].setChecked(True)
             else:
                 self.arraydata[index.row()][index.column()].setChecked(False)
-
         self.dataChanged.emit(index,index)
+
         return True
 
 
@@ -153,6 +159,7 @@ class TableModel(QAbstractTableModel):
         else:
             if orientation==Qt.Horizontal and role==Qt.DisplayRole:
                 return self.headerdata[col]
+
         return None
 
 
@@ -171,10 +178,13 @@ class TableModel(QAbstractTableModel):
 
 
     def mimeTypes(self):
+        '''For drag/drop docs into folders'''
+
         return ['doc_table_item',]
 
 
     def mimeData(self,indices):
+        '''For drag/drop docs into folders'''
 
         LOGGER.debug('header data = %s' %self.headerdata)
         LOGGER.debug('indices = %s' %indices)
@@ -219,6 +229,25 @@ class MyHeaderView(QtWidgets.QHeaderView):
         self.setSectionsMovable(True)
 
     def initresizeSections(self):
+        '''Initial resize columns
+
+        The entire resizing logic is very confusing, I can't quite recall
+        myself.
+
+        The problem was: by default Qt doesn't let you resize each column's
+        width, if you want the table widget to expand with its container.
+        This is because there are only 4 resize modes for the headerview:
+            * QHeaderView.Interactive
+            * QHeaderView.Fixed
+            * QHeaderView.Stretch
+            * QHeaderView.ResizeToContents
+        and they are mutually exclusive, i.e. you can't combine them like
+
+            QHeaderView.Interactive | QHeaderView.Stretch
+
+        Very annoying.
+        The current solution is still not ideal.
+        '''
 
         model=self.model()
         if model is None:
@@ -243,6 +272,8 @@ class MyHeaderView(QtWidgets.QHeaderView):
 
 
     def myresize(self, *args):
+        '''Resize columns
+        '''
 
         model=self.model()
         if model is None:
@@ -303,6 +334,7 @@ class MyHeaderView(QtWidgets.QHeaderView):
 
 
     def columnFromLabel(self, label):
+        '''NOT IN USE'''
         headers=self.model().headerdata
         if label in headers:
             return headers.index(label)

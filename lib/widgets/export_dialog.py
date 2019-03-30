@@ -1,3 +1,17 @@
+'''
+Export dialog.
+
+MeiTing Trunk
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+'''
+
 import os
 import shutil
 import logging
@@ -8,7 +22,6 @@ from PyQt5.QtCore import Qt,\
         pyqtSlot
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QDialogButtonBox
-import resources
 from .. import sqlitedb
 from .. import bibparse
 from .. import risparse
@@ -20,9 +33,13 @@ LOGGER=logging.getLogger(__name__)
 
 
 
-
 class ExportDialog(QtWidgets.QDialog):
     def __init__(self,settings,parent):
+        '''
+        Args:
+            parent (QWidget): parent widget.
+            settings (QSettings): application settings. See _MainWindow.py
+        '''
 
         super(ExportDialog,self).__init__(parent=parent)
 
@@ -68,8 +85,7 @@ class ExportDialog(QtWidgets.QDialog):
         h_layout.addLayout(self.content_vlayout)
 
         if self.parent.is_loaded:
-            # What if database if empty
-
+            # What if database if empty?
             folder_dict=self.parent.main_frame.folder_dict
             self.folder_tree=createFolderTree(folder_dict,self)
         else:
@@ -80,7 +96,6 @@ class ExportDialog(QtWidgets.QDialog):
         self.export_button=self.buttons.addButton('Export',
                 QDialogButtonBox.ApplyRole)
 
-        #self.buttons.accepted.connect(self.doExport)
         self.export_button.clicked.connect(self.doExport)
         self.buttons.rejected.connect(self.reject)
 
@@ -93,6 +108,11 @@ class ExportDialog(QtWidgets.QDialog):
 
     @pyqtSlot(QtWidgets.QListWidgetItem)
     def cateSelected(self,item):
+        '''Load widgets for a selected category
+
+        Args:
+            item (QListWidgetItem): selected category item.
+        '''
 
         item_text=item.text()
         LOGGER.debug('item.text() = %s' %item_text)
@@ -115,6 +135,15 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def createFrame(self,title):
+        '''Create a template frame for a category page
+
+        Args:
+            title (str): title of the category
+
+        Returns:
+            scroll (QScrollArea): a scroll area.
+            va (QVBoxLayout): the vertical box layout used in scroll.
+        '''
 
         frame=QtWidgets.QWidget(self)
         scroll=QtWidgets.QScrollArea()
@@ -134,13 +163,20 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def clearFolderTreeState(self):
+        '''Uncheck all checkboxes in the folder tree'''
 
         for item in iterTreeWidgetItems(self.folder_tree):
             item.setCheckState(0,False)
 
         return
 
+
     def getFolderTreeState(self):
+        '''Collect check states in the folder tree
+
+        Returns:
+            folders (list): list of QTreeWidgetItem who is checked.
+        '''
 
         folders=[]
         for item in iterTreeWidgetItems(self.folder_tree):
@@ -154,6 +190,8 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def createOmitKeyGroup(self):
+        '''Create checkbox group
+        '''
 
         grid=QtWidgets.QGridLayout()
 
@@ -192,11 +230,11 @@ class ExportDialog(QtWidgets.QDialog):
 
         self.groupbox.setLayout(grid)
 
-
         return self.groupbox
 
 
     def loadCopyFileOptions(self):
+        '''Load widgets for the Copy Files category'''
 
         scroll,va=self.createFrame('Copy Document Files')
         self.current_task='copy_file'
@@ -223,6 +261,7 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def loadExportBibOptions(self):
+        '''Load widgets for the Export Bibtex category'''
 
         scroll,va=self.createFrame('Export to bibtex')
         self.bib_settings={}
@@ -267,6 +306,7 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def createPathTypeGroup(self, export_type):
+        '''Create radiobutton group for file path type selection'''
 
         groupbox=QtWidgets.QGroupBox('Use relative or absolute paths for files.')
         ha=QtWidgets.QHBoxLayout()
@@ -284,6 +324,7 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def getPathType(self):
+        '''Collect check states in the path type radiobutton group'''
 
         for rii in self.path_type_groupbox.findChildren(QtWidgets.QRadioButton):
             if rii.isChecked():
@@ -291,6 +332,7 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def getExportManner(self):
+        '''Collect check states in the export manner radiobutton group'''
 
         for box in self.radio_groupbox.findChildren(QtWidgets.QRadioButton):
             if box.isChecked():
@@ -301,6 +343,7 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def omitKeyChanged(self,on):
+        '''Store changes in the omit keys checkbox group'''
 
         self.bib_settings['omit_keys']=self.getOmitKeys()
         LOGGER.debug('omit keys = %s' %self.bib_settings['omit_keys'])
@@ -309,6 +352,7 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def omitKeysGroupChanged(self, on, groupbox):
+        '''Change check states in the omit keys checkbox group as a whole'''
 
         omit_keys=[]
 
@@ -324,6 +368,7 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def getOmitKeys(self):
+        '''Collect check states in the omit key checkbox group'''
 
         omit_keys=[]
 
@@ -335,6 +380,7 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def loadExportRISOptions(self):
+        '''Load widgets for the Export RIS category'''
 
         scroll,va=self.createFrame('Export to RIS')
         self.current_task='ris_export'
@@ -375,6 +421,7 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def loadExportZoteroOptions(self):
+        '''Load widgets for the Export Zotero category'''
 
         scroll,va=self.createFrame('Export to Zotero')
         self.current_task='zotero_export'
@@ -383,6 +430,7 @@ class ExportDialog(QtWidgets.QDialog):
 
 
     def doExportFiles(self):
+        '''Export files'''
 
         folder_dict=self.parent.main_frame.folder_dict
         folder_data=self.parent.main_frame.folder_data
@@ -403,12 +451,6 @@ class ExportDialog(QtWidgets.QDialog):
             msg.exec_()
             return
 
-        '''
-        folders=[]
-        for item in iterTreeWidgetItems(self.folder_tree):
-            if item.checkState(0):
-                folders.append(item)
-        '''
         folders=self.getFolderTreeState()
         if len(folders)==0:
             self.popUpChooseFolder()
@@ -419,9 +461,7 @@ class ExportDialog(QtWidgets.QDialog):
         job_list=[] # (jobid, source_path, target_path)
         for item in folders:
             folderid=item.data(1,0)
-
             docids=folder_data[folderid]
-
             tree=sqlitedb.getFolderTree(folder_dict,folderid)[1]
 
             LOGGER.debug('Process folder %s, id = %s, tree = %s'\
@@ -441,7 +481,6 @@ class ExportDialog(QtWidgets.QDialog):
                         oldjj=os.path.join(lib_folder,fjj)
                         job_list.append((len(job_list), oldjj, newfjj))
 
-        #import time
         def copyFunc(jobid,s,t):
             try:
                 shutil.copy(s,t)
@@ -453,11 +492,9 @@ class ExportDialog(QtWidgets.QDialog):
                 rec=1
                 result=None
 
-            #time.sleep(0.5)
             return rec,jobid,result
 
         if len(job_list)>0:
-
             thread_run_dialog=ThreadRunDialog(copyFunc,job_list,
                     show_message='Exporting Files...',max_threads=4,
                     get_results=False,
@@ -472,14 +509,6 @@ class ExportDialog(QtWidgets.QDialog):
     def doBibExport(self):
 
         #---------------Get selected folders---------------
-        '''
-        folders=[]
-        for item in iterTreeWidgetItems(self.folder_tree):
-            if item.checkState(0):
-                folderid=item.data(1,0)
-                foldername=item.data(0,0)
-                folders.append((foldername, folderid))
-        '''
         folders=[(item.data(0,0), item.data(1,0)) for item in self.getFolderTreeState()]
         if len(folders)==0:
             self.popUpChooseFolder()
@@ -588,7 +617,29 @@ class ExportDialog(QtWidgets.QDialog):
         return
 
 
-    def saveBib(self,results,folders,manner,fname,folder_data,meta_dict,citationkeys):
+    def saveBib(self, results, folders, manner, fname, folder_data, meta_dict,
+            citationkeys):
+        """Save exported bibtex text to files
+
+        Args:
+            results (list): return values of metaDictToBib().
+            folders (list): list of folders in the format [(name, folderid), ].
+            manner (str): saving manner, 'All in one': save all bib entries
+                          in a single file.
+                          'Per folder': group by folder.
+                          'Per document': per doc.
+            fname (str): if manner=='All in one', the abspath to the output
+                         bib file. Otherwise, the abspath to folder to save
+                         output bib files.
+            folder_data (dict): documents in each folder. keys: folder id in str,
+                                values: list of doc ids. To determine when
+                                a folder gets all its docs exported.
+            meta_dict (dict): meta data of all documents. keys: docid,
+                              values: DocMeta dict.
+            citationkeys (list): list of the citationkeys for each doc. Used
+                                 as the file name in 'Per document' mode.
+
+        """
 
         faillist=[]
 
@@ -689,14 +740,6 @@ class ExportDialog(QtWidgets.QDialog):
     def doRISExport(self):
 
         #---------------Get selected folders---------------
-        '''
-        folders=[]
-        for item in iterTreeWidgetItems(self.folder_tree):
-            if item.checkState(0):
-                folderid=item.data(1,0)
-                foldername=item.data(0,0)
-                folders.append((foldername, folderid))
-        '''
         folders=[(item.data(0,0), item.data(1,0)) for item in self.getFolderTreeState()]
         if len(folders)==0:
             self.popUpChooseFolder()
@@ -801,7 +844,29 @@ class ExportDialog(QtWidgets.QDialog):
         return
 
 
-    def saveRIS(self,results,folders,manner,fname,folder_data,meta_dict,citationkeys):
+    def saveRIS(self, results, folders, manner, fname, folder_data, meta_dict,
+            citationkeys):
+        """Save exported RIS text to files
+
+        Args:
+            results (list): return values of metaDictToRiIS().
+            folders (list): list of folders in the format [(name, folderid), ].
+            manner (str): saving manner, 'All in one': save all RIS entries
+                          in a single file.
+                          'Per folder': group by folder.
+                          'Per document': per doc.
+            fname (str): if manner=='All in one', the abspath to the output
+                         ris file. Otherwise, the abspath to folder to save
+                         output ris files.
+            folder_data (dict): documents in each folder. keys: folder id in str,
+                                values: list of doc ids. To determine when
+                                a folder gets all its docs exported.
+            meta_dict (dict): meta data of all documents. keys: docid,
+                              values: DocMeta dict.
+            citationkeys (list): list of the citationkeys for each doc. Used
+                                 as the file name in 'Per document' mode.
+
+        """
         faillist=[]
 
         if manner=='All in one':

@@ -1,9 +1,22 @@
+'''
+Widget for computing and displaying duplicate checking.
+
+MeiTing Trunk
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+'''
+
 import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 from PyQt5.QtGui import QBrush, QColor, QIcon, QCursor
 from PyQt5.QtWidgets import QDialogButtonBox
-import resources
 from ..tools import fuzzyMatch, dfsCC
 from .threadrun_dialog import Master
 
@@ -14,9 +27,21 @@ LOGGER=logging.getLogger(__name__)
 
 class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
-    del_doc_from_folder_signal=pyqtSignal(list, str, str, bool)
-    del_doc_from_lib_signal=pyqtSignal(list, bool)
+    del_doc_from_folder_signal=pyqtSignal(list, # docids
+            str, #foldername
+            str, #folderid
+            bool #reload_talbe
+            )
+    del_doc_from_lib_signal=pyqtSignal(list, # docids
+            bool #reload_table
+            )
+
     def __init__(self,settings,parent=None):
+        '''
+        Args:
+            parent (QWidget): parent widget.
+            settings (QSettings): application settings. See _MainWindow.py
+        '''
         super(CheckDuplicateFrame,self).__init__(parent=parent)
 
         self.settings=settings
@@ -93,7 +118,20 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
         return frame
 
 
-    def checkDuplicates(self,meta_dict,current_folder,docids1,docid2=None):
+    def checkDuplicates(self, meta_dict, current_folder, docids1, docid2=None):
+        """Start the duplicate checking among documents
+
+        Args:
+            meta_dict (dict): meta data of all documents. keys: docid,
+                              values: DocMeta dict.
+            current_folder (tuple): (foldername_in_str, folder_id_in_str).
+            docids1 (list): ids of docs in group 1.
+
+        Kwargs:
+            docid2 (int, list or None): if int or list, ids of docs in group 2,
+                then duplicate checking is done among all pairs across group 1,
+                2. If None, checking is done among all pairs in group 1.
+        """
 
         self.tree.clear()
         self.setVisible(True)
@@ -116,12 +154,25 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
 
     def prepareJoblist(self, jobid, docids1, docid2):
+        '''Prepare fuzzy matching jobs
+
+        Args:
+            jobid (int): dummy job id.
+            docids1 (list): ids of docs in group 1.
+            docid2 (int, list or None): ids of docs in group 2,
+
+        Returns:
+            rec (int): 0 for success.
+            jobid (int): dummy job id.
+            job_list (list): list of tuples, each providing the args for a
+                             fuzzyMatch() call.
+        '''
 
         n=len(docids1)
         job_list=[]
 
+        #----------------Check among docds----------------
         if docid2 is None:
-            #----------------Check among docds----------------
             for ii in range(n):
                 docii=docids1[ii]
                 for jj in range(n):
@@ -131,8 +182,8 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
                     else:
                         job_list.append((ii, docii, docjj,
                             self.meta_dict[docii], self.meta_dict[docjj]))
+        #-----------------nxm compare-----------------
         else:
-            #-----------------nxm compare-----------------
             if not isinstance(docid2, (tuple,list)):
                 # docid2 is a single doc
                 docid2=[docid2,]
@@ -152,9 +203,10 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
     @pyqtSlot()
     def jobListReady(self):
+        '''After getting all jobs, launch threads and process jobs
+        '''
 
         rec,jobid,job_list=self.master1.results[0]
-
         LOGGER.debug('rec from job list prepare = %s' %rec)
 
         if rec==0 and len(job_list)>0:
@@ -174,19 +226,20 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
 
     def collectResults(self):
+        '''Collect matching results'''
 
         new=self.master2.results
         for recii,jobidii,(kii,vii) in new:
             self.scores_dict[kii]=vii
 
         LOGGER.info('Duplicate search results collected.')
-
         self.addResultToTree()
 
         return
 
 
     def addResultToTree(self):
+        '''Display results'''
 
         hi_color=self.settings.value('display/folder/highlight_color_br',
                 QBrush)
@@ -207,6 +260,7 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
             return item
 
         edges=[kk for kk,vv in self.scores_dict.items() if vv>=self.min_score]
+        # if no duplicates, return
         if len(edges)==0:
             self.noDupLabel.setVisible(True)
             LOGGER.info('No duplicate found.')
@@ -226,7 +280,6 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
             for ii,cii in enumerate(comps):
                 cii.sort()
                 groups[cii[0]]=cii[1:]
-
         else:
             if not isinstance(self.docid2, (tuple,list)):
                 # docid2 is a single doc
@@ -286,6 +339,7 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
 
     def docTreeMenu(self,pos):
+        '''Right click menu in the document tree'''
 
         menu=QtWidgets.QMenu()
 
@@ -307,13 +361,12 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
     def delDocs(self):
 
         LOGGER.debug('current_folder = %s' %str(self.current_folder))
-
         foldername,folderid=self.current_folder
         sel_rows=self.tree.selectedItems()
+
         if len(sel_rows)>0:
 
             docids=[int(ii.data(6,0)) for ii in sel_rows]
-
             LOGGER.debug('Selected docids = %s.' %docids)
 
             if folderid=='-1':

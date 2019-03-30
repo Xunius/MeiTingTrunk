@@ -1,3 +1,17 @@
+'''
+Import dialog.
+
+MeiTing Trunk
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+'''
+
 import os
 import shutil
 import logging
@@ -14,8 +28,6 @@ LOGGER=logging.getLogger(__name__)
 
 
 class ResultDialog(QtWidgets.QDialog):
-
-    #open_lib_signal=pyqtSignal()
 
     def __init__(self,main_text='',info_text='',detailed_text='',parent=None):
         super(self.__class__,self).__init__(parent=parent)
@@ -123,12 +135,16 @@ class ResultDialog(QtWidgets.QDialog):
 
 
 
-
 class ImportDialog(QtWidgets.QDialog):
 
-    open_lib_signal=pyqtSignal(str)
+    open_lib_signal=pyqtSignal(str)  # sqlite file name
 
     def __init__(self,settings,parent):
+        '''
+        Args:
+            parent (QWidget): parent widget.
+            settings (QSettings): application settings. See _MainWindow.py
+        '''
 
         super(ImportDialog,self).__init__(parent=parent)
 
@@ -190,6 +206,11 @@ class ImportDialog(QtWidgets.QDialog):
 
     @pyqtSlot(QtWidgets.QListWidgetItem)
     def cateSelected(self,item):
+        '''Load widgets for a selected category
+
+        Args:
+            item (QListWidgetItem): selected category item.
+        '''
 
         item_text=item.text()
         LOGGER.debug('item.text() = %s' %item_text)
@@ -209,7 +230,16 @@ class ImportDialog(QtWidgets.QDialog):
         return
 
 
-    def createFrame(self,title):
+    def createFrame(self, title):
+        '''Create a template frame for a category page
+
+        Args:
+            title (str): title of the category
+
+        Returns:
+            scroll (QScrollArea): a scroll area.
+            va (QVBoxLayout): the vertical box layout used in scroll.
+        '''
 
         frame=QtWidgets.QWidget(self)
         scroll=QtWidgets.QScrollArea()
@@ -229,6 +259,7 @@ class ImportDialog(QtWidgets.QDialog):
 
 
     def loadImportMendeley(self):
+        '''Load Mendeley import category page'''
 
         scroll,va=self.createFrame('Import From Mendeley')
         self.current_task='mendeley'
@@ -281,29 +312,34 @@ class ImportDialog(QtWidgets.QDialog):
         label.setTextFormat(Qt.RichText)
         va.addWidget(label)
 
-        ha=QtWidgets.QHBoxLayout()
-
         self.mendeley_file_le=QtWidgets.QLineEdit()
-
         button=QtWidgets.QPushButton(self)
         button.setText('Open')
         button.clicked.connect(lambda: self.importFileChooseButtonClicked(
             self.mendeley_file_le))
 
+        ha=QtWidgets.QHBoxLayout()
         ha.addWidget(self.mendeley_file_le)
         ha.addWidget(button)
 
         va.addLayout(ha)
 
         #----------------------Notice----------------------
-
+        va.addWidget(getHLine())
         va.addStretch()
+
+        label=QtWidgets.QLabel('''Notice: Import will try to export the annotations (highlights, notes) you made in the Mendeley library. <br/>
+                "Cananical" documents (those don't belong to any folder) will be put to the "Default" folder.''')
+        label.setTextFormat(Qt.RichText)
+        va.addWidget(label)
+
 
         return scroll
 
 
     @pyqtSlot(QtWidgets.QLineEdit)
     def outFileChooseButtonClicked(self, le):
+        '''Prompt to select output sqlite file name and set it to lineedit'''
 
         storage_folder=self.settings.value('saving/storage_folder',str)
         fname = QtWidgets.QFileDialog.getSaveFileName(self,
@@ -327,6 +363,7 @@ class ImportDialog(QtWidgets.QDialog):
 
     @pyqtSlot(QtWidgets.QLineEdit)
     def importFileChooseButtonClicked(self, le):
+        '''Prompt to select input sqlite file name and set it to lineedit'''
 
         fname = QtWidgets.QFileDialog.getOpenFileName(self,
                 'Select your Mendeley sqlite database file',
@@ -341,6 +378,7 @@ class ImportDialog(QtWidgets.QDialog):
 
 
     def loadImportZotero(self):
+        '''Load Zotero import category page'''
 
         scroll,va=self.createFrame('Import From Zotero')
         self.current_task='zotero'
@@ -349,6 +387,7 @@ class ImportDialog(QtWidgets.QDialog):
 
 
     def loadImportEndNote(self):
+        '''Load EndNote import category page'''
 
         scroll,va=self.createFrame('Import From EndNote')
         self.current_task='endnote'
@@ -371,7 +410,14 @@ class ImportDialog(QtWidgets.QDialog):
 
 
     def doMendeleyImport1(self):
+        '''Do Mendeley import, part 1
 
+        This part is responsible for collecting arguments from widgets, and
+        feed into importMendeleyPreprocess(). See import_mendeley.py for more
+        details.
+        '''
+
+        #-----------Get output sqlite file name-----------
         file_out_name=self.lib_name_le.text()
         if file_out_name=='':
             self.popUpGiveName()
@@ -387,6 +433,7 @@ class ImportDialog(QtWidgets.QDialog):
             if choice==QtWidgets.QMessageBox.No:
                 return
 
+        #------------Get input sqlite file name------------
         file_in_name=self.mendeley_file_le.text()
         if file_in_name=='':
             self.popUpGiveFile()
@@ -426,14 +473,22 @@ class ImportDialog(QtWidgets.QDialog):
                 post_process_func=None,
                 parent=self)
 
-        self.thread_run_dialog1.master.all_done_signal.connect(self.doMendeleyImport2)
+        self.thread_run_dialog1.master.all_done_signal.connect(
+                self.doMendeleyImport2)
         self.thread_run_dialog1.exec_()
 
         return
 
 
     def doMendeleyImport2(self):
+        '''Do Mendeley import, part 2
 
+        After connecting to both sqlite databases, this part is responsible for
+        copying document data over, and copying attachment files.
+        See import_mendeley.importMendeleyCopyData() for more details.
+        '''
+
+        #-------------Get results from part 1-------------
         file_out_name=self.lib_name_le.text()
         step1_results=self.thread_run_dialog1.results[0]
         rec, _, dbin, dbout, docids,lib_folder,lib_name=step1_results
@@ -447,6 +502,7 @@ class ImportDialog(QtWidgets.QDialog):
             msg.exec_()
             LOGGER.warning('Failed to run importMendeleyPreprocess().')
 
+            #----------------Remove sqlite file----------------
             if os.path.exists(file_out_name):
                 os.remove(file_out_name)
                 LOGGER.info('Remove sqlite database file %s' %file_out_name)
@@ -457,7 +513,6 @@ class ImportDialog(QtWidgets.QDialog):
             return
 
         rename_files=self.settings.value('saving/rename_files', 1)
-
         LOGGER.debug('rename_files = %s' %rename_files)
 
         #-----------------Prepare job list-----------------
@@ -466,11 +521,13 @@ class ImportDialog(QtWidgets.QDialog):
             self.job_list.append((ii, dbin, dbout, lib_name, lib_folder,
                 rename_files, ii, docii))
 
+        # this last job signals a sqlite commit
         self.job_list.append((-1, dbin, dbout, lib_name, lib_folder,
             rename_files, ii, None))
 
         #------------------Run in thread------------------
-        self.thread_run_dialog2=ThreadRunDialog(import_mendeley.importMendeleyCopyData,
+        self.thread_run_dialog2=ThreadRunDialog(
+                import_mendeley.importMendeleyCopyData,
                 self.job_list,
                 show_message='Transfering data...',
                 max_threads=1,
@@ -480,9 +537,8 @@ class ImportDialog(QtWidgets.QDialog):
                 post_process_func=None,
                 parent=self)
 
-        self.thread_run_dialog2.master.all_done_signal.connect(lambda: self.postImport(
-            file_out_name))
-
+        self.thread_run_dialog2.master.all_done_signal.connect(
+                lambda: self.postImport(file_out_name))
         self.thread_run_dialog2.exec_()
 
         return
@@ -490,9 +546,15 @@ class ImportDialog(QtWidgets.QDialog):
 
     @pyqtSlot()
     def postImport(self, file_name):
+        '''Show feedbacks after Mendeley import
 
+        Args:
+            file_name (str): output sqlite file path.
+        '''
+
+        #-------------Get results from part 2-------------
         step2_results=self.thread_run_dialog2.master.results
-        rec=step2_results[-1][0]
+        rec=step2_results[-1][0]  # last step rec
         LOGGER.info('return code of importMendeleyCopyData: %s' %rec)
 
         #---------Succeeded in committing database---------
@@ -512,21 +574,25 @@ class ImportDialog(QtWidgets.QDialog):
                             %fail_fileii)
                     pdf_fail_list.append(entryii)
 
+            #-----------------Show failed jobs-----------------
             if len(fail_list)>0 or len(pdf_fail_list)>0:
 
                 msg=ResultDialog()
                 msg.setText('Errors encountered.')
 
+                # only doc transfer failures
                 if len(fail_list)>0 and len(pdf_fail_list)==0:
                     msg.setInformativeText('Failed to import some documents.')
                     fail_str='\n'.join(fail_list)
                     msg.setDetailedText(fail_str)
 
+                # only pdf annotation export failures
                 elif len(fail_list)==0 and len(pdf_fail_list)>0:
                     msg.setInformativeText('Failed to export annotations in some PDFs.')
                     fail_str='\n'.join(pdf_fail_list)
                     msg.setDetailedText(fail_str)
 
+                # both doc transfer and pdf annotation export failures
                 elif len(fail_list)>0 and len(pdf_fail_list)>0:
                     msg.setInformativeText('''
                     Failed to import some documents. <br/>
@@ -538,17 +604,20 @@ class ImportDialog(QtWidgets.QDialog):
 
                 choice=msg.exec_()
 
+                # open new library
                 if choice==1:
                     LOGGER.info('Emitting open lib signal. File = %s' %file_name)
                     self.thread_run_dialog2.accept()
                     self.reject()
                     self.open_lib_signal.emit(file_name)
 
+            #------------------No failed jobs------------------
             else:
                 choice=QtWidgets.QMessageBox.question(self, 'Import completed',
                         'Open new library?',
                         QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
+                # open new library
                 if choice==QtWidgets.QMessageBox.Yes:
                     LOGGER.info('Emitting open lib signal. File = %s' %file_name)
                     self.thread_run_dialog2.accept()
@@ -568,6 +637,7 @@ class ImportDialog(QtWidgets.QDialog):
             dirname,fname=os.path.split(file_name)
             lib_folder=os.path.join(dirname,os.path.splitext(fname)[0])
 
+            #----------------Remove sqlite file----------------
             if os.path.exists(file_name):
                 os.remove(file_name)
                 LOGGER.info('Remove sqlite database file %s' %file_name)

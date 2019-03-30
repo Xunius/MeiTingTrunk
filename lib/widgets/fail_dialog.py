@@ -1,3 +1,19 @@
+'''
+A dialog to replace QMessageBox to display some error messages.
+The default QMessageBox is very difficult to control its size.
+
+
+MeiTing Trunk
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+'''
+
 from PyQt5.QtGui import QFont
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QDialogButtonBox, QStyle
@@ -8,6 +24,14 @@ class FailDialog(QtWidgets.QDialog):
     create_fail_summary=pyqtSignal()
 
     def __init__(self,main_text='',info_text='',detailed_text='',parent=None):
+        '''
+        Args:
+            main_text (str): main text set by setText().
+            info_text (str): text set by setInformativeText().
+            detailed_text (str): text set by setDetailedText().
+            parent (QWidget): parent widget.
+        '''
+
         super(self.__class__,self).__init__(parent=parent)
 
         self.main_text=main_text

@@ -1,3 +1,18 @@
+'''
+Widgets for the meta data tab.
+
+
+MeiTing Trunk
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+'''
+
 import os
 import re
 import logging
@@ -5,7 +20,6 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, QPoint, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QFontMetrics
 from PyQt5.QtWidgets import QDialogButtonBox
-import resources
 from .. import sqlitedb
 from ..tools import getHLine, getXExpandYMinSizePolicy, parseAuthors,\
         getXExpandYExpandSizePolicy
@@ -17,12 +31,22 @@ LOGGER=logging.getLogger(__name__)
 
 class AdjustableTextEdit(QtWidgets.QTextEdit):
 
-    edited_signal=pyqtSignal(str)
+    edited_signal=pyqtSignal(str)  # field name
     def __init__(self,field,parent=None):
+        '''
+        Args:
+            field (str): field name of this textedit, e.g. title, year ...
+            parent (QWidget): parent widget.
+
+        This modified QTextEdit doesn't show scroll bar, but adjusts height
+        acorrding to contents and width.
+        '''
+
         super(AdjustableTextEdit,self).__init__(parent)
 
         self.field=field # field name, e.g. title, year, tags_l ...
         self.fm=QFontMetrics(self.font())
+        # pop up tooltip
         self.tooltip_label=QtWidgets.QLabel()
         self.tooltip_label.setWindowFlags(Qt.SplashScreen)
         self.tooltip_label.setMargin(3)
@@ -41,9 +65,8 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
 
     def focusInEvent(self,event):
-        #self.setToolTip('tooltip')
-        #print('focusInEvent: QCursor.pos()', QCursor.pos())
-        #QtWidgets.QToolTip.showText(QCursor.pos(), 'tooltip')
+
+        #-----------------Pop up tool tip-----------------
         if self.label_enabled and self.tooltip_text:
             self.tooltip_label.move(self.mapToGlobal(
                 QPoint(0, self.height()-120)))
@@ -55,6 +78,7 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
     def focusOutEvent(self,event):
 
+        #------------------Close tool tip------------------
         if self.document().isModified():
             self.edited_signal.emit(self.field)
         if self.label_enabled:
@@ -69,6 +93,7 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
 
     def resizeTextEdit(self):
+        '''Resize edit'''
 
         docheight=self.document().size().height()
         margin=self.document().documentMargin()
@@ -81,11 +106,20 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
 class AdjustableTextEditWithFold(AdjustableTextEdit):
 
-    fold_change_signal=pyqtSignal(str,bool)
+    fold_change_signal=pyqtSignal(str,bool)   # field, isfold
     def __init__(self,field,parent=None):
+        '''
+        Args:
+            field (str): field name of this textedit, e.g. title, year ...
+            parent (QWidget): parent widget.
+
+        This modified QTextEdit add a fold button next to the edit, and fold/
+        unfold long texts.
+        '''
+
         super(AdjustableTextEditWithFold,self).__init__(parent)
 
-        self.field=field
+        self.field=field  # why I can't remove this?
         self.is_fold=False
         self.fold_above_nl=3
 
@@ -110,7 +144,9 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
         ''' %(int(font_height/2), max(1,font_height-2))
         )
 
+
     def getNumberOfLines(self):
+        '''Compute the number of lines currently showing'''
 
         fm=self.fontMetrics()
         doc=self.document()
@@ -120,7 +156,9 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
         return nlines
 
+
     def resizeTextEdit(self):
+        '''Resize and show/hide fold button'''
 
         if self.getNumberOfLines()<self.fold_above_nl:
             self.fold_button.setVisible(False)
@@ -142,7 +180,9 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
         return
 
+
     def foldText(self):
+        '''Fold text to show only the 1st line'''
 
         nlines=self.getNumberOfLines()
         if nlines>=self.fold_above_nl:
@@ -157,6 +197,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
 
     def unfoldText(self):
+        '''Expand text to show all lines'''
 
         docheight=self.document().size().height()
         margin=self.document().documentMargin()
@@ -171,24 +212,23 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
 class FileLineEdit(QtWidgets.QLineEdit):
     def __init__(self,parent=None):
-        super(FileLineEdit,self).__init__(parent)
+        '''
+        Args:
+            parent (QWidget): parent widget.
 
+        This modified QLineEdit accepts a file path as its text, and displays
+        an elided version of the file name part of the path.
+        '''
+
+        super(FileLineEdit,self).__init__(parent)
         self.fm=QFontMetrics(self.font())
 
     def setText(self,text,elide=True):
+
         self.full_text=text
         self.short_text=os.path.split(self.full_text)[1]
-        #self.short_text=text
 
-        '''
-        if elide:
-            super(FileLineEdit,self).setText(
-                self.fm.elidedText(self.short_text,Qt.ElideRight,self.width()))
-        else:
-            super(FileLineEdit,self).setText(self.short_text)
-        '''
-        #super(FileLineEdit,self).setText(text)
-        # It seems that it requires a 20 pixel space
+        # It seems that it requires a 20 pixel extra space
         super(FileLineEdit,self).setText(
              self.fm.elidedText(self.short_text,Qt.ElideRight,self.width()-20))
 
@@ -196,7 +236,7 @@ class FileLineEdit(QtWidgets.QLineEdit):
 
 
     def text(self):
-        #return self.full_text
+
         return self.fm.elidedText(self.short_text,Qt.ElideRight,self.width()-20)
 
 
@@ -212,7 +252,14 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
     meta_edited=pyqtSignal(list) # send field names
     update_by_doi_signal=pyqtSignal(sqlitedb.DocMeta)
+
     def __init__(self,settings,parent=None):
+        '''
+        Args:
+            parent (QWidget): parent widget.
+            settings (QSettings): application settings. See _MainWindow.py
+        '''
+
         super(MetaTabScroll,self).__init__(parent)
 
         self.settings=settings
@@ -225,7 +272,10 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         frame.setStyleSheet('background-color:white')
         self.setWidgetResizable(True)
         self.setWidget(frame)
-        self.fields_dict={}  # key: field name, value: textedit or lineedit
+        # key: field name, consistent with the keys in DocMeta
+        # value: textedit or lineedit
+        # therefore this dict is a translated version of DocMeta (subset)
+        self.fields_dict={}
         self.fold_dict={} # key: field name, value: is textedit folded
 
         #-------------------Add widgets-------------------
@@ -337,10 +387,16 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
     @pyqtSlot(str)
     def fieldEdited(self,field):
+        '''Collect edited fields and send meta_edited signal
+
+        Args:
+            field (str): field name
+
+        Now it appears a bit redundant.
+        '''
 
         LOGGER.debug('Changed field = %s' %field)
         LOGGER.debug('meta_dict = %s' %self._meta_dict)
-
         self.meta_edited.emit([field,])
 
         return
@@ -355,13 +411,21 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         return qlabel
 
 
-    def createOneLineField(self,label,key,font_name,grid_layout):
+    def createOneLineField(self, label, key, font_name, grid_layout):
+        '''Create a label and a textedit and put in a row
+
+        Args:
+            label (str): text to display in the label.
+            key (str): field name for the textedit, this is also the key in
+                       the DocMeta dict.
+            font_name (str): string specifying the font used in the textedit.
+            grid_layout (QGridLayout): grid layout to add the label and textedit.
+        '''
 
         te=AdjustableTextEdit(key)
         qlabel=QtWidgets.QLabel(label)
         qlabel.setStyleSheet(self.label_color)
 
-        #if font_name in self.font_dict:
         te.setFont(self.settings.value('display/fonts/%s' %font_name, QFont))
 
         rnow=grid_layout.rowCount()
@@ -376,16 +440,24 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         return
 
 
-    def createMultiLineField(self,label,key,font_name):
+    def createMultiLineField(self, label, key, font_name):
+        '''Create a label and a foldable textedit in 2 rows
+
+        Args:
+            label (str): text to display in the label.
+            key (str): field name for the textedit, this is also the key in
+                       the DocMeta dict.
+            font_name (str): string specifying the font used in the textedit.
+        '''
 
         te=AdjustableTextEditWithFold(key)
         te.setFrameStyle(QtWidgets.QFrame.NoFrame)
         self.fold_dict[key]=te.is_fold
         te.fold_change_signal.connect(self.foldChanged)
 
-        #if font_name in self.font_dict:
         te.setFont(self.settings.value('display/fonts/%s' %font_name, QFont))
 
+        # set tooltip texts
         if key=='authors_l':
             te.label_enabled=True
             te.tooltip_text='lastname, firstname\nlastname, firstname\n...'
@@ -408,24 +480,24 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
 
     def createFileField(self,text=None,font_name='meta_keywords'):
+        '''Create lineedit for an attachment file and a associated del button
+
+        Kwargs:
+            text (str or None): file path.
+            font_name (str): string specifying the font used in the textedit.
+        '''
 
         h_layout=QtWidgets.QHBoxLayout()
 
         le=FileLineEdit()
         le.setReadOnly(True)
-
         le.setFont(self.settings.value('display/fonts/%s' %font_name, QFont))
 
         if text is not None:
-            print('# <createFileField>: file text=',text)
             le.setText(text)
 
         if le not in self.fields_dict['files_l']:
-            LOGGER.debug('before add file le to fields_dict. %s'\
-                    %self.fields_dict['files_l'])
             self.fields_dict['files_l'].append(le)
-            LOGGER.debug('after add file le to fields_dict. %s'\
-                    %self.fields_dict['files_l'])
 
         # create a del file button
         button=QtWidgets.QPushButton()
@@ -458,6 +530,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         LOGGER.debug('Insert file %s entry at %s' %(text,self.file_insert_idx))
 
+        # keep a record of the current idx in the vertical layout
         self.v_layout.insertLayout(self.file_insert_idx,h_layout)
         self.file_insert_idx+=1
 
@@ -465,6 +538,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
 
     def delFileButtonClicked(self, idx=None):
+        '''Delete an attachment file in response to del button click'''
 
         self.delFileField(idx)
         self.fieldEdited('files_l')
@@ -473,6 +547,12 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
 
     def delFileField(self,idx=None):
+        '''Delete an attachment file or all files
+
+        Kwargs:
+            idx (int or None): if int, the index of the file in
+                fields_dict['files_l'] list to delete. If None, delete all files.
+        '''
 
         def delFile(le):
             self.v_layout.removeWidget(le.del_button)
@@ -481,6 +561,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             le.del_button.deleteLater()
             # NOTE: you can't del a element in list if it is iterating
             #self.fields_dict['files_l'].remove(le)
+            # keep a record of the current idx in the vertical layout
             self.file_insert_idx-=1
 
         if idx is None:
@@ -498,6 +579,8 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
 
     def addFileButtonClicked(self):
+        '''Add an attachment file, in response to add file button click
+        '''
 
         if hasattr(self.parent, '_current_doc') and self.parent._current_doc is None:
             return
@@ -508,23 +591,30 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         if fname:
 
             LOGGER.info('Add new file = %s' %fname)
-
             self.createFileField(fname)
             self.fieldEdited('files_l')
 
         return
 
 
-    def foldChanged(self,field,isfold):
+    @pyqtSlot(str, bool)
+    def foldChanged(self, field, isfold):
+        '''Store fold state of a field
+
+        Args:
+            field (str): name of field whose fold state is changed.
+            isfold (bool): textedit is folded or not.
+        '''
 
         self.fold_dict[field]=isfold
-
         LOGGER.debug('Field = %s. isfold = %s' %(field, isfold))
 
         return
 
 
     def doiSearchButtonClicked(self):
+        '''Query meta data via doi in response to doi button click
+        '''
 
         doi_pattern=re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
                 re.DOTALL|re.UNICODE)
@@ -552,17 +642,23 @@ class MetaTabScroll(QtWidgets.QScrollArea):
                     return
 
                 meta_dict=_crossref.crossRefToMetaDict(doi_dict)
-
                 LOGGER.debug('Got meta_dict from doi:' %meta_dict)
                 LOGGER.debug('citationkey = %s' %meta_dict['citationkey'])
 
-                #self.update_by_doi_signal.emit(meta_dict)
                 self.exchangeMetaDict(meta_dict)
 
         return
 
 
-    def exchangeMetaDict(self,new_dict):
+    def exchangeMetaDict(self, new_dict):
+        '''Update the meta data dict of current doc with info from doi query
+
+        Args:
+            new_dict (DocMeta): meta data dict created in doi query.
+
+        This will compare the meta data from doi query with existing ones,
+        if any difference found, update.
+        '''
 
         docid=self.parent._current_doc
         if docid is None:
@@ -572,6 +668,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         fields=[]
 
         for kk,vv in old_dict.items():
+            # don't update these fields
             if kk in ['id', 'read', 'favourite', 'added', 'files_l',
                     'folders_l', 'tags_l', 'deletionPending', 'notes',
                     'abstract' ]:
@@ -582,6 +679,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         if 'firstNames_l' in fields or 'lastName_l' in fields:
             fields.append('authors_l') # updateTableData monitors this
+            # What's point of this?
 
         LOGGER.debug('Changed fields = %s' %fields)
 
@@ -595,6 +693,8 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
     @property
     def _meta_dict(self):
+        '''Create a meta dict from the info in the lineedit/textedit widgets
+        '''
 
         def parseToList(text):
             result=[]
@@ -605,10 +705,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
                     result.append(tii)
             return result
 
-        #result_dict={}
         result_dict=sqlitedb.DocMeta()
         for kk,vv in self.fields_dict.items():
-            # field should be a list
+            # field should be a list if key ends with '_l'
             if kk.endswith('_l'):
                 if isinstance(vv,(tuple,list)):
                     values=[]
@@ -626,10 +725,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
                 elif isinstance(vv,QtWidgets.QTextEdit):
                     if kk=='authors_l':
                         names=parseToList(vv.toPlainText())
-                        firsts,lasts,authors=parseAuthors(names)
+                        firsts,lasts,_=parseAuthors(names)
                         result_dict['firstNames_l']=firsts
                         result_dict['lastName_l']=lasts
-                        #result_dict['authors_l']=authors
                     else:
                         result_dict[kk]=parseToList(vv.toPlainText())
                 elif isinstance(vv,QtWidgets.QLineEdit):
@@ -646,8 +744,11 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         return result_dict
 
 
-
 class MetaDataEntryDialog(QtWidgets.QDialog):
+    '''Previous as a dialog for manually adding a doc.
+    NOT IN USE currently. Can't quite recall, maybe it's the doi updating
+    part that is rather tricky.
+    '''
 
     def __init__(self,settings,parent=None):
         super(MetaDataEntryDialog,self).__init__(parent)
@@ -707,7 +808,16 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
 class NoteTextEdit(QtWidgets.QTextEdit):
 
     note_edited_signal=pyqtSignal()
+
     def __init__(self,settings,parent=None):
+        '''
+        Args:
+            parent (QWidget): parent widget.
+            settings (QSettings): application settings. See _MainWindow.py
+
+        A slightly moded QTextEdit to displaying and editing note.
+        Will have to add more formatting features later.
+        '''
 
         self.settings=settings
 

@@ -286,7 +286,7 @@ New session started
 
         if self.is_loaded:
             if len(self.main_frame.changed_folder_ids) +\
-                    len(self.main_frame.changed_folder_ids)>0:
+                    len(self.main_frame.changed_doc_ids)>0:
                 choice=QtWidgets.QMessageBox.question(self, 'Confirm Close',
                         'Save changes and close?',
                         QtWidgets.QMessageBox.Yes |\
@@ -302,7 +302,7 @@ New session started
 
         if choice==QtWidgets.QMessageBox.Yes:
             self.saveDatabaseTriggered()
-            self.closeDatabaseTriggered(ask=False)
+            #self.closeDatabaseTriggered(ask=False)
             self.logger.info('settings.sync()')
             self.settings.sync()
             event.accept()
