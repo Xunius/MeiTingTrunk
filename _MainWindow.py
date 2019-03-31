@@ -27,7 +27,7 @@ from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 import _MainFrame
 from lib import sqlitedb
 from lib.widgets import PreferenceDialog, ExportDialog, ThreadRunDialog,\
-        ImportDialog
+        ImportDialog, AboutDialog
 
 from main import __version__
 
@@ -261,7 +261,7 @@ New session started
 
         #--------------------Help menu--------------------
         self.help_menu=self.menu_bar.addMenu('&Help')
-        self.help_menu.addAction('&Help')
+        self.help_menu.addAction('&About')
 
         #-----------------Connect signals-----------------
         create_database_action.triggered.connect(self.createDatabaseTriggered)
@@ -570,9 +570,11 @@ New session started
             return False
 
 
-    @pyqtSlot()
+    @pyqtSlot(QtWidgets.QAction)
     def helpMenuTriggered(self,action):
         self.logger.info('action=%s, action.text()=%s' %(action,action.text()))
+        dia=AboutDialog(__version__, self)
+        dia.exec_()
         return
 
 
