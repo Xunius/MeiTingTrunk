@@ -1,3 +1,18 @@
+'''
+Preference dialog.
+
+
+MeiTing Trunk
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+'''
+
 import os
 import logging
 from collections import OrderedDict
@@ -5,7 +20,6 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, QPoint, pyqtSlot, QRect
 from PyQt5.QtGui import QFont, QPainter
 from PyQt5.QtWidgets import QStyle, QStyleOptionSlider, QDialogButtonBox
-import resources
 from ..tools import getHLine, getXMinYExpandSizePolicy
 
 LOGGER=logging.getLogger(__name__)
@@ -15,6 +29,12 @@ LOGGER=logging.getLogger(__name__)
 class PreferenceDialog(QtWidgets.QDialog):
 
     def __init__(self,settings,parent=None):
+        '''
+        Args:
+            parent (QWidget): parent widget.
+            settings (QSettings): application settings. See _MainWindow.py
+        '''
+
         super(PreferenceDialog,self).__init__(parent=parent)
 
         self.settings=settings
@@ -88,6 +108,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
     @pyqtSlot()
     def applyChanges(self):
+        '''Write changes to settings'''
 
         LOGGER.info('Changes: %s' %self.new_values)
 
@@ -98,7 +119,6 @@ class PreferenceDialog(QtWidgets.QDialog):
         if 'saving/auto_save_min' in self.new_values:
             interval=self.settings.value('saving/auto_save_min',1,int)
             self.parent.main_frame.auto_save_timer.setInterval(interval*60*1000)
-
             LOGGER.info('Set auto save timer to %s' %interval)
 
         self.new_values={}
@@ -117,16 +137,21 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         #sqlitedb.saveFoldersToDatabase(self.db,self.folder_dict,
                 #self.settings.value('saving/storage_folder'))
+        # UPDATE: after changing the file paths relative, seems no need to
+        # do the above things.
 
         return
 
 
-
     @pyqtSlot(QtWidgets.QListWidgetItem)
     def cateSelected(self,item):
+        '''Load widgets for a selected category
+
+        Args:
+            item (QListWidgetItem): selected category item.
+        '''
 
         item_text=item.text()
-
         LOGGER.info('item.text() = %s' %item.text())
 
         if self.content_vlayout.count()>1:
@@ -149,6 +174,15 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def createFrame(self,title):
+        '''Create a template frame for a category page
+
+        Args:
+            title (str): title of the category
+
+        Returns:
+            scroll (QScrollArea): a scroll area.
+            va (QVBoxLayout): the vertical box layout used in scroll.
+        '''
 
         frame=QtWidgets.QWidget(self)
         scroll=QtWidgets.QScrollArea()
@@ -168,6 +202,8 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def createOmitKeyGroup(self):
+        '''Create checkbox group
+        '''
 
         grid=QtWidgets.QGridLayout()
 
@@ -206,11 +242,11 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         self.groupbox.setLayout(grid)
 
-
         return self.groupbox
 
 
     def loadDisplayOptions(self):
+        '''Load widgets for the Display category'''
 
         scroll,va=self.createFrame('Select Fonts')
 
@@ -233,25 +269,29 @@ class PreferenceDialog(QtWidgets.QDialog):
 
     @pyqtSlot(QtWidgets.QListWidgetItem)
     def chooseFont(self,item):
-        item_text=item.text()
+        '''Choose a font
 
+        Args:
+            item (QListWidgetItem): item for field font change is applying to
+        '''
+
+        item_text=item.text()
         LOGGER.info('item.text() = %s' %item.text())
 
         font_setting_name=self.font_dict[item_text]
         default=self.settings.value(font_setting_name, QFont)
-
         new_font,isok=QtWidgets.QFontDialog.getFont(default,
                 caption='Choose Font for %s' %item_text)
 
         if isok:
             self.new_values[font_setting_name]=new_font
-
             LOGGER.info('Font after change = %s' %new_font)
 
         return
 
 
     def loadSavingsOptions(self):
+        '''Load widgets for the Savings category'''
 
         scroll, va=self.createFrame('Rename Files')
 
@@ -334,6 +374,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def chooseSaveFolder(self):
+        '''Prompt for dir choose and store new value'''
 
         fname=QtWidgets.QFileDialog.getExistingDirectory(self,
             'Choose a folder to save documents and database')
@@ -346,6 +387,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def changeRenameFiles(self,on):
+        '''Store the check state of rename file checkbox'''
 
         on=1 if on>0 else 0 # for some reason <on> keeps giving me 2
         self.new_values['saving/rename_files']=on
@@ -355,6 +397,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def changeSavingInterval(self,value):
+        '''Store the value on the auto saving interval slider'''
 
         LOGGER.info('Change auto saving interval to %s' %value)
         self.new_values['saving/auto_save_min']=value
@@ -363,6 +406,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def loadBibExportOptions(self):
+        '''Load widgets for the bibtex Export category'''
 
         scroll, va=self.createFrame('Bibtex Export')
         self.groupbox=self.createOmitKeyGroup()
@@ -381,6 +425,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def loadRISExportOptions(self):
+        '''Load widgets for the RIS Export category'''
 
         scroll, va=self.createFrame('RIS Export')
 
@@ -397,6 +442,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def createPathTypeGroup(self, export_type):
+        '''Create radiobutton group for file path type selection'''
 
         groupbox=QtWidgets.QGroupBox('Use relative or absolute paths for files.')
         ha=QtWidgets.QHBoxLayout()
@@ -416,6 +462,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
     @pyqtSlot(bool, str)
     def pathTypeChanged(self,on, export_type):
+        '''Collect check states in the path type radiobutton group'''
 
         LOGGER.debug('export_type = %s' %export_type)
         for rii in self.radio_groupbox.findChildren(QtWidgets.QRadioButton):
@@ -427,6 +474,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def omitKeyChanged(self,on):
+        '''Store changes in the omit keys checkbox group'''
 
         self.new_values['export/bib/omit_fields']=self.getOmitKeys()
 
@@ -434,6 +482,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def omitKeysGroupChanged(self, on, groupbox):
+        '''Change check states in the omit keys checkbox group as a whole'''
 
         omit_keys=[]
 
@@ -451,6 +500,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def getOmitKeys(self):
+        '''Collect check states in the omit key checkbox group'''
 
         omit_keys=[]
 
@@ -462,6 +512,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def loadCitationStyleOptions(self):
+        '''Load widgets for the Citaiton Style category'''
 
         scroll, va=self.createFrame('Citation Styles')
         va.addStretch()
@@ -470,6 +521,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def loadMiscellaneousOptions(self):
+        '''Load widgets for the Miscellaneous category'''
 
         scroll, va=self.createFrame('Auto Open')
 
@@ -523,6 +575,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def changeAutoOpenLast(self,on):
+        '''Store the check state of the auto open checkbox'''
 
         if on:
             self.new_values['file/auto_open_last']=1
@@ -535,6 +588,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def changeRecentNumber(self,value):
+        '''Store the value on the recent open slider'''
 
         LOGGER.info('Change recent database number to %s' %value)
         self.new_values['file/recent_open_num']=value
@@ -543,6 +597,7 @@ class PreferenceDialog(QtWidgets.QDialog):
 
 
     def changeDuplicateMinScore(self,value):
+        '''Store the value in the duplicate minimum score spinbox'''
 
         LOGGER.info('Change min duplicate score to %s' %value)
         self.new_values['duplicate_min_score']=value
@@ -553,6 +608,18 @@ class PreferenceDialog(QtWidgets.QDialog):
 class LabeledSlider(QtWidgets.QWidget):
     def __init__(self, minimum, maximum, interval=1, orientation=Qt.Horizontal,
             labels=None, parent=None):
+        '''Slider widget with labels
+
+        Args:
+            minimum (int): min value.
+            maximum (int): max value.
+            interval (int): interval.
+        Kwargs:
+            orientation (int): orientation.
+            labels (str or None): labels.
+            parent (QWidget or None): parent widget.
+        '''
+
         super(LabeledSlider, self).__init__(parent=parent)
 
         levels=range(minimum, maximum+interval, interval)

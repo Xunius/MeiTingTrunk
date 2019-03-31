@@ -453,7 +453,14 @@ def searchMultipleLike2(db, text, field_list, folderid, desend=False):
         desend (bool): whether to include subfolders (by walking done folder
                        tree) of given folder.
 
-    Returns: rec (list): list of doc ids matching search.
+    Returns: rec (list): list of doc ids matching search, together with the
+        field names where the match is found. E.g.
+
+        [(1, 'authors,title'),
+         (10, 'title,keywords'),
+         (214, 'abstract,tag'),
+         ...
+        ]
     """
 
     cin=db.cursor()

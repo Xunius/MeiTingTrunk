@@ -1,11 +1,25 @@
+'''
+Widgets for search computation and result display.
+
+
+MeiTing Trunk
+An open source reference management tool developed in PyQt5 and Python3.
+
+Copyright 2018-2019 Guang-zhi XU
+
+This file is distributed under the terms of the
+GPLv3 licence. See the LICENSE file for details.
+You may use, distribute and modify this code under the
+terms of the GPLv3 license.
+'''
+
 from collections import OrderedDict
 import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize, QRegExp, QRect
-from PyQt5.QtGui import QBrush, QColor, QIcon, QCursor, QFont, \
-        QSyntaxHighlighter, QTextCharFormat, QPen
-from PyQt5.QtWidgets import QDialogButtonBox
-import resources
+from PyQt5.QtGui import QBrush, QColor, QFont, \
+        QSyntaxHighlighter, QTextCharFormat
+#from PyQt5.QtWidgets import QDialogButtonBox
 from .. import sqlitefts
 from ..tools import iterTreeWidgetItems
 
@@ -15,6 +29,10 @@ LOGGER=logging.getLogger(__name__)
 
 
 class DummyWidget(QtWidgets.QWidget):
+    '''A dummy widget to hold the fold button, text label and textedit for a
+    search result detail row
+    '''
+
     resize_sig=pyqtSignal(QSize)
 
     def __init__(self,parent=None):
@@ -27,6 +45,7 @@ class DummyWidget(QtWidgets.QWidget):
 
 
 class HighLighter(QSyntaxHighlighter):
+    '''Highlight the search term in textedit'''
 
     def __init__(self,match_words,parent=None):
         super(HighLighter,self).__init__(parent)
@@ -54,9 +73,13 @@ class HighLighter(QSyntaxHighlighter):
 
 
 class AdjustableTextEdit(QtWidgets.QTextEdit):
+    '''This modified QTextEdit doesn't show scroll bar, but adjusts height
+    acorrding to contents and width.
+    '''
 
     td_size_sig=pyqtSignal(QSize)
     def __init__(self,parent=None):
+
         super(AdjustableTextEdit,self).__init__(parent)
 
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -67,6 +90,7 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
 
     def resizeTextEdit(self):
+        '''Set textedit height according to contents'''
 
         docheight=self.document().size().height()
         margin=self.document().documentMargin()
@@ -77,6 +101,7 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
 
     def resizeEvent(self,e):
+        '''Send the current size via signal'''
 
         super(AdjustableTextEdit,self).resizeEvent(e)
         self.td_size_sig.emit(QSize(self.sizeHint().width(),
@@ -86,6 +111,7 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
 
     def setHighlightText(self, text_list):
+        '''Highlight the search term'''
 
         if not isinstance(text_list, (tuple, list)):
             text_list=[text_list,]
@@ -95,6 +121,7 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
 
 class AdjustableTextEditWithFold(AdjustableTextEdit):
+    '''Adjustable textedit with a fold button to fold/expand long texts'''
 
     fold_size_sig=pyqtSignal(QSize)
     def __init__(self,parent=None):
@@ -135,6 +162,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
 
     def resizeTextEdit(self):
+        '''Show/hide fold button according to number of lines in text'''
 
         if self.getNumberOfLines()<self.fold_above_nl:
             self.fold_button.setVisible(False)
@@ -185,6 +213,10 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
 
 class BorderItemDelegate(QtWidgets.QStyledItemDelegate):
+    '''To show borders in treewidget item.
+    NOT IN USE
+    '''
+
     def __init__(self, parent, borderRole):
         super(BorderItemDelegate, self).__init__(parent)
         self.borderRole = borderRole
@@ -232,10 +264,16 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
     search_done_sig=pyqtSignal()
     #hide_doc_sig=pyqtSignal()
-    create_folder_sig=pyqtSignal(str,list)
-    MyBorderRole = Qt.UserRole + 1
+    create_folder_sig=pyqtSignal(str,list)  # search_text, docids
+    MyBorderRole = Qt.UserRole + 1  # not in use
 
     def __init__(self,settings,parent=None):
+        '''Handles text searching and result display
+
+        Args:
+            parent (QWidget): parent widget.
+            settings (QSettings): application settings. See _MainWindow.py
+        '''
         super(SearchResFrame,self).__init__(parent=parent)
 
         self.settings=settings
@@ -252,8 +290,10 @@ class SearchResFrame(QtWidgets.QScrollArea):
         #----------------Create treewidget----------------
         self.tree=QtWidgets.QTreeWidget(self)
         self.tree.setColumnCount(6)
+        # put doc id in column 5. This is later used to identify selected docs.
         self.tree.setColumnHidden(5,True)
 
+        # column widths
         headers=OrderedDict([
             ('Fold all', 70),
             ('Authors', 150),
@@ -278,7 +318,6 @@ class SearchResFrame(QtWidgets.QScrollArea):
         self.tree.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.tree.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
         #self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
-        #self.tree.customContextMenuRequested.connect(self.docTreeMenu)
         self.tree.itemSelectionChanged.connect(self.changeBGColor)
 
         self.is_all_fold=False
@@ -292,6 +331,8 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
 
     def createClearSearchFrame(self):
+        '''Create a header frame showing search term, results count and control
+        buttons'''
 
         frame=QtWidgets.QFrame()
         frame.setStyleSheet('background: rgb(235,225,190)')
@@ -323,6 +364,25 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
 
     def addFieldRows(self, parent, fields, meta, search_text):
+        '''Add detail rows to a matched doc
+
+        Args:
+            parent (QTreeWidgetItem): the header item showing a matched doc.
+            fields (list): list of matched field names, including 'authors',
+                           'title', 'keywords' etc..
+            meta (DocMeta): meta data dict for the matched doc.
+            search_text (str): searched text.
+
+        A dummy container widget is created, inside which a grid layout is used
+        to hold a number of rows, each being a matched field, e.g. 'authors',
+        'title', etc.. Each row consists of a fold button to fold long texts,
+        a label showing the field name, and a textedit showing the field value,
+        with the <search_text> highlighted.
+
+        The dummy container is then put in a QTreeWidgetItem by calling
+        setItemWidget(). The item is added as a child of <parent>, which
+        shows the matched doc in similar format as the doc table.
+        '''
 
         font=self.settings.value('display/fonts/doc_table',QFont)
 
@@ -335,7 +395,6 @@ class SearchResFrame(QtWidgets.QScrollArea):
         crow=grid.rowCount()
 
         for fii in fields:
-
             if fii=='authors':
                 textii=', '.join(meta['authors_l'])
             elif fii=='title':
@@ -377,8 +436,14 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
 
     def changeBGColor(self):
+        '''Change background color of QTreeWidgetItem
 
-        #------------Remove highlights for all------------
+        This makes the header row of a doc, and all detail rows (child items
+        of the header row) appeared to be selected together, by giving them
+        a highlight color. Selecting either the header row or any child row
+        makes them all highlighted.
+        '''
+
         sel_rows=self.tree.selectedItems()
         hlcolor=self.tree.palette().highlight().color().name()
 
@@ -392,6 +457,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
                 # I thought this would results in endless loop, but it doesn't!
                 item.setSelected(True)
 
+            # child detail rows has item widget
             wii=self.tree.itemWidget(item,0)
             if wii:
                 if idii in docids:
@@ -402,17 +468,31 @@ class SearchResFrame(QtWidgets.QScrollArea):
         return
 
 
-    def search(self,db,text,field_list,folderid,meta_dict,desend):
+    def search(self, db, text, field_list, folderid, meta_dict, desend):
+        """Start search
+
+        Args:
+            db (sqlite connection): sqlite connection.
+            text (str): searched term.
+            field_list (list): list of field names to search. Including
+                'Authors', 'Title', etc.. The complete list see _MainFrame.py.
+            folderid (str): id the folder. Search is done within docs in this
+                 folder, also controled by <desend>.
+            meta_dict (dict): dict of all meta data in the library.
+            desend (bool): whether to walk down the folder tree and include
+                 subfolders of folder <folderid>.
+
+        """
 
         self.tree.clear()
         self.setVisible(True)
         self.meta_dict=meta_dict
         self.search_text=text
         self.desend=desend
-
         LOGGER.info('search text = %s. is desend = %s' %(text, desend))
 
-        search_res=sqlitefts.searchMultipleLike2(db, text, field_list, folderid, desend)
+        search_res=sqlitefts.searchMultipleLike2(db, text, field_list,
+                folderid, desend)
         self.label.setText('%d searches results related to "%s"'\
                 %(len(search_res),text))
         self.addResultToTree(text, search_res)
@@ -421,8 +501,26 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
 
     def addResultToTree(self, search_text, search_res):
+        '''Add search results to a QTreeWidget for display
+
+        Args:
+            search_text (str): searched term.
+            search_res (list): list of doc ids matching search, together with
+                the field names where the match is found. E.g.
+                        [(1, 'authors,title'),
+                         (10, 'title,keywords'),
+                         (214, 'abstract,tag'),
+                         ...
+                        ]
+        '''
 
         def createEntry(docid, gid):
+            '''Create an entry for a matched doc
+
+            Args:
+                docid (int): id of matched doc.
+                gid (int): counter of the current doc.
+            '''
 
             meta=self.meta_dict[docid]
             item=QtWidgets.QTreeWidgetItem([
@@ -435,6 +533,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
                 ])
             return item
 
+        #-------------------If no match-------------------
         if len(search_res)==0:
             self.noMatchLabel.setVisible(True)
             LOGGER.info('Not result found.')
@@ -442,19 +541,20 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
         self.noMatchLabel.setVisible(False)
 
-        #--------------------Get groups--------------------
+        #-------------Create entries for docs-------------
         for ii,recii in enumerate(search_res):
             docii, fieldii=recii
-            fieldii=list(set(fieldii.split(',')))
-
+            fieldii=list(set(fieldii.split(','))) # str to list
             itemii=createEntry(docii, str(ii+1))
             self.tree.addTopLevelItem(itemii)
 
             # add group members
-            self.addFieldRows(itemii, fieldii, self.meta_dict[docii], search_text)
+            self.addFieldRows(itemii, fieldii, self.meta_dict[docii],
+                    search_text)
 
         self.tree.expandAll()
 
+        # highlight header rows
         hi_color=self.settings.value('display/folder/highlight_color_br',
                 QBrush).color().name()
 
@@ -466,13 +566,14 @@ class SearchResFrame(QtWidgets.QScrollArea):
         }
         ''' %hi_color)
 
-        self.search_done_sig.emit()
+        self.search_done_sig.emit() # trigger main_frame.status_bar.clearMessage()
 
         return
 
 
     @pyqtSlot()
     def createFolder(self):
+        '''Send signal to create a folder for selected search results'''
 
         sel_rows=self.tree.selectedItems()
         if len(sel_rows)>0:
@@ -480,9 +581,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
             for ii in sel_rows:
                 docids.append(int(ii.data(5,0)))
             docids=list(set(docids))
-
             LOGGER.info('Selected docids=%s.' %docids)
-
             self.create_folder_sig.emit(self.search_text, docids)
 
         return
@@ -490,6 +589,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
     @pyqtSlot(int)
     def headerSectionClicked(self,idx):
+        '''Expand/fold all docs on clicking header 0'''
 
         if idx==0:
             if self.is_all_fold:
