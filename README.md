@@ -9,7 +9,7 @@ An open source reference management tool developed in PyQt5 and Python3.
 
 ### Folders
 
-* Oragnize documents in a folder tree, with arbirary level of folder nesting.
+* Oragnize documents in a folder tree, with arbitrary level of folder nesting.
 * Add a document to multiple folders without taking up duplicate storage.
 
 ### Import format
@@ -88,7 +88,7 @@ Major features that are still lacking (I greatly appreciate any help with any of
 * Full text searching inside PDFs.
 * Import from Zotero and EndNote.
 * Other document types aside articles and books.
-* Packaing into a format suitable for a few mainstream Linux software management tools.
+* Packaging into a format suitable for a few mainstream Linux package management tools.
 * Of cource, any stability or performance improvements.
 
 
