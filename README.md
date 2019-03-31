@@ -47,7 +47,8 @@ An open source reference management tool developed in PyQt5 and Python3.
 
 ## Screenshots
 
-Main interface.
+Main interface
+(https://user-images.githubusercontent.com/8076931/55284312-b651c700-53a6-11e9-9478-cb6ab8e89cf3.png)
 
 Bulk export.
 
