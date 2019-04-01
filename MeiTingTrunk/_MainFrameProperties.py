@@ -13,7 +13,7 @@ You may use, distribute and modify this code under the
 terms of the GPLv3 license.
 '''
 
-from lib import sqlitedb
+from .lib import sqlitedb
 
 
 class MainFrameProperties:

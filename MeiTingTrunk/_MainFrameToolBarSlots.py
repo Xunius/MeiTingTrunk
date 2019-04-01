@@ -18,10 +18,10 @@ terms of the GPLv3 license.
 
 from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5 import QtWidgets
-from lib import sqlitedb
-from lib import bibparse, risparse
-from lib import retrievepdfmeta
-from lib.widgets import FailDialog, ThreadRunDialog
+from .lib import sqlitedb
+from .lib import bibparse, risparse
+from .lib import retrievepdfmeta
+from .lib.widgets import FailDialog, ThreadRunDialog
 import logging
 
 

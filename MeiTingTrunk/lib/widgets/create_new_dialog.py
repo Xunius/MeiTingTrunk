@@ -6,7 +6,6 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QRegExp
 from PyQt5.QtWidgets import QDialogButtonBox
 from PyQt5.QtGui import QFont, QRegExpValidator
-import resources
 from .. import sqlitedb
 from .. import bibparse
 from .. import risparse

@@ -64,7 +64,7 @@ Currently only tested in Linux.
 
 * python3+
 * PyQt5
-* pdfminer
+* pdfminer.six
 * PyPDF2
 * beautifulsoup4
 * bibtexparser

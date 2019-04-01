@@ -19,10 +19,10 @@ import subprocess
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, pyqtSlot, QModelIndex
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QFont, QBrush, QColor, QCursor, QIcon
-from lib import sqlitedb
-from lib import bibparse, risparse
-from lib.tools import parseAuthors
-from lib.widgets import Master, FailDialog
+from .lib import sqlitedb
+from .lib import bibparse, risparse
+from .lib.tools import parseAuthors
+from .lib.widgets import Master, FailDialog
 
 
 class MainFrameDocTableSlots:

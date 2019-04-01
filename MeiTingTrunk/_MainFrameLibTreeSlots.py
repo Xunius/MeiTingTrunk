@@ -18,8 +18,8 @@ trashing, and restoring from trash.
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QCursor, QBrush, QColor, QIcon
-from lib import sqlitedb
-from lib.tools import iterTreeWidgetItems
+from .lib import sqlitedb
+from .lib.tools import iterTreeWidgetItems
 
 
 

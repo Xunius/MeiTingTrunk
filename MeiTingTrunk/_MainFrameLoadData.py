@@ -84,9 +84,9 @@ terms of the GPLv3 license.
 
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
-from lib import sqlitedb
-from lib import bibparse
-from lib.tools import getHLine
+from .lib import sqlitedb
+from .lib import bibparse
+from .lib.tools import getHLine
 
 
 

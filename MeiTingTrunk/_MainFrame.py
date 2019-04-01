@@ -46,12 +46,12 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 
-import _MainFrameLoadData, _MainFrameDataSlots, _MainFrameToolBarSlots,\
+from . import _MainFrameLoadData, _MainFrameDataSlots, _MainFrameToolBarSlots,\
         _MainFrameLibTreeSlots, _MainFrameFilterListSlots, _MainFrameDocTableSlots,\
         _MainFrameMetaTabSlots, _MainFrameOtherSlots, _MainFrameProperties
-from lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy, \
+from .lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy, \
         getXExpandYMinSizePolicy, getXExpandYExpandSizePolicy, getHLine
-from lib.widgets import MyTreeWidget, TableModel,\
+from .lib.widgets import MyTreeWidget, TableModel,\
         MyHeaderView, MetaTabScroll, CheckDuplicateFrame, NoteTextEdit,\
         SearchResFrame
 
@@ -535,6 +535,10 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         tv.doubleClicked.connect(self.docDoubleClicked)
         tv.setAlternatingRowColors(True)
+
+        # NOTE: this seems to be change somewhere between PyQt5.6.0 and
+        # PyQt5.12.1 that the latter default to setWordWrap(True)
+        tv.setWordWrap(False)
 
         tv.setStyleSheet('''alternate-background-color: rgb(230,230,249);
                 background-color: none''')

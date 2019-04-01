@@ -1,0 +1,8 @@
+PyQt5
+pdfminer.six
+pypdf2
+beautifulsoup4
+fuzzywuzzy
+bibtexparser
+crossrefapi
+RISparser

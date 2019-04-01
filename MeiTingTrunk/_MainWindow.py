@@ -24,12 +24,14 @@ import pathlib
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QSettings, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
-import _MainFrame
-from lib import sqlitedb
-from lib.widgets import PreferenceDialog, ExportDialog, ThreadRunDialog,\
+from . import _MainFrame
+from . import resources
+from .lib import sqlitedb
+from .lib.widgets import PreferenceDialog, ExportDialog, ThreadRunDialog,\
         ImportDialog, AboutDialog
 
-from main import __version__
+#from . import __version__
+from .version import __version__
 
 
 # default setting for bibtex export

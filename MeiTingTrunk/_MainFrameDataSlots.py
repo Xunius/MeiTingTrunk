@@ -19,8 +19,8 @@ from datetime import datetime
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QBrush
 from PyQt5 import QtWidgets
-from lib import sqlitedb
-from lib import widgets
+from .lib import sqlitedb
+from .lib import widgets
 
 
 

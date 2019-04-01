@@ -15,7 +15,7 @@ terms of the GPLv3 license.
 
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSlot
-from lib import sqlitedb
+from .lib import sqlitedb
 
 
 class MainFrameFilterListSlots:
