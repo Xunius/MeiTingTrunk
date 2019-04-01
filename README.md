@@ -77,6 +77,39 @@ Currently only tested in Linux.
 * crossrefapi
 * RISparser
 
+## Install
+
+## install using pip
+
+
+```
+pip install meitingtrunk
+```
+
+Then launch it in the terminal with
+
+
+```
+$ meitingtrunk
+```
+
+## Manual install
+
+You can clone this repo
+
+```
+git clone https://github.com/Xunius/MeiTingTrunk
+```
+
+and launch it with
+
+```
+$ cd MeiTingTrunk
+$ python -m MeiTingTrunk.main
+```
+
+Check out the dependency list if any module is missing in your python environment.
+
 
 ## Contribution
 
