@@ -9,7 +9,7 @@ An open source reference management tool developed in PyQt5 and Python3.
 
 ### Folders
 
-* Oragnize documents in a folder tree, with arbirary level of folder nesting.
+* Oragnize documents in a folder tree, with arbitrary level of folder nesting.
 * Add a document to multiple folders without taking up duplicate storage.
 
 ### Import format
@@ -47,15 +47,20 @@ An open source reference management tool developed in PyQt5 and Python3.
 
 ## Screenshots
 
-Main interface.
+Main interface
+![](https://user-images.githubusercontent.com/8076931/55284312-b651c700-53a6-11e9-9478-cb6ab8e89cf3.png)
 
 Bulk export.
+![](https://user-images.githubusercontent.com/8076931/55284318-d5e8ef80-53a6-11e9-9db9-560082253c2e.png)
 
 Duplicate checking results.
+![](https://user-images.githubusercontent.com/8076931/55284321-e4cfa200-53a6-11e9-8b6f-9e686d339acc.png)
 
 Meta data searching.
+![](https://user-images.githubusercontent.com/8076931/55284338-324c0f00-53a7-11e9-97a1-cd0e197ec012.png)
 
 Actions on documents.
+![](https://user-images.githubusercontent.com/8076931/55284334-23fdf300-53a7-11e9-9e34-01a1ae514a72.png)
 
 
 ## Platforms and Dependencies
@@ -75,18 +80,15 @@ Currently only tested in Linux.
 
 ## Contribution
 
-This software is still in its very early stage. Please consider helping
-by trying it out, sending issues, suggestions, ideas or contributing code.
+This software is still in its very early stage. Please consider helping by trying it out, sending issues, suggestions, ideas or contributing code.
 
-Major features that are still lacking (I greatly appreciate any help with
-any of them):
+Major features that are still lacking (I greatly appreciate any help with any of them):
 
-* Format citations into various citation styles, in a format suitable to paste into word
-editors.
+* Format citations into various citation styles, in a format suitable to paste into word editors.
 * Full text searching inside PDFs.
 * Import from Zotero and EndNote.
 * Other document types aside articles and books.
-* Packaing into a format suitable for a few mainstream Linux software management tools.
+* Packaging into a format suitable for a few mainstream Linux package management tools.
 * Of cource, any stability or performance improvements.
 
 
