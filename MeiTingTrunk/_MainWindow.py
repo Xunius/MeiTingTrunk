@@ -461,6 +461,10 @@ New session started
         self.db=db
         # read and parse data
         meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
+
+        # clear 'Opening database' message. This has to happen before loadLibTree()
+        # otherwise table row message will be cleared.
+        self.main_frame.status_bar.clearMessage()
         # load data into GUI
         self.main_frame.loadLibTree(db,meta_dict,folder_data,folder_dict)
         #self.main_frame.progressbar.setVisible(False)
