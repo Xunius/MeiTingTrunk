@@ -359,7 +359,7 @@ class MainFrameDocTableSlots:
             self.logger.info('OS = %s, file_man = %s' %(current_os, file_man))
 
         elif current_os=='Darwin':
-            file_man='open'
+            file_man='open -R'
             self.logger.info('OS = %s, file_man = %s' %(current_os, file_man))
 
         #----------------Open file manager----------------
