@@ -15,6 +15,7 @@ terms of the GPLv3 license.
 '''
 
 import os
+import platform
 import subprocess
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, pyqtSlot, QModelIndex
 from PyQt5 import QtWidgets
@@ -288,7 +289,18 @@ class MainFrameDocTableSlots:
         NOTE: need to re-write this for Windows version.
         """
 
+        current_os=platform.system()
+        if current_os=='Linux':
+            open_command='xdg-open'
+        elif current_os=='Darwin':
+            open_command='open'
+        elif current_os=='Windows':
+            raise Exception("Currently only support Linux and Mac.")
+        else:
+            raise Exception("Currently only support Linux and Mac.")
+
         self.logger.info('docids = %s' %docids)
+        self.logger.info('OS = %s, open command = %s' %(current_os, open_command))
         lib_folder=self.settings.value('saving/current_lib_folder',str)
 
         for docii in docids:
@@ -307,7 +319,7 @@ class MainFrameDocTableSlots:
 
             self.logger.debug('docid = %s. file_path = %s' %(docii, file_pathii))
 
-            prop=subprocess.call(('xdg-open', file_pathii))
+            prop=subprocess.call((open_command, file_pathii))
             if prop==0:
                 # set read to True
                 self.meta_dict[docii]['read']='true'
@@ -332,12 +344,23 @@ class MainFrameDocTableSlots:
         NOTE: need to re-write this for Windows verion.
         """
 
+        current_os=platform.system()
+        if current_os not in ['Linux', 'Darwin']:
+            self.logger.exception('Currently only support Linux and Mac.')
+            raise Exception("Currently only support Linux and Mac.")
+
         self.logger.info('docids = %s' %docids)
 
-        #------------Get default file mananger------------
-        prop=subprocess.Popen(['xdg-mime','query','default','inode/directory'],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        file_man=prop.communicate()[0].decode('ascii').strip().replace('.desktop','')
+        if current_os=='Linux':
+            #------------Get default file mananger------------
+            prop=subprocess.Popen(['xdg-mime','query','default','inode/directory'],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            file_man=prop.communicate()[0].decode('ascii').strip().replace('.desktop','')
+            self.logger.info('OS = %s, file_man = %s' %(current_os, file_man))
+
+        elif current_os=='Darwin':
+            file_man='open'
+            self.logger.info('OS = %s, file_man = %s' %(current_os, file_man))
 
         #----------------Open file manager----------------
         lib_folder=self.settings.value('saving/current_lib_folder',str)

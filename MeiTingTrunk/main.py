@@ -123,6 +123,10 @@ LOG_CONFIG={
 # [y] del prints
 # add doc table sort idx to settings
 # master control on the statusbar, show a diff message after done if not close_on_finish
+# disable save lib, close lib when not loaded
+# add doc adding to Edit or File?
+# use open instead of xdg-open in Mac
+# auto renaming bib, ris files when meta data is empty
 
 def main(args=None):
 
