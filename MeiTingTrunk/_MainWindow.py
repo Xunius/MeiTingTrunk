@@ -183,8 +183,8 @@ New session started
         create_database_action=self.file_menu.addAction('Create New Library')
         open_database_action=self.file_menu.addAction('Open Library')
         self.recent_open_menu=self.file_menu.addMenu('Open Recent')
-        save_database_action=self.file_menu.addAction('Save Library')
-        close_database_action=self.file_menu.addAction('Close Library')
+        self.save_database_action=self.file_menu.addAction('Save Library')
+        self.close_database_action=self.file_menu.addAction('Close Library')
         self.file_menu.addSeparator()
         create_backup_action=self.file_menu.addAction('Create Backup')
         quit_action=self.file_menu.addAction('Quit')
@@ -192,15 +192,15 @@ New session started
         create_database_action.setIcon(QIcon.fromTheme('document-new'))
         open_database_action.setIcon(QIcon.fromTheme('document-open'))
         self.recent_open_menu.setIcon(QIcon.fromTheme('document-open-recent'))
-        save_database_action.setIcon(QIcon.fromTheme('document-save'))
-        close_database_action.setIcon(QIcon.fromTheme('call-stop'))
+        self.save_database_action.setIcon(QIcon.fromTheme('document-save'))
+        self.close_database_action.setIcon(QIcon.fromTheme('call-stop'))
         create_backup_action.setIcon(QIcon.fromTheme('document-send'))
         quit_action.setIcon(QIcon.fromTheme('window-close'))
 
         create_database_action.setShortcut('Ctrl+Shift+n')
         open_database_action.setShortcut('Ctrl+o')
-        save_database_action.setShortcut('Ctrl+s')
-        close_database_action.setShortcut('Ctrl+w')
+        self.save_database_action.setShortcut('Ctrl+s')
+        self.close_database_action.setShortcut('Ctrl+w')
         quit_action.setShortcut('Ctrl+q')
 
         #---------------Populate open recent---------------
@@ -260,6 +260,8 @@ New session started
         self.tool_menu.addAction(self.export_action)
         if not self.is_loaded:
             self.export_action.setEnabled(False)
+            self.save_database_action.setEnabled(False)
+            self.close_database_action.setEnabled(False)
 
         #--------------------Help menu--------------------
         self.help_menu=self.menu_bar.addMenu('&Help')
@@ -268,8 +270,8 @@ New session started
         #-----------------Connect signals-----------------
         create_database_action.triggered.connect(self.createDatabaseTriggered)
         open_database_action.triggered.connect(self.openDatabaseTriggered)
-        save_database_action.triggered.connect(self.saveDatabaseTriggered)
-        close_database_action.triggered.connect(self.closeDatabaseTriggered)
+        self.save_database_action.triggered.connect(self.saveDatabaseTriggered)
+        self.close_database_action.triggered.connect(self.closeDatabaseTriggered)
         preference_action.triggered.connect(self.preferenceTriggered)
         self.import_action.triggered.connect(self.importTriggered)
         self.export_action.triggered.connect(self.exportTriggered)
@@ -517,6 +519,8 @@ New session started
 
         self.import_action.setEnabled(True)
         self.export_action.setEnabled(True)
+        self.save_database_action.setEnabled(True)
+        self.close_database_action.setEnabled(True)
 
         # add to recent list
         recent=self.settings.value('file/recent_open',[],str)
@@ -560,6 +564,8 @@ New session started
 
             self.import_action.setEnabled(False)
             self.export_action.setEnabled(False)
+            self.save_database_action.setEnabled(False)
+            self.close_database_action.setEnabled(False)
 
             self.current_lib=None
             self.current_lib_folder=None
