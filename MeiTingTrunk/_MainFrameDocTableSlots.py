@@ -359,7 +359,7 @@ class MainFrameDocTableSlots:
             self.logger.info('OS = %s, file_man = %s' %(current_os, file_man))
 
         elif current_os=='Darwin':
-            file_man='open -R'
+            file_man='open'
             self.logger.info('OS = %s, file_man = %s' %(current_os, file_man))
 
         #----------------Open file manager----------------
@@ -370,7 +370,10 @@ class MainFrameDocTableSlots:
 
             self.logger.debug('docid = %s. file_path = %s' %(docii, file_pathii))
 
-            prop=subprocess.call((file_man, file_pathii))
+            if current_os=='Darwin':
+                prop=subprocess.call((file_man, '-R', file_pathii))
+            else:
+                prop=subprocess.call((file_man, file_pathii))
 
         return
 
