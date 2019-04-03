@@ -34,7 +34,8 @@ setuptools.setup(
             'fuzzywuzzy',
             'bibtexparser',
             'crossrefapi',
-            'RISparser'
+            'RISparser',
+            'send2trash'
             ],
         python_requires='>=3',
         #package_data={'sample': ['

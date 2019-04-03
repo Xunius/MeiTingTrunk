@@ -21,6 +21,7 @@ import re
 from datetime import datetime
 import sqlite3
 import logging
+from send2trash import send2trash
 from collections import MutableMapping
 try:
     from . import bibparse
@@ -1016,12 +1017,15 @@ def createNewDatabase(file_path):
     return dbout, dirname, lib_name
 
 
-def metaDictToDatabase(db, docid, meta_dict_all, meta_dict, lib_folder, rename_files):
+def metaDictToDatabase(db, docid, meta_dict_all, meta_dict, lib_folder,
+        rename_files):
     """Save document changes to sqlite
 
     Args:
         db (sqlite connection): sqlite connection.
         docid (int): id of doc to save changes.
+        meta_dict_all (dict): meta data of all documents. keys: docid,
+            values: DocMeta dict.
         meta_dict (DocMeta): meta data dict.
         lib_folder (str): abspath to the folder of the library. By design
                           this should point to the folder CONTAINING the
@@ -1030,6 +1034,8 @@ def metaDictToDatabase(db, docid, meta_dict_all, meta_dict, lib_folder, rename_f
                             for using original file name.
 
     Returns: rec (int): 0 if success, None otherwise.
+             reload_doc (bool): if True, call loadDocTable() to refresh changes
+                                in the 'files_l' field later.
 
     3 types of changes are handled in this function:
         * insertion: <docid> is not found in sqlite, addToDatabase() is called.
@@ -1289,6 +1295,8 @@ def addToDatabase(db, docid, meta_dict, lib_folder, rename_files):
                             for using original file name.
 
     Returns: rec (int): 0 if success, None otherwise.
+             reload_doc (bool): if True, call loadDocTable() to refresh changes
+                                in the 'files_l' field later.
     """
 
     LOGGER.info('Adding doc to database. docid = %s' %docid)
@@ -1314,9 +1322,9 @@ def addToDatabase(db, docid, meta_dict, lib_folder, rename_files):
     if len(meta_dict['files_l'])>0:
         rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files)
         LOGGER.debug('rec of insertToDocumentFiles = %s' %rec)
-        reload_docs=True
+        reload_doc=True
     else:
-        reload_docs=False
+        reload_doc=False
 
     #------------------Update folder------------------
     rec=insertToTable(db, 'DocumentFolders',
@@ -1354,7 +1362,7 @@ def addToDatabase(db, docid, meta_dict, lib_folder, rename_files):
 
     LOGGER.info('Done adding doc to database.')
 
-    return 0, reload_docs
+    return 0, reload_doc
 
 
 def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files):
@@ -1369,6 +1377,8 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files):
                           sqlite database file.
         rename_files (int): 1 for renaming attachment files when saving, 0
                             for using original file name.
+             reload_doc (bool): if True, call loadDocTable() to refresh changes
+                                in the 'files_l' field later.
 
     Returns: rec (int): 0 if success, None otherwise.
     """
@@ -1442,16 +1452,17 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files):
                 absii=os.path.join(lib_folder,fii)
                 if os.path.exists(absii):
                     LOGGER.info('Deleting file from disk %s' %absii)
-                    os.remove(absii)
+                    #os.remove(absii)
+                    send2trash(absii)
 
         LOGGER.debug('Need to update files.')
         delFromTable(db, 'DocumentFiles', docid)
         rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files)
         LOGGER.debug('rec of insertToDocumentFiles=%s' %rec)
 
-        reload_docs=True
+        reload_doc=True
     else:
-        reload_docs=False
+        reload_doc=False
 
     #-----------------Update keywords-----------------
     if set(old_meta['keywords_l']) != set(meta_dict['keywords_l']):
@@ -1516,7 +1527,7 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files):
 
     LOGGER.info('Done updating doc to database.')
 
-    return 0, reload_docs
+    return 0, reload_doc
 
 
 def delDocFromDatabase(db, docid, lib_folder):
@@ -1560,7 +1571,8 @@ def delDocFromDatabase(db, docid, lib_folder):
         absii=os.path.join(lib_folder,fii)
         if os.path.exists(absii):
             LOGGER.info('Deleting file from disk %s' %absii)
-            os.remove(absii)
+            #os.remove(absii)
+            send2trash(absii)
 
     #-----------------del keywords-----------------
     delFromTable(db, 'DocumentKeywords', docid)
