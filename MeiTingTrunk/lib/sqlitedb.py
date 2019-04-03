@@ -1444,6 +1444,12 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files):
     #-------------------Update files-------------------
     if set(old_meta['files_l']) != set(meta_dict['files_l']):
 
+
+        LOGGER.debug('Need to update files.')
+        delFromTable(db, 'DocumentFiles', docid)
+        rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files)
+        LOGGER.debug('rec of insertToDocumentFiles=%s' %rec)
+
         # any old file to del?
         del_files=list(set(old_meta['files_l']).difference(set(meta_dict['files_l'])))
         if len(del_files)>0:
@@ -1454,11 +1460,6 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files):
                     LOGGER.info('Deleting file from disk %s' %absii)
                     #os.remove(absii)
                     send2trash(absii)
-
-        LOGGER.debug('Need to update files.')
-        delFromTable(db, 'DocumentFiles', docid)
-        rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files)
-        LOGGER.debug('rec of insertToDocumentFiles=%s' %rec)
 
         reload_doc=True
     else:

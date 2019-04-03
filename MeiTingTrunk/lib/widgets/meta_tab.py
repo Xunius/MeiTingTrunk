@@ -211,7 +211,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
 
 
 class FileLineEdit(QtWidgets.QLineEdit):
-    def __init__(self,parent=None):
+    def __init__(self,lib_folder,parent=None):
         '''
         Args:
             parent (QWidget): parent widget.
@@ -222,6 +222,9 @@ class FileLineEdit(QtWidgets.QLineEdit):
 
         super(FileLineEdit,self).__init__(parent)
         self.fm=QFontMetrics(self.font())
+        self.lib_folder=lib_folder
+        self.parent=parent
+
 
     def setText(self,text,elide=True):
 
@@ -235,16 +238,34 @@ class FileLineEdit(QtWidgets.QLineEdit):
         return
 
 
-    def text(self):
+    #def text(self):
 
-        return self.fm.elidedText(self.short_text,Qt.ElideRight,self.width()-20)
+        #return self.fm.elidedText(self.short_text,Qt.ElideRight,self.width()-20)
 
 
-    def resizeEvent(self,event):
+    def resizeEvent(self, event):
 
         super(QtWidgets.QLineEdit, self).resizeEvent(event)
         if hasattr(self,'full_text'):
             self.setText(self.full_text,elide=True)
+
+
+    def focusInEvent(self, event):
+
+        super(FileLineEdit,self).setText(os.path.join(self.lib_folder,
+            self.full_text))
+
+
+    def focusOutEvent(self, event):
+
+        old_text=self.full_text
+        new_text=self.text()
+        print('old text=%s' %old_text)
+        print('new text=%s' %new_text)
+        if old_text!=new_text:
+            self.setText(self.text())
+            self.parent.fieldEdited('files_l')
+
 
 
 
@@ -489,8 +510,9 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         h_layout=QtWidgets.QHBoxLayout()
 
-        le=FileLineEdit()
-        le.setReadOnly(True)
+        le=FileLineEdit(self.settings.value('saving/current_lib_folder',
+            type=str), parent=self)
+        #le.setReadOnly(True)
         le.setFont(self.settings.value('display/fonts/%s' %font_name, QFont))
 
         if text is not None:
