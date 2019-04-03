@@ -1,11 +1,12 @@
-Metadata-Version: 2.1
+Metadata-Version: 1.2
 Name: meitingtrunk
-Version: 0.1a9
+Version: 0.1a10
 Summary: An open source reference management tool developed in PyQt5 and Python3.
 Home-page: https://github.com/Xunius/MeiTingTrunk
 Author: Guangzhi XU
 Author-email: xugzhi1987@gmail.com
 License: UNKNOWN
+Description-Content-Type: text/markdown
 Description: # MeiTing Trunk
         An open source reference management tool developed in PyQt5 and Python3.
         
@@ -159,4 +160,3 @@ Classifier: Operating System :: MacOS
 Classifier: Programming Language :: Python :: 3
 Classifier: Topic :: Education
 Requires-Python: >=3
-Description-Content-Type: text/markdown

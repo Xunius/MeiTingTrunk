@@ -6,3 +6,4 @@ fuzzywuzzy
 bibtexparser
 crossrefapi
 RISparser
+send2trash
