@@ -257,19 +257,21 @@ class MainFrameDataSlots:
 
             sqlitedb.saveFoldersToDatabase(self.db,
                     self.changed_folder_ids, self.folder_dict,
-                    self.folder_data,
                     self.settings.value('saving/current_lib_folder'))
 
             self.changed_folder_ids=[]
             self.logger.info('Folder changes saved to database.')
 
         #--------------------Save docs--------------------
+        any_reload_doc=False
         for docid in self.changed_doc_ids:
             self.logger.info('Saving doc %s' %docid)
-            sqlitedb.metaDictToDatabase(self.db,docid,
+            rec, reload_doc=sqlitedb.metaDictToDatabase(self.db, docid,
+                    self.meta_dict,
                     self.meta_dict.get(docid),
                     self.settings.value('saving/current_lib_folder'),
-                    self.settings.value('saving/rename_files'))
+                    self.settings.value('saving/rename_files', type=int))
+            any_reload_doc=any_reload_doc or reload_doc
 
         self.changed_doc_ids=[]
         self.settings.sync()
@@ -277,6 +279,16 @@ class MainFrameDataSlots:
         self.progressbar.setVisible(False)
 
         self.logger.info('Saving completed.')
+
+        #current_folder=self._current_folder
+        current_doc_ids=self._current_docids
+        #if any_reload_doc and current_folder is not None:
+        if any_reload_doc and current_doc_ids:
+            current_row=self.doc_table.currentIndex().row()
+            self.logger.debug('Reloading doc table after save. current_row = %s' %(current_row))
+            self.loadDocTable(docids=current_doc_ids, sortidx=None,
+                    sel_row=current_row)
+
 
         return
 
