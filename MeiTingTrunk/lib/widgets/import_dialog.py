@@ -127,7 +127,7 @@ class ResultDialog(QtWidgets.QDialog):
 
     def accept(self):
         if self.open_lib_checkbox.isChecked():
-            print('# <accept>: open lib')
+            #print('# <accept>: open lib')
             #self.open_lib_signal.emit()
             super(self.__class__, self).accept()
         else:
@@ -310,6 +310,7 @@ class ImportDialog(QtWidgets.QDialog):
         '''
         )
         label.setTextFormat(Qt.RichText)
+        label.setWordWrap(True)
         va.addWidget(label)
 
         self.mendeley_file_le=QtWidgets.QLineEdit()
@@ -331,6 +332,7 @@ class ImportDialog(QtWidgets.QDialog):
         label=QtWidgets.QLabel('''Notice: Import will try to export the annotations (highlights, notes) you made in the Mendeley library. <br/>
                 "Cananical" documents (those don't belong to any folder) will be put to the "Default" folder.''')
         label.setTextFormat(Qt.RichText)
+        label.setWordWrap(True)
         va.addWidget(label)
 
 
