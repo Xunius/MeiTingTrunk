@@ -215,6 +215,7 @@ class FileLineEdit(QtWidgets.QLineEdit):
         '''
         Args:
             parent (QWidget): parent widget.
+            lib_folder (str): abspath to lib_current_folder.
 
         This modified QLineEdit accepts a file path as its text, and displays
         an elided version of the file name part of the path.
@@ -225,8 +226,17 @@ class FileLineEdit(QtWidgets.QLineEdit):
         self.lib_folder=lib_folder
         self.parent=parent
 
+        self.editingFinished.connect(self.checkNewValue) # focus out or return
+
 
     def setText(self,text,elide=True):
+        '''Provide textedit with a file path
+
+        Args:
+            text (str): file path, could be abs or rel.
+        Kwargs:
+            elide (bool): make elided text or not.
+        '''
 
         self.full_text=text
         self.short_text=os.path.split(self.full_text)[1]
@@ -252,19 +262,46 @@ class FileLineEdit(QtWidgets.QLineEdit):
 
     def focusInEvent(self, event):
 
-        super(FileLineEdit,self).setText(os.path.join(self.lib_folder,
-            self.full_text))
+        text=self.full_text
+        if os.path.isabs(text):
+            super(FileLineEdit,self).setText(text)
+        else:
+            super(FileLineEdit,self).setText(os.path.join(self.lib_folder,
+                text))
 
 
-    def focusOutEvent(self, event):
+    def checkNewValue(self):
 
-        old_text=self.full_text
-        new_text=self.text()
-        print('old text=%s' %old_text)
-        print('new text=%s' %new_text)
-        if old_text!=new_text:
-            self.setText(self.text())
-            self.parent.fieldEdited('files_l')
+        # compare change
+        old_path=self.full_text
+        new_path=os.path.expanduser(self.text())
+        if not os.path.isabs(old_path):
+            old_path=os.path.join(self.lib_folder,old_path)
+        if not os.path.isabs(new_path):
+            new_path=os.path.join(self.lib_folder,new_path)
+
+        if old_path!=new_path:
+            if not os.path.exists(new_path):
+                LOGGER.debug('Given file not found %s. Revert to previous.'\
+                        %new_path)
+                self.setText(old_path)
+
+                # disconnect to avoid triggering twice
+                self.editingFinished.disconnect()
+                msg=QtWidgets.QMessageBox()
+                msg.resize(500,500)
+                msg.setIcon(QtWidgets.QMessageBox.Warning)
+                msg.setWindowTitle('Error')
+                msg.setText('File not found %s' %(' '*20))
+                msg.setInformativeText('''
+Given file <br/> <span style=font:bold;> %s </span> <br/>is not found.<br/> Revert to previous value.''' %new_path)
+                msg.exec_()
+                # re-connect
+                self.editingFinished.connect(self.checkNewValue)
+
+            else:
+                self.setText(new_path)
+                self.parent.fieldEdited('files_l')
 
 
 

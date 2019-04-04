@@ -1018,7 +1018,7 @@ def createNewDatabase(file_path):
 
 
 def metaDictToDatabase(db, docid, meta_dict_all, meta_dict, lib_folder,
-        rename_files):
+        rename_files, add_manner):
     """Save document changes to sqlite
 
     Args:
@@ -1032,6 +1032,9 @@ def metaDictToDatabase(db, docid, meta_dict_all, meta_dict, lib_folder,
                           sqlite database file.
         rename_files (int): 1 for renaming attachment files when saving, 0
                             for using original file name.
+        add_manner (int): file adding manner. If 'copy', copy added attachment
+                          into lib_folder/_collections/. If 'link', create
+                          symbolic link.
 
     Returns: rec (int): 0 if success, None otherwise.
              reload_doc (bool): if True, call loadDocTable() to refresh changes
@@ -1061,14 +1064,16 @@ def metaDictToDatabase(db, docid, meta_dict_all, meta_dict, lib_folder,
             reload_doc=False
         else:
             LOGGER.info('docid %s in database. Updating...' %docid)
-            rec,reload_doc=updateToDatabase(db,docid,meta_dict,lib_folder,rename_files)
+            rec,reload_doc=updateToDatabase(db, docid, meta_dict, lib_folder,
+                    rename_files, add_manner)
     else:
         if meta_dict is None:
             LOGGER.info('docid %s not in database. New meta=None. Ignore.' %docid)
             rec=0
         else:
             LOGGER.info('docid %s not in database. Inserting...' %docid)
-            rec,reload_doc=addToDatabase(db,docid,meta_dict,lib_folder,rename_files)
+            rec,reload_doc=addToDatabase(db, docid, meta_dict, lib_folder,
+                    rename_files, add_manner)
 
     if reload_doc:
         meta_dict_all[docid]=getMetaData(db,docid)
@@ -1165,7 +1170,8 @@ def delFromTable(db, table, docid):
     return 0
 
 
-def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
+def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files,
+        add_manner):
     """Insert or update columns in the DocumentsFiles table
 
     Args:
@@ -1177,6 +1183,9 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
                           sqlite database file.
         rename_files (int): 1 for renaming attachment files when saving, 0
                             for using original file name.
+        add_manner (int): file adding manner. If 'copy', copy added attachment
+                          into lib_folder/_collections/. If 'link', create
+                          symbolic link.
 
     Returns: 0
 
@@ -1210,29 +1219,28 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
         LOGGER.debug('files_l=%s' %files)
         for fii in files:
             LOGGER.debug('fii=%s' %fii)
-            #fii=os.path.expanduser(fii)
-            #LOGGER.debug('expanduser fii=%s' %fii)
+
             # this is a newly added file, therefore it's abs
             if os.path.isabs(fii):
                 new_file=True
+                # check new file is in the same lib
+                #common=os.path.commonprefix([abs_file_folder,fii])
+                dirname=os.path.dirname(fii)
+                if dirname==abs_file_folder:
+                    LOGGER.warning('Adding a file from within lib: %s'\
+                            %fii)
+
             # this file is already added to lib, therefore it's rel
             else:
                 new_file=False
-            #fii=os.path.abspath(fii)
-            #LOGGER.debug('abspath fii=%s' %fii)
 
+            #--------------Compose new file name--------------
             if rename_files:
                 newfilename=renameFile(fii,meta_dict)
             else:
                 newfilename=os.path.split(fii)[1]
+                newfilename=re.sub(r'[<>:"|/\?*]','_',newfilename)
 
-            #absii=tools.removeInvalidPathChar(absii)
-            #folder,filename=os.path.split(absii)
-            # can't do filename change here, will cause missing file.
-            #filename=re.sub(r'[<>:"|?*]','_',filename)
-            #if rename_files:
-                #filename=renameFile(fii,meta_dict)
-            #newabsii=os.path.join(lib_folder,'_collections')
             newabsii=os.path.join(abs_file_folder,newfilename)
 
             if new_file:
@@ -1241,6 +1249,9 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
                 newfilename=os.path.split(newabsii)[1]
                 oldabsii=fii
             else:
+                # deal with name conflicts?
+                newabsii=autoRename(newabsii)
+                newfilename=os.path.split(newabsii)[1]
                 oldfilename=os.path.split(fii)[1]
                 oldabsii=os.path.join(abs_file_folder,oldfilename)
 
@@ -1250,15 +1261,17 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
             LOGGER.debug('new abspath = %s' %newabsii)
             LOGGER.debug('new relpath = %s' %rel_fii)
 
-            #if not os.path.exists(newabsii):
-            # check if fii is abspath or relpath
-            #if os.path.isabs(fii):
+            #------------Copy or link or move file------------
             if new_file:
                 try:
-                    shutil.copy(oldabsii,newabsii)
-                    LOGGER.info('copy file %s -> %s' %(oldabsii,newabsii))
+                    if add_manner=='copy':
+                        shutil.copy(oldabsii,newabsii)
+                    elif add_manner=='link':
+                        os.symlink(oldabsii,newabsii)
+                    LOGGER.info('%s file %s -> %s' %(add_manner,oldabsii,newabsii))
                 except:
-                    LOGGER.exception('Failed to copy file %s to %s' %(oldabsii,newabsii))
+                    LOGGER.exception('Failed to %s file %s to %s'\
+                            %(add_manner,oldabsii,newabsii))
             else:
                 try:
                     shutil.move(oldabsii,newabsii)
@@ -1267,12 +1280,6 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
                     LOGGER.exception('Failed to move file %s to %s'\
                             %(oldabsii,newabsii))
 
-            #--------------------Copy file--------------------
-            #try:
-                #shutil.copy(fii, newabsii)
-                #LOGGER.debug('Copied file %s to %s' %(absii,newabsii))
-            #except:
-                #LOGGER.exception('Failed to copy file %s to %s' %(absii,newabsii))
 
         db.commit()
 
@@ -1281,7 +1288,7 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files):
     return 0
 
 
-def addToDatabase(db, docid, meta_dict, lib_folder, rename_files):
+def addToDatabase(db, docid, meta_dict, lib_folder, rename_files, add_manner):
     """Add new document to sqlite
 
     Args:
@@ -1293,6 +1300,9 @@ def addToDatabase(db, docid, meta_dict, lib_folder, rename_files):
                           sqlite database file.
         rename_files (int): 1 for renaming attachment files when saving, 0
                             for using original file name.
+        add_manner (int): file adding manner. If 'copy', copy added attachment
+                          into lib_folder/_collections/. If 'link', create
+                          symbolic link.
 
     Returns: rec (int): 0 if success, None otherwise.
              reload_doc (bool): if True, call loadDocTable() to refresh changes
@@ -1320,7 +1330,8 @@ def addToDatabase(db, docid, meta_dict, lib_folder, rename_files):
 
     #-------------------Update files-------------------
     if len(meta_dict['files_l'])>0:
-        rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files)
+        rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder,
+                rename_files, add_manner)
         LOGGER.debug('rec of insertToDocumentFiles = %s' %rec)
         reload_doc=True
     else:
@@ -1365,7 +1376,8 @@ def addToDatabase(db, docid, meta_dict, lib_folder, rename_files):
     return 0, reload_doc
 
 
-def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files):
+def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files,
+        add_manner):
     """Save changes of existing document to sqlite
 
     Args:
@@ -1377,10 +1389,13 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files):
                           sqlite database file.
         rename_files (int): 1 for renaming attachment files when saving, 0
                             for using original file name.
-             reload_doc (bool): if True, call loadDocTable() to refresh changes
-                                in the 'files_l' field later.
+        add_manner (int): file adding manner. If 'copy', copy added attachment
+                          into lib_folder/_collections/. If 'link', create
+                          symbolic link.
 
     Returns: rec (int): 0 if success, None otherwise.
+             reload_doc (bool): if True, call loadDocTable() to refresh changes
+                                in the 'files_l' field later.
     """
 
     cout=db.cursor()
@@ -1447,7 +1462,8 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files):
 
         LOGGER.debug('Need to update files.')
         delFromTable(db, 'DocumentFiles', docid)
-        rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files)
+        rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder,
+                rename_files, add_manner)
         LOGGER.debug('rec of insertToDocumentFiles=%s' %rec)
 
         # any old file to del?
@@ -1460,6 +1476,8 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files):
                     LOGGER.info('Deleting file from disk %s' %absii)
                     #os.remove(absii)
                     send2trash(absii)
+                    #NOTE that files deleted by send2trash seems to be
+                    # unable to restore, at least in linux
 
         reload_doc=True
     else:

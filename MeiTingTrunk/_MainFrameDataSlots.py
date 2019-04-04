@@ -270,7 +270,9 @@ class MainFrameDataSlots:
                     self.meta_dict,
                     self.meta_dict.get(docid),
                     self.settings.value('saving/current_lib_folder'),
-                    self.settings.value('saving/rename_files', type=int))
+                    self.settings.value('saving/rename_files', type=int),
+                    self.settings.value('saving/file_move_manner', type=str)
+                    )
             any_reload_doc=any_reload_doc or reload_doc
 
         self.changed_doc_ids=[]

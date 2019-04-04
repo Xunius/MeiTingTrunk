@@ -127,6 +127,10 @@ New session started
                     'Documents/MeiTingTrunk')
             settings.setValue('saving/storage_folder', storage_folder)
 
+            # file copy/link
+            settings.setValue('saving/file_move_manner', 'link')
+            # 'copy' or 'link'
+
             # auto save
             settings.setValue('saving/auto_save_min', 5),
 
