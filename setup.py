@@ -28,6 +28,7 @@ setuptools.setup(
         install_requires=[
             #'qt>=5',
             'PyQt5',
+            'sqlite3',
             'pdfminer.six',
             'pypdf2',
             'beautifulsoup4',

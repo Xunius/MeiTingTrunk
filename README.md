@@ -69,6 +69,7 @@ Currently only tested in Linux.
 
 * python3+
 * PyQt5
+* sqlite3
 * pdfminer.six
 * PyPDF2
 * beautifulsoup4
@@ -76,6 +77,7 @@ Currently only tested in Linux.
 * fuzzywuzzy
 * crossrefapi
 * RISparser
+* send2trash
 
 ## Install
 

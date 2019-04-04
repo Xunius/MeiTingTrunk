@@ -1,12 +1,11 @@
-Metadata-Version: 1.2
+Metadata-Version: 2.1
 Name: meitingtrunk
-Version: 0.1a10
+Version: 0.1a11
 Summary: An open source reference management tool developed in PyQt5 and Python3.
 Home-page: https://github.com/Xunius/MeiTingTrunk
 Author: Guangzhi XU
 Author-email: xugzhi1987@gmail.com
 License: UNKNOWN
-Description-Content-Type: text/markdown
 Description: # MeiTing Trunk
         An open source reference management tool developed in PyQt5 and Python3.
         
@@ -78,6 +77,7 @@ Description: # MeiTing Trunk
         
         * python3+
         * PyQt5
+        * sqlite3
         * pdfminer.six
         * PyPDF2
         * beautifulsoup4
@@ -85,6 +85,7 @@ Description: # MeiTing Trunk
         * fuzzywuzzy
         * crossrefapi
         * RISparser
+        * send2trash
         
         ## Install
         
@@ -160,3 +161,4 @@ Classifier: Operating System :: MacOS
 Classifier: Programming Language :: Python :: 3
 Classifier: Topic :: Education
 Requires-Python: >=3
+Description-Content-Type: text/markdown
