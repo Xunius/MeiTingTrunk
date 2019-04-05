@@ -410,7 +410,6 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         for ii in ['Copy File', 'Create Symbolic Link']:
             buttonii=QtWidgets.QRadioButton(ii)
-            print('manner=',manner,'ii.lower()',ii.lower())
             if manner in ii.lower():
                 buttonii.setChecked(True)
             buttonii.toggled.connect(lambda on: self.savingMannerChange(on))
