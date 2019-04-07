@@ -19,7 +19,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 from PyQt5.QtGui import QBrush, QColor, QIcon, QCursor, QFont
 from PyQt5.QtWidgets import QDialogButtonBox
 from .. import sqlitedb
-from ..tools import fuzzyMatch, dfsCC, getHLine, parseAuthors
+from ..tools import fuzzyMatchPrepare, fuzzyMatch, dfsCC, getHLine, parseAuthors
 from .threadrun_dialog import Master
 from .search_res_frame import AdjustableTextEditWithFold
 
@@ -207,6 +207,7 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
         self.docids1=docids1
         self.docids1.sort()
         self.docid2=docid2
+
         #---------Disable merging if inside trash---------
         trashed_folder_ids=sqlitedb.getTrashedFolders(self.folder_dict)
         if current_folder[1] in trashed_folder_ids:
@@ -242,18 +243,49 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
         n=len(docids1)
         job_list=[]
+        cache_dict={}  # store strings for docs to avoid re-compute
+
+        def getFromCache(cdict, key):
+            if key in cdict:
+                value=cdict[key]
+            else:
+                value=fuzzyMatchPrepare(key, self.meta_dict[key])
+                cdict[key]=value
+            return value
 
         #----------------Check among docds----------------
         if docid2 is None:
+            jobid=0
             for ii in range(n):
                 docii=docids1[ii]
+                _, authorsii, titleii, jyii=getFromCache(cache_dict, docii)
                 for jj in range(n):
                     docjj=docids1[jj]
                     if ii>=jj:
                         self.scores_dict[(docii, docjj)]=0
                     else:
-                        job_list.append((ii, docii, docjj,
-                            self.meta_dict[docii], self.meta_dict[docjj]))
+                        _, authorsjj, titlejj, jyjj=getFromCache(cache_dict,
+                                docjj)
+
+                        # shortcut: skip if author string len diff >= 50%
+                        if abs(len(authorsii)-len(authorsjj))>=\
+                                max(len(authorsii), len(authorsjj))//2:
+                            self.scores_dict[(docii, docjj)]=0
+                            continue
+
+                        # shortcut: skip if title string len diff >= 50%
+                        if abs(len(titleii)-len(titlejj))>=\
+                                max(len(titleii), len(titlejj))//2:
+                            self.scores_dict[(docii, docjj)]=0
+                            continue
+
+                        job_list.append((jobid,
+                            getFromCache(cache_dict, docii),
+                            getFromCache(cache_dict, docjj),
+                            self.min_score))
+                        jobid+=1
+
+
         #-----------------nxm compare-----------------
         else:
             if not isinstance(docid2, (tuple,list)):
@@ -261,14 +293,35 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
                 docid2=[docid2,]
 
             m=len(docid2)
+            jobid=0
 
             for ii in range(m):
                 docii=docid2[ii]
+                _, authorsii, titleii, jyii=getFromCache(cache_dict, docii)
                 for jj in range(n):
                     docjj=docids1[jj]
                     if docii!=docjj:
-                        job_list.append((ii, docii, docjj, self.meta_dict[docii],
-                            self.meta_dict[docjj]))
+                        _, authorsjj, titlejj, jyjj=getFromCache(cache_dict,
+                                docjj)
+
+                        # shortcut: skip if author string len diff >= 50%
+                        if abs(len(authorsii)-len(authorsjj))>=\
+                                max(len(authorsii), len(authorsjj))//2:
+                            self.scores_dict[(docii, docjj)]=0
+                            continue
+
+                        # shortcut: skip if title string len diff >= 50%
+                        if abs(len(titleii)-len(titlejj))>=\
+                                max(len(titleii), len(titlejj))//2:
+                            self.scores_dict[(docii, docjj)]=0
+                            continue
+
+                        job_list.append((jobid,
+                            getFromCache(cache_dict, docii),
+                            getFromCache(cache_dict, docjj),
+                            self.min_score))
+                        jobid+=1
+                        jobid+=1
 
         return 0,jobid,job_list
 
@@ -301,8 +354,10 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
         '''Collect matching results and send results to GUI'''
 
         new=self.master2.results
-        for recii,jobidii,(kii,vii) in new:
-            self.scores_dict[kii]=vii
+        for recii,jobidii,resii in new:
+            if recii==0:
+                kii,vii=resii
+                self.scores_dict[kii]=vii
 
         LOGGER.info('Duplicate search results collected.')
         self.addResults()

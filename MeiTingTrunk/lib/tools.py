@@ -217,15 +217,41 @@ def removeInvalidPathChar(path):
     return path
 
 
-def fuzzyMatch(jobid, id1, id2, dict1, dict2):
+def fuzzyMatchPrepare(docid, meta_dict):
+    """Get meta data in a document and prepare strings for fuzzy matching
+
+    Args:
+        docid (int): doc id.
+        meta_dict (DocMeta): meta data dict of doc.
+
+    Returns:
+        docid (int): doc id.
+        authors1 (str): author list string.
+        title1 (str): title.
+        jy1 (str): journal+year string.
+    """
+
+    authors1=meta_dict['authors_l'] or ''
+    authors1=', '.join(authors1)
+
+    title1=meta_dict['title'] or ''
+
+    journal1=meta_dict['publication'] or ''
+    year1=meta_dict['year'] or ''
+
+    jy1='%s %s' %(journal1, year1)
+
+    return docid, authors1, title1, jy1
+
+
+def fuzzyMatch(jobid, doc1_list, doc2_list, min_score):
     """Compute similarity score between 2 docs using fuzzy matching
 
     Args:
         jobid (int): job id.
-        id1 (int): id of doc 1.
-        id2 (int): id of doc 2.
-        dict1 (DocMeta): meta data dict of doc 1.
-        dict2 (DocMeta): meta data dict of doc 2.
+        doc1_list (list): strings to compare in doc 1.
+        doc2_list (list): strings to compare in doc 2.
+        min_score (int): minimum score to flag a match.
 
     Returns:
         rec (int): 0 for success.
@@ -235,39 +261,43 @@ def fuzzyMatch(jobid, id1, id2, dict1, dict2):
 
     """
 
-    authors1=dict1['authors_l'] or ''
-    authors2=dict2['authors_l'] or ''
-    authors1=', '.join(authors1)
-    authors2=', '.join(authors2)
+    id1, authors1, title1, jy1 = doc1_list
+    id2, authors2, title2, jy2 = doc2_list
 
-    title1=dict1['title'] or ''
-    title2=dict2['title'] or ''
+    len_authors=(len(authors1)+len(authors2))//2
+    len_title=(len(title1)+len(title2))//2
+    len_other=(len(jy1)+len(jy2))//2
+    A=min_score*(len_authors+len_title+len_other)
 
-    journal1=dict1['publication'] or ''
-    journal2=dict2['publication'] or ''
-    year1=dict1['year'] or ''
-    year2=dict2['year'] or ''
+    ratio_authors=fuzz.ratio(authors1, authors2)
 
-    jy1='%s %s' %(journal1, year1)
-    jy2='%s %s' %(journal2, year2)
+    # a short cut for authors score
+    if len_authors>0:
+        min_ratio_authors=A/len_authors - 100*(len_title+len_other)/len_authors
+        if ratio_authors<min_ratio_authors:
+            return 0,jobid, ((id1,id2), 0)
 
-    ratio_authors=fuzz.token_sort_ratio(authors1, authors2)
     ratio_title=fuzz.ratio(title1, title2)
+
+    # a short cut for authors score
+    if len_title>0:
+        min_ratio_title=A/len_title - (ratio_authors*len_authors+100*len_other)/len_title
+        if ratio_title<min_ratio_title:
+            return 0,jobid, ((id1,id2), 0)
+
     ratio_other=fuzz.ratio(jy1, jy2)
 
-    len_authors=0.5*(len(authors1)+len(authors2))
-    len_title=0.5*(len(title1)+len(title2))
-    len_other=0.5*(len(jy1)+len(jy2))
-
-    score=(len_authors*ratio_authors + len_title*ratio_title + len_other*ratio_other)/\
+    score=(len_authors*ratio_authors + len_title*ratio_title + len_other*ratio_other)//\
             (len_authors+len_title+len_other)
 
+    '''
     LOGGER.debug('authors1 = %s, authors2 = %s, score = %d'\
             %(authors1, authors2, ratio_authors))
     LOGGER.debug('title1 = %s, title2 = %s, score = %d'\
             %(title1, title2, ratio_title))
     LOGGER.debug('jy1 = %s, jy2 = %s, score = %d'\
             %(jy1, jy2, ratio_other))
+    '''
 
     return 0,jobid, ((id1,id2), round(score))
 
