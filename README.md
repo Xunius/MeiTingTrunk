@@ -56,6 +56,9 @@ Bulk export.
 Duplicate checking results.
 ![](https://user-images.githubusercontent.com/8076931/55284321-e4cfa200-53a6-11e9-8b6f-9e686d339acc.png)
 
+Merge duplicates.
+![](https://user-images.githubusercontent.com/8076931/55678909-5aea8080-5934-11e9-87bf-575fb99e3697.png)
+
 Meta data searching.
 ![](https://user-images.githubusercontent.com/8076931/55284338-324c0f00-53a7-11e9-97a1-cd0e197ec012.png)
 
