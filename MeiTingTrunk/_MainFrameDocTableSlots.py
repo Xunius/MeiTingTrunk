@@ -251,7 +251,7 @@ class MainFrameDocTableSlots:
                     self.delFromFolder(docids, foldername, folderid, True)
 
                 elif action==del_from_lib_action:
-                    self.delDoc(docids,True)
+                    self.delDoc(docids,True,True)
 
                 elif action==del_from_trash_action:
                     self.destroyDoc(docids,current_folderid,True,True)
@@ -433,8 +433,8 @@ class MainFrameDocTableSlots:
         return
 
 
-    @pyqtSlot(list, bool)
-    def delDoc(self, docids, reload_table):
+    @pyqtSlot(list, bool, bool)
+    def delDoc(self, docids, reload_table, ask=True):
         """Delete docs from the library (across all folders)
 
         Args:
@@ -454,11 +454,12 @@ class MainFrameDocTableSlots:
 
         self.logger.info('docids = %s' %docids)
 
-        choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
-                'Confirm deleting a document from library?',
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        if ask:
+            choice=QtWidgets.QMessageBox.question(self, 'Confirm deletion',
+                    'Confirm deleting a document from library?',
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
-        if choice==QtWidgets.QMessageBox.Yes:
+        if not ask or choice==QtWidgets.QMessageBox.Yes:
 
             for idii in docids:
 
