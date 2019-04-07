@@ -940,6 +940,7 @@ class MainFrameDocTableSlots:
                 'Checking duplicates in folder "%s".' %current_folder[0])
 
         self.duplicate_result_frame.checkDuplicates(self.meta_dict,
+                self.folder_dict,
                 current_folder, docids1, docids)
 
         return
