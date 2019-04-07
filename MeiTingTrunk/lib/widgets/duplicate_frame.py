@@ -491,14 +491,21 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
         foldername,folderid=self.current_folder
         if folderid=='-1':
-            menu.addAction('Delete From Library')
+            menu.addAction('Delete From &Library')
         else:
-            menu.addAction('Delete From Current Folder')
+            menu.addAction('Delete From Current &Folder')
+
+        menu.addAction('&Remove From Duplicate Group')
 
         action=menu.exec_(QCursor.pos())
 
         if action:
-            self.delDocs()
+            action_text=action.text().replace('&','')
+            if action_text in ['Delete From Current Folder',
+                    'Delete From Library']:
+                self.delDocs()
+            elif action_text=='Remove From Duplicate Group':
+                self.removeFromGroup()
 
         return
 
@@ -525,6 +532,80 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
             for itemii in sel_rows:
                 self.tree.invisibleRootItem().removeChild(itemii)
+
+        return
+
+
+    def removeFromGroup(self):
+
+        sel_rows=self.tree.selectedItems()
+        hi_color=self.settings.value('display/folder/highlight_color_br',
+                QBrush)
+
+        #-------------------Remove items-------------------
+        # while is better than for when dealing with item iter
+        while len(sel_rows)>0:
+            itemii=sel_rows.pop()
+            docid=int(itemii.data(6,0))
+
+            #------------Remove a child from group------------
+            if itemii.data(0,0)=='':
+                gid=int(itemii.parent().data(0,0))
+                itemii.parent().removeChild(itemii)
+
+                if gid in self.group_dict:
+                    members=self.group_dict[gid]['members']
+                    if docid in members:
+                        members.remove(docid)
+                    self.group_dict[gid]['members']=members
+
+            #-------------Remove header from group-------------
+            else:
+                gid=int(itemii.data(0,0))
+                members=self.group_dict[gid]['members']
+                # single header, del
+                if len(members)==1:
+                    self.tree.invisibleRootItem().removeChild(itemii)
+                    del self.group_dict[gid]
+                else:
+                    idx=self.tree.indexOfTopLevelItem(itemii)
+                    children=itemii.takeChildren()
+                    itemii=self.tree.takeTopLevelItem(idx)
+
+                    if len(children)>=2:
+                        if docid in members:
+                            members.remove(docid)
+                        self.group_dict[gid]['members']=members
+
+                        # promote the next child to header
+                        newheader=children[0]
+                        newheader.setData(0,0,str(gid))
+                        self.tree.insertTopLevelItem(idx, newheader)
+
+                        # highlight group header
+                        for jj in range(self.tree.columnCount()):
+                            newheader.setBackground(jj, hi_color)
+
+                        # add new children
+                        for cjj in children[1:]:
+                            newheader.addChild(cjj)
+
+                        newheader.setExpanded(True)
+                    else:
+                        del self.group_dict[gid]
+
+        #-------------Remove singleton headers-------------
+        idx=0
+        while idx<self.tree.topLevelItemCount():
+            itemii=self.tree.topLevelItem(idx)
+            if itemii.childCount()==0:
+                self.tree.takeTopLevelItem(idx)
+                gid=itemii.data(0,0)
+                del self.group_dict[int(gid)]
+            else:
+                idx+=1
+
+        LOGGER.debug('groups after deletion: %s' %self.group_dict.keys())
 
         return
 
