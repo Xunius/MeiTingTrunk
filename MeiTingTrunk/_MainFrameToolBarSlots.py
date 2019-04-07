@@ -17,6 +17,7 @@ terms of the GPLv3 license.
 '''
 
 from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtGui import QBrush
 from PyQt5 import QtWidgets
 from .lib import sqlitedb
 from .lib import bibparse, risparse
@@ -408,6 +409,7 @@ class MainFrameToolBarSlots:
                 'Checking duplicates in folder "%s".' %current_folder)
 
         self.duplicate_result_frame.checkDuplicates(self.meta_dict,
+                self.folder_dict,
                 self._current_folder,
                 docids,
                 None)
@@ -431,6 +433,30 @@ class MainFrameToolBarSlots:
             self.loadMetaTab(docid)
             self.loadBibTab(docid)
             self.loadNoteTab(docid)
+
+            #------------Remove highlights for all folders-------
+            self.removeFolderHighlights()
+
+            #-------------------Get folders-------------------
+            folders=self.meta_dict[docid]['folders_l']
+            folders=[str(fii[0]) for fii in folders]
+            self.logger.debug('Ids of folders containing doc (%s): %s' %(docid, folders))
+
+            #---------Highlight folders contaning doc---------
+            hi_color=self.settings.value('display/folder/highlight_color_br',
+                    QBrush)
+            for fii in folders:
+                mii=self.libtree.findItems(fii, Qt.MatchExactly | Qt.MatchRecursive,
+                        column=1)
+                if len(mii)>0:
+                    for mjj in mii:
+                        mjj.setBackground(0, hi_color)
+
+            #------------Show confirm review frame------------
+            if self.meta_dict[docid]['confirmed'] in [None, 'false']:
+                self.confirm_review_frame.setVisible(True)
+            else:
+                self.confirm_review_frame.setVisible(False)
 
         return
 

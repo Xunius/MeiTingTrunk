@@ -443,6 +443,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         frame.del_doc_from_lib_signal.connect(self.delDoc)
         frame.clear_duplicate_button.clicked.connect(
                 self.clearDuplicateButtonClicked)
+        frame.merge_frame.add_new_doc_sig.connect(self.addDocFromDuplicateMerge)
+        frame.merge_frame.del_doc_sig.connect(self.delDoc)
         frame.setVisible(False)
 
         return frame
