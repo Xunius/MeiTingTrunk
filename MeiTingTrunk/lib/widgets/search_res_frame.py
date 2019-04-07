@@ -16,9 +16,10 @@ terms of the GPLv3 license.
 from collections import OrderedDict
 import logging
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize, QRegExp, QRect
-from PyQt5.QtGui import QBrush, QColor, QFont, \
-        QSyntaxHighlighter, QTextCharFormat
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize, QRegExp, QRect,\
+        QPoint
+from PyQt5.QtGui import QBrush, QColor, QFont, QSyntaxHighlighter,\
+        QTextCharFormat
 #from PyQt5.QtWidgets import QDialogButtonBox
 from .. import sqlitefts
 from ..tools import iterTreeWidgetItems
@@ -82,11 +83,41 @@ class AdjustableTextEdit(QtWidgets.QTextEdit):
 
         super(AdjustableTextEdit,self).__init__(parent)
 
+        # pop up tooltip
+        self.tooltip_label=QtWidgets.QLabel()
+        self.tooltip_label.setWindowFlags(Qt.SplashScreen)
+        self.tooltip_label.setMargin(3)
+        self.tooltip_label.setStyleSheet('''
+                background-color: rgb(235,225,120)
+                ''')
+        self.tooltip_text=''
+        self.label_enabled=False
+
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.textChanged.connect(self.resizeTextEdit)
         self.document().documentLayout().documentSizeChanged.connect(
                 self.resizeTextEdit)
+
+
+    def focusInEvent(self,event):
+
+        #-----------------Pop up tool tip-----------------
+        if self.label_enabled and self.tooltip_text:
+            self.tooltip_label.move(self.mapToGlobal(
+                QPoint(0, self.height()-70)))
+            self.tooltip_label.setText(self.tooltip_text)
+            self.tooltip_label.show()
+
+        super(AdjustableTextEdit,self).focusInEvent(event)
+
+
+    def focusOutEvent(self,event):
+
+        #------------------Close tool tip------------------
+        if self.label_enabled:
+            self.tooltip_label.close()
+        super(AdjustableTextEdit,self).focusOutEvent(event)
 
 
     def resizeTextEdit(self):
@@ -156,7 +187,7 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
         doc=self.document()
         docheight=doc.size().height()
         margin=doc.documentMargin()
-        nlines=(docheight-2*margin)/fm.height()
+        nlines=(docheight-2*margin)//fm.height()
 
         return nlines
 
@@ -195,6 +226,12 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
             self.setMaximumHeight(fontheight+2*margin)
             self.is_fold=True
             self.fold_button.setArrowType(Qt.RightArrow)
+        else:
+            # dont understand, but this works
+            fontheight=self.fontMetrics().height()
+            margin=self.document().documentMargin()
+            self.setMinimumHeight(fontheight+2*margin)
+            self.setMaximumHeight(fontheight+2*margin)
 
         return
 
