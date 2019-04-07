@@ -777,7 +777,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
                             else:
                                 textii=vii.text().strip()
                         elif isinstance(vii,QtWidgets.QTextEdit):
-                            textii=vii.toPlaintext().strip()
+                            textii=vii.toPlainText().strip()
                         if textii:
                             values.append(textii)
                     result_dict[kk]=values

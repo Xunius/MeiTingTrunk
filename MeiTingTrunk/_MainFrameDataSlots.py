@@ -314,5 +314,38 @@ class MainFrameDataSlots:
 
 
 
+    @pyqtSlot(sqlitedb.DocMeta)
+    def addDocFromDuplicateMerge(self, meta_dict):
+
+        docid=max(self.meta_dict.keys())+1
+        self.logger.info('Add new doc. Given id=%s' %docid)
+
+        # update folder_data
+        folders=meta_dict['folders_l']
+        for folderid, foldername in folders:
+            self.folder_data[folderid].append(docid)
+
+        # add to needs review folder
+        self.folder_data['-2'].append(docid)
+
+        # update meta_dict
+        self.meta_dict[docid]=meta_dict
+
+        self.changed_doc_ids.append(docid)
+
+        msg=QtWidgets.QMessageBox()
+        msg.resize(600,500)
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setWindowTitle('Merge completed')
+        msg.setText('                New document created.                  ')
+        msg.setInformativeText('''
+        New document has been created from duplicate merge, <br/>
+        and added to folder(s): <br/>
+        <br/>
+            <span style="font: bold;"> %s </span>
+        ''' %(', '.join([fii[1] for fii in folders])))
+        msg.exec_()
+
+        return
 
 
