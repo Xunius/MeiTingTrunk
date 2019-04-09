@@ -343,6 +343,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         title_te=AdjustableTextEdit('title')
         title_te.setFrameStyle(QtWidgets.QFrame.NoFrame)
         title_te.setFont(self.settings.value('display/fonts/meta_title', QFont))
+        title_te.setPlaceholderText('Title')
         self.fields_dict['title']=title_te
         self.v_layout.addWidget(title_te)
 

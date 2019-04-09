@@ -94,36 +94,38 @@ class MainFrameDocTableSlots:
         """
 
         rowid=current.row()
-        docid=self._tabledata[rowid][0]
-        self.logger.info('Selected rowid = %s. docid = %s' %(rowid, docid))
 
-        self.loadMetaTab(docid)
-        self.loadBibTab(docid)
-        self.loadNoteTab(docid)
+        if rowid>=0 and rowid<len(self._tabledata):
+            docid=self._tabledata[rowid][0]
+            self.logger.info('Selected rowid = %s. docid = %s' %(rowid, docid))
 
-        #------------Remove highlights for all folders-------
-        self.removeFolderHighlights()
+            self.loadMetaTab(docid)
+            self.loadBibTab(docid)
+            self.loadNoteTab(docid)
 
-        #-------------------Get folders-------------------
-        folders=self.meta_dict[docid]['folders_l']
-        folders=[str(fii[0]) for fii in folders]
-        self.logger.debug('Ids of folders containing doc (%s): %s' %(docid, folders))
+            #------------Remove highlights for all folders-------
+            self.removeFolderHighlights()
 
-        #---------Highlight folders contaning doc---------
-        hi_color=self.settings.value('display/folder/highlight_color_br',
-                QBrush)
-        for fii in folders:
-            mii=self.libtree.findItems(fii, Qt.MatchExactly | Qt.MatchRecursive,
-                    column=1)
-            if len(mii)>0:
-                for mjj in mii:
-                    mjj.setBackground(0, hi_color)
+            #-------------------Get folders-------------------
+            folders=self.meta_dict[docid]['folders_l']
+            folders=[str(fii[0]) for fii in folders]
+            self.logger.debug('Ids of folders containing doc (%s): %s' %(docid, folders))
 
-        #------------Show confirm review frame------------
-        if self.meta_dict[docid]['confirmed'] in [None, 'false']:
-            self.confirm_review_frame.setVisible(True)
-        else:
-            self.confirm_review_frame.setVisible(False)
+            #---------Highlight folders contaning doc---------
+            hi_color=self.settings.value('display/folder/highlight_color_br',
+                    QBrush)
+            for fii in folders:
+                mii=self.libtree.findItems(fii, Qt.MatchExactly | Qt.MatchRecursive,
+                        column=1)
+                if len(mii)>0:
+                    for mjj in mii:
+                        mjj.setBackground(0, hi_color)
+
+            #------------Show confirm review frame------------
+            if self.meta_dict[docid]['confirmed'] in [None, 'false']:
+                self.confirm_review_frame.setVisible(True)
+            else:
+                self.confirm_review_frame.setVisible(False)
 
         return
 
@@ -427,7 +429,9 @@ class MainFrameDocTableSlots:
                     %self.meta_dict[idii]['deletionPending'])
 
         if reload_table:
-            self.loadDocTable(folder=(foldername,folderid),sel_row=None)
+            #current_row=self.doc_table.currentIndex().row()
+            self.loadDocTable(folder=(foldername,folderid),sortidx=4,sel_row=None)
+            #self.selDoc(self.doc_table.currentIndex(),None)
 
 
         return
@@ -480,7 +484,9 @@ class MainFrameDocTableSlots:
                         %self.meta_dict[idii]['deletionPending'])
 
             if reload_table:
-                self.loadDocTable(folder=self._current_folder,sel_row=None)
+                #current_row=self.doc_table.currentIndex().row()
+                self.loadDocTable(folder=self._current_folder,sortidx=4,sel_row=None)
+                #self.selDoc(self.doc_table.currentIndex(),None)
 
         return
 

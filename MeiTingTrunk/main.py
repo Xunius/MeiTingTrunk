@@ -127,6 +127,10 @@ LOG_CONFIG={
 # add doc adding to Edit or File?
 # use open instead of xdg-open in Mac
 # auto renaming bib, ris files when meta data is empty
+# icons on mac missing
+# drag/drop on mac
+# keyboard shortcuts
+# button style on mac
 
 def main(args=None):
 

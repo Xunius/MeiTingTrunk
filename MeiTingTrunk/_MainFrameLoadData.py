@@ -308,6 +308,8 @@ class MainFrameLoadData:
                 if current_row==sel_row:
                     self.logger.info('@@@@@row not change. force sel doc')
                     self.selDoc(self.doc_table.currentIndex(),None)
+            else:
+                self.selDoc(self.doc_table.currentIndex(),None)
 
             self.status_bar.showMessage('%d rows' %len(data))
         else:
