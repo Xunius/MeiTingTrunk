@@ -229,8 +229,7 @@ New session started
         #--------------------Edit menu--------------------
         self.edit_menu=self.menu_bar.addMenu('&Edit')
         preference_action=QtWidgets.QAction('Preferences',self)
-        preference_action.setIcon(QIcon.fromTheme('preferences-system',
-            self.style().standardIcon(QStyle.SP_FileDialogListView)))
+        preference_action.setIcon(QIcon.fromTheme('preferences-system'))
         preference_action.setShortcut('Ctrl+p')
         self.edit_menu.addAction(preference_action)
 

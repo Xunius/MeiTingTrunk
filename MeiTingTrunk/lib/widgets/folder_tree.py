@@ -146,15 +146,15 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
             if current_item:
                 current_item=current_item[0]
 
-            LOGGER.debug('folderid of current item = %s' %current_item.data(1,0))
-            LOGGER.debug('folderid of target item = %s' %newparent.data(1,0))
+            #LOGGER.debug('folderid of current item = %s' %current_item.data(1,0))
+            #LOGGER.debug('folderid of target item = %s' %newparent.data(1,0))
 
             if newparent is not None and current_item is not None and\
                     newparent.data(1,0) not in trashed_folders and\
                     current_item.data(1,0) in trashed_folders:
                 event.setDropAction(Qt.MoveAction)
 
-                LOGGER.warning('Set drop action to Qt.MoveAction. Doesnt seem to work.')
+                #LOGGER.warning('Set drop action to Qt.MoveAction. Doesnt seem to work.')
             else:
                 event.setDropAction(Qt.CopyAction)
 
@@ -187,8 +187,8 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
             if current_item:
                 current_item=current_item[0]
 
-            LOGGER.debug('folderid of current item = %s' %current_item.data(1,0))
-            LOGGER.debug('folderid of target item = %s' %newparent.data(1,0))
+            #LOGGER.debug('folderid of current item = %s' %current_item.data(1,0))
+            #LOGGER.debug('folderid of target item = %s' %newparent.data(1,0))
 
             if newparent is not None and current_item is not None and\
                     newparent.data(1,0) not in trashed_folders and\
@@ -228,18 +228,24 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
         #------------------dropping a doc------------------
         if mime_data.hasFormat('doc_table_item'):
             # decode byte to str
-            dropped_docid=mime_data.data('doc_table_item').data().decode('ascii')
-            dropped_docid=int(dropped_docid)
+            dropped_docids=mime_data.data('doc_table_item').data().decode('ascii')
+            # if more than 1 doc dropping, is a string 'docid1, docid2, docid3...'
+            dropped_docids=map(int, dropped_docids.split(','))
             pos=event.pos()
             newparent=self.itemAt(pos)
+
+            if newparent is None:
+                return
+
             parentidx=self.indexFromItem(newparent)
 
-            LOGGER.debug('docid = %s. prarentid = %s.' %(dropped_docid,
+            LOGGER.debug('docid = %s. prarentid = %s.' %(dropped_docids,
                 newparent.data(1,0)))
 
             if newparent.data(1,0) not in ['', '-2', '-1']:
                 LOGGER.info('Doc drop valid. Emitting add_doc_to_folder_signal.')
-                self.add_doc_to_folder_signal.emit(dropped_docid, newparent.data(1,0))
+                for docii in dropped_docids:
+                    self.add_doc_to_folder_signal.emit(docii, newparent.data(1,0))
 
             return
 
@@ -252,6 +258,10 @@ class MyTreeWidget(QtWidgets.QTreeWidget):
 
             pos=event.pos()
             newparent=self.itemAt(pos)
+
+            if newparent is None:
+                return
+
             parentidx=self.indexFromItem(newparent)
             indicatorpos=self.dropIndicatorPosition()
 
