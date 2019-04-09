@@ -560,7 +560,10 @@ class MainFrameDocTableSlots:
 
         if not ask or (ask and choice==QtWidgets.QMessageBox.Yes):
 
-            current_foldername=self.folder_dict[current_folderid][0]
+            if current_folderid=='-3':
+                current_foldername='Trash'
+            else:
+                current_foldername=self.folder_dict[current_folderid][0]
 
             for idii in docids:
 
@@ -600,7 +603,8 @@ class MainFrameDocTableSlots:
                 self.logger.info('Deleted %s from meta_dict' %idii)
 
             if reload_table:
-                self.loadDocTable(folder=self._current_folder,sel_row=None)
+                self.loadDocTable(folder=self._current_folder, sortidx=4,
+                        sel_row=None)
 
         return
 
