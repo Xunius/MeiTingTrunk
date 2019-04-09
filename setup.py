@@ -36,7 +36,8 @@ setuptools.setup(
             'bibtexparser',
             'crossrefapi',
             'RISparser',
-            'send2trash'
+            'send2trash',
+            'python-levenshtein'
             ],
         python_requires='>=3',
         #package_data={'sample': ['

@@ -87,6 +87,8 @@ Currently only tested in Linux.
 * crossrefapi
 * RISparser
 * send2trash
+* python-levenshtein
+
 
 ## Install
 

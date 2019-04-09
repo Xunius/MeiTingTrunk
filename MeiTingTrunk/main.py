@@ -24,6 +24,8 @@ from PyQt5.QtCore import Qt, QTimer
 from . import _MainWindow
 from .version import __version__
 
+
+
 dirname=os.path.split(__file__)[0]
 LOG_CONFIG={
         'version': 1,
@@ -36,9 +38,12 @@ LOG_CONFIG={
         'handlers': {
             'default': {
                 'level': 'DEBUG',
-                'class': 'logging.FileHandler',
+                'class': 'logging.handlers.RotatingFileHandler',
                 'formatter': 'standard',
-                'filename': os.path.join(dirname,'MTT.log')
+                'filename': os.path.join(dirname,'MTT.log'),
+                'mode': 'a',
+                'maxBytes': 10*1024*1024,  # 10 M
+                'backupCount': 1
                 },
             },
         'root' : {
@@ -47,7 +52,6 @@ LOG_CONFIG={
                 'propagate': True
             }
         }
-
 
 
 # TODO:
