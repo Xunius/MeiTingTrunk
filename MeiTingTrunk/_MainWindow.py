@@ -22,6 +22,7 @@ import logging.config
 import sqlite3
 import pathlib
 from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QStyle
 from PyQt5.QtCore import Qt, QSettings, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 from . import _MainFrame
@@ -193,13 +194,20 @@ New session started
         create_backup_action=self.file_menu.addAction('Create Backup')
         quit_action=self.file_menu.addAction('Quit')
 
-        create_database_action.setIcon(QIcon.fromTheme('document-new'))
-        open_database_action.setIcon(QIcon.fromTheme('document-open'))
-        self.recent_open_menu.setIcon(QIcon.fromTheme('document-open-recent'))
-        self.save_database_action.setIcon(QIcon.fromTheme('document-save'))
-        self.close_database_action.setIcon(QIcon.fromTheme('call-stop'))
+        create_database_action.setIcon(QIcon.fromTheme('document-new',
+            self.style().standardIcon(QStyle.SP_FileDialogNewFolder)))
+        open_database_action.setIcon(QIcon.fromTheme('document-open',
+            self.style().standardIcon(QStyle.SP_DirOpenIcon)))
+        self.recent_open_menu.setIcon(QIcon.fromTheme('document-open-recent',
+            self.style().standardIcon(QStyle.SP_DirOpenIcon)))
+        self.save_database_action.setIcon(QIcon.fromTheme('document-save',
+            self.style().standardIcon(QStyle.SP_DialogSaveButton)))
+        self.close_database_action.setIcon(QIcon.fromTheme('call-stop',
+            self.style().standardIcon(QStyle.SP_BrowserStop)))
+
         create_backup_action.setIcon(QIcon.fromTheme('document-send'))
-        quit_action.setIcon(QIcon.fromTheme('window-close'))
+        quit_action.setIcon(QIcon.fromTheme('window-close',
+            self.style().standardIcon(QStyle.SP_DialogCloseButton)))
 
         create_database_action.setShortcut('Ctrl+Shift+n')
         open_database_action.setShortcut('Ctrl+o')
@@ -221,7 +229,8 @@ New session started
         #--------------------Edit menu--------------------
         self.edit_menu=self.menu_bar.addMenu('&Edit')
         preference_action=QtWidgets.QAction('Preferences',self)
-        preference_action.setIcon(QIcon.fromTheme('preferences-system'))
+        preference_action.setIcon(QIcon.fromTheme('preferences-system',
+            self.style().standardIcon(QStyle.SP_FileDialogListView)))
         preference_action.setShortcut('Ctrl+p')
         self.edit_menu.addAction(preference_action)
 

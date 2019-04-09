@@ -17,6 +17,7 @@ trashing, and restoring from trash.
 
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QStyle
 from PyQt5.QtGui import QCursor, QBrush, QColor, QIcon
 from .lib import sqlitedb
 from .lib.tools import iterTreeWidgetItems
@@ -136,7 +137,8 @@ class MainFrameLibTreeSlots:
                 del_action.setShortcut('D')
 
                 rename_action=menu.addAction('&Rename Folder')
-                rename_action.setIcon(QIcon.fromTheme('edit-select-all'))
+                rename_action.setIcon(QIcon.fromTheme('edit-select-all',
+                    self.style().standardIcon(QStyle.SP_FileDialogDetailedView)))
                 rename_action.setShortcut('R')
 
                 if item==self.needsreview_folder:

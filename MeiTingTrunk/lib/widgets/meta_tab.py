@@ -19,7 +19,7 @@ import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, QPoint, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QFontMetrics
-from PyQt5.QtWidgets import QDialogButtonBox
+from PyQt5.QtWidgets import QDialogButtonBox, QStyle
 from .. import sqlitedb
 from ..tools import getHLine, getXExpandYMinSizePolicy, parseAuthors,\
         getXExpandYExpandSizePolicy
@@ -382,7 +382,8 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         #--------------Add doi search button--------------
         self.doi_search_button=QtWidgets.QPushButton()
         self.doi_search_button.setFixedSize(30,30)
-        self.doi_search_button.setIcon(QIcon.fromTheme('edit-find'))
+        self.doi_search_button.setIcon(QIcon.fromTheme('edit-find',
+            self.style().standardIcon(QStyle.SP_FileDialogContentsView)))
         self.doi_search_button.setStyleSheet('''
         QPushButton {
             border: 1px solid rgb(190,190,190);

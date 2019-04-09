@@ -17,7 +17,7 @@ from collections import OrderedDict
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 from PyQt5.QtGui import QBrush, QColor, QIcon, QCursor, QFont
-from PyQt5.QtWidgets import QDialogButtonBox
+from PyQt5.QtWidgets import QDialogButtonBox, QStyle
 from .. import sqlitedb
 from ..tools import fuzzyMatchPrepare, fuzzyMatch, dfsCC, getHLine, parseAuthors
 from .threadrun_dialog import Master
@@ -125,7 +125,9 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
         self.clear_duplicate_label=QtWidgets.QLabel()
         ha.addWidget(self.clear_duplicate_label)
         tip_label=QtWidgets.QLabel()
-        tip_icon=QIcon.fromTheme('help-about').pixmap(QSize(16,16))
+        tip_icon=QIcon.fromTheme('help-about',
+            self.style().standardIcon(QStyle.SP_MessageBoxInformation)).pixmap(
+                    QSize(16,16))
         tip_label.setPixmap(tip_icon)
         tip_label.setToolTip('''Change "Mininimum Similary Score" in "Preferences" to change the filtering of matching results.''')
 

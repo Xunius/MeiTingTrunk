@@ -45,6 +45,7 @@ import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
+from PyQt5.QtWidgets import QStyle
 
 from . import _MainFrameLoadData, _MainFrameDataSlots, _MainFrameToolBarSlots,\
         _MainFrameLibTreeSlots, _MainFrameFilterListSlots, _MainFrameDocTableSlots,\
@@ -253,7 +254,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
                     cdii.setChecked(True)
                     button.setDefaultAction(addii)
                     button.setText('Add')
-                    button.setIcon(QIcon.fromTheme('document-new'))
+                    button.setIcon(QIcon.fromTheme('document-new',
+                        self.style().standardIcon(QStyle.SP_FileDialogDetailedView)))
                     self.settings.setValue('import/default_add_action',aii)
                 else:
                     addii.setShortcut('')
@@ -288,7 +290,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         # these has to happen after setDefaultAction()
         button.setText('Add')
-        button.setIcon(QIcon.fromTheme('document-new'))
+        button.setIcon(QIcon.fromTheme('document-new',
+            self.style().standardIcon(QStyle.SP_FileDialogDetailedView)))
         button.setMenu(menu)
         button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
 
@@ -309,7 +312,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         button.setDefaultAction(self.create_folder_action)
 
         button.setText('Create Folder')
-        button.setIcon(QIcon.fromTheme('folder-new'))
+        button.setIcon(QIcon.fromTheme('folder-new',
+            self.style().standardIcon(QStyle.SP_FileDialogNewFolder)))
         button.setMenu(menu)
         button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
 
@@ -323,7 +327,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         button=QtWidgets.QToolButton(self)
         button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         button.setText('Check Duplicates')
-        button.setIcon(QIcon.fromTheme('scanner'))
+        button.setIcon(QIcon.fromTheme('scanner',
+            self.style().standardIcon(QStyle.SP_FileDialogContentsView)))
         button.clicked.connect(self.checkDuplicateClicked)
 
         return button
@@ -362,7 +367,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         aii.setText('Include sub-folders')
         menu.addAction(aii)
 
-        button.setIcon(QIcon.fromTheme('edit-find'))
+        button.setIcon(QIcon.fromTheme('edit-find',
+            self.style().standardIcon(QStyle.SP_FileDialogContentsView)))
         button.setMenu(menu)
         button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
         button.clicked.connect(self.searchBarClicked)
@@ -643,7 +649,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         self.copy_bib_button=QtWidgets.QToolButton(self)
         self.copy_bib_button.setText('Copy')
-        self.copy_bib_button.setIcon(QIcon.fromTheme('edit-copy'))
+        self.copy_bib_button.setIcon(QIcon.fromTheme('edit-copy',
+                self.style().standardIcon(QStyle.SP_FileDialogDetailedView)))
         self.copy_bib_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
         h_layout=QtWidgets.QHBoxLayout()

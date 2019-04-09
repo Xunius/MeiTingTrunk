@@ -19,6 +19,7 @@ import platform
 import subprocess
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, pyqtSlot, QModelIndex
 from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QStyle
 from PyQt5.QtGui import QFont, QBrush, QColor, QCursor, QIcon
 from .lib import sqlitedb
 from .lib import bibparse, risparse
@@ -155,26 +156,30 @@ class MainFrameDocTableSlots:
         trashed_folder_ids=self._trashed_folder_ids+['-3']
 
         open_action=menu.addAction('&Open File Externally')
-        open_action.setIcon(QIcon.fromTheme('document-open'))
+        open_action.setIcon(QIcon.fromTheme('document-open',
+                self.style().standardIcon(QStyle.SP_FileIcon)))
         open_action.setShortcut('O')
 
         open_folder_action=menu.addAction('Open Containing &Folder')
-        #open_folder_action.setIcon(QIcon.fromTheme('system-file-manager'))
-        open_folder_action.setIcon(self.style().standardIcon(
-            QtWidgets.QStyle.SP_DirIcon))
+        open_folder_action.setIcon(QIcon.fromTheme('folder',
+                self.style().standardIcon(QStyle.SP_FileDialogStart)))
         open_folder_action.setShortcut('F')
 
         #-----------------Deletion actions-----------------
         del_from_folder_action=QtWidgets.QAction('&Delete From Current Folder',
                 menu)
-        del_from_folder_action.setIcon(QIcon.fromTheme('user-trash'))
+        del_from_folder_action.setIcon(QIcon.fromTheme('user-trash',
+                self.style().standardIcon(QStyle.SP_TrashIcon)))
         del_from_folder_action.setShortcut('D')
 
         del_from_lib_action=QtWidgets.QAction('Delete From Library',menu)
-        del_from_lib_action.setIcon(QIcon.fromTheme('user-trash'))
+        del_from_lib_action.setIcon(QIcon.fromTheme('user-trash',
+                self.style().standardIcon(QStyle.SP_TrashIcon)))
 
         del_from_trash_action=QtWidgets.QAction('Delete From Trash',menu)
-        del_from_trash_action.setIcon(QIcon.fromTheme('edit-delete'))
+        del_from_trash_action.setIcon(QIcon.fromTheme('edit-delete',
+                self.style().standardIcon(QStyle.SP_TrashIcon)))
+        #self.style().standardIcon(QStyle.SP_MessageBoxCritical)))
 
         if current_folderid=='-1':
             menu.addAction(del_from_lib_action)
@@ -189,7 +194,7 @@ class MainFrameDocTableSlots:
         #-------------Mark needs review action-------------
         mark_needsreview_action=QtWidgets.QAction('&Mark document as Needs Review',menu)
         mark_needsreview_action.setIcon(self.style().standardIcon(
-            QtWidgets.QStyle.SP_MessageBoxInformation))
+            QStyle.SP_MessageBoxInformation))
         mark_needsreview_action.setShortcut('M')
 
         if current_folderid!='-2':
@@ -197,24 +202,29 @@ class MainFrameDocTableSlots:
 
         #--------------Duplicate check action--------------
         check_duplicate_folder_action=menu.addAction('Check Du&plicates Within Folder')
-        check_duplicate_folder_action.setIcon(QIcon.fromTheme('edit-find'))
+        check_duplicate_folder_action.setIcon(QIcon.fromTheme('edit-find',
+                self.style().standardIcon(QStyle.SP_FileDialogContentsView)))
         check_duplicate_folder_action.setShortcut('P')
 
         check_duplicate_lib_action=menu.addAction('Check Duplicates Within Library')
-        check_duplicate_lib_action.setIcon(QIcon.fromTheme('edit-find'))
+        check_duplicate_lib_action.setIcon(QIcon.fromTheme('edit-find',
+                self.style().standardIcon(QStyle.SP_FileDialogContentsView)))
 
         #------------------Export actions------------------
         menu.addSeparator()
         export_bib_action=menu.addAction('Export to &bibtex File')
-        export_bib_action.setIcon(QIcon.fromTheme('document-save-as'))
+        export_bib_action.setIcon(QIcon.fromTheme('document-save-as',
+                self.style().standardIcon(QStyle.SP_DialogSaveButton)))
         export_bib_action.setShortcut('B')
 
         export_ris_action=menu.addAction('Export to &RIS File')
-        export_ris_action.setIcon(QIcon.fromTheme('document-save-as'))
+        export_ris_action.setIcon(QIcon.fromTheme('document-save-as',
+                self.style().standardIcon(QStyle.SP_DialogSaveButton)))
         export_ris_action.setShortcut('R')
 
         copy_clipboard_action=menu.addAction('Export Citation To &Clipboard')
-        copy_clipboard_action.setIcon(QIcon.fromTheme('edit-copy'))
+        copy_clipboard_action.setIcon(QIcon.fromTheme('edit-copy',
+                self.style().standardIcon(QStyle.SP_FileDialogDetailedView)))
         copy_clipboard_action.setShortcut('C')
 
         sel_rows=self.doc_table.selectionModel().selectedRows()
