@@ -5,3 +5,4 @@
 *.ini
 /dist/
 /build/
+/samples/
