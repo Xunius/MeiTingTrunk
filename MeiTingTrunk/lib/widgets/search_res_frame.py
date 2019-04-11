@@ -433,15 +433,15 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
         for fii in fields:
             if fii=='authors':
-                textii=', '.join(meta['authors_l'])
+                textii='; '.join(meta['authors_l'])
             elif fii=='title':
                 textii=meta['title']
             elif fii=='publication':
                 textii=meta['publication']
             elif fii=='keywords':
-                textii=', '.join(meta['keywords_l'])
+                textii='; '.join(meta['keywords_l'])
             elif fii=='tag':
-                textii=', '.join(meta['tags_l'])
+                textii='; '.join(meta['tags_l'])
             elif fii=='abstract':
                 textii=meta['abstract']
             elif fii=='note':
