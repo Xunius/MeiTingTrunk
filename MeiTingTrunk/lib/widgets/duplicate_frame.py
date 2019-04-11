@@ -472,7 +472,11 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
             #-------------------Add to tree-------------------
             for jj,docjj in enumerate(members[1:]):
-                itemjj=self.createEntry(docjj, '', str(scores[jj]))
+                # connection lost along the path between 2 vertices
+                sjj=str(scores[jj])
+                if sjj=='0':
+                    sjj='N/A'
+                itemjj=self.createEntry(docjj, '', sjj)
                 itemii.addChild(itemjj)
 
         self.tree.setStyleSheet('''
