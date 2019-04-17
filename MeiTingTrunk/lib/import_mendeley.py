@@ -35,8 +35,6 @@ from . import sqlitedb
 from . import exportpdf
 from . import xapiandb
 from bs4 import BeautifulSoup
-import threading
-from queue import Queue
 
 
 LOGGER=logging.getLogger(__name__)
@@ -98,35 +96,6 @@ DOI_PATTERN=re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
 NOTE_EXCLUDE_PATTERNS=[
         DOI_PATTERN,
         ]
-
-class WorkThread(threading.Thread):
-    def __init__(self,id,workq,outq,func):
-        threading.Thread.__init__(self)
-        self.id=id
-        self.workq=workq
-        self.outq=outq
-        self.func=func
-
-    def run(self):
-        while True:
-            print('# <WorkThread>: Thread %s start processing ... Remaining queue size: %d. Active threads: %d'\
-                %(self.id, self.workq.qsize(), threading.active_count()))
-
-            args=self.workq.get()
-            jobid=args[0]
-            try:
-                rec=self.func(*args)
-                print('############# <run>: rec=',rec)
-                LOGGER.debug('Job %d done. Remaining queue size: %d.'\
-                    %(jobid, self.workq.qsize()))
-            except:
-                rec=(1,jobid,None)
-                LOGGER.debug('Job %d failed. Remaining queue size: %d.'\
-                    %(jobid, self.workq.qsize()))
-            self.workq.task_done()
-            self.outq.put(rec)
-
-
 
 
 def getDocIds(db):
@@ -652,10 +621,6 @@ def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
         LOGGER.debug('lib_folder = %s' %lib_folder)
         LOGGER.debug('rel_lib_folder = %s' %rel_lib_folder)
 
-        #-----------------Create xapian db-----------------
-        xapian_folder=os.path.join('lib_folder', '_xapian_db')
-        xapiandb.createDatabase(xapian_folder)
-
         #----------------Copy folders table----------------
         query='''SELECT id, name, parentId
         FROM Folders
@@ -691,7 +656,7 @@ def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
 
 
 def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
-        rename_file, ii, docii):
+        rename_file, ii, docii, do_indexing):
     """Copy document data from Mendeley and commit to output sqlite
 
     Args:
@@ -705,6 +670,7 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
                   doc id in the output sqlite.
         docii (int or None): if int, id of the copied doc. If None, call
                              commit() on <dbout> and close() on <dbin>.
+        do_indexing (bool): do xapian indexing or not.
 
     Returns:
         rec (int): 0 if success copy. 1 if failed. 2 if failed to export
@@ -727,27 +693,10 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
     file_folder=os.path.join(lib_folder,'_collections')
     rel_lib_folder=os.path.join('', lib_name) # relative to storage folder
     rel_file_folder=os.path.join('','_collections')
-    xapian_folder=os.path.join(lib_folder, '_xapian_db')
-    xapian_db=xapiandb.createDatabase(xapian_folder)
 
-    #xapian_inq=Queue()
-    #xapian_outq=Queue()
-    #xapian_tds=[]
-
-    def xapianwrapper(jobid, dbpath, abspath, relpath, meta, db):
-        try:
-            result=xapiandb.indexFile(dbpath, abspath, relpath, meta, db)
-            return 0, jobid, result
-        except:
-            return 1, jobid, None
-
-    '''
-    for jj in range(1):
-        tdii=WorkThread(jj,xapian_inq, xapian_outq, xapianwrapper)
-        xapian_tds.append(tdii)
-        tdii.daemon=True
-        tdii.start()
-    '''
+    if do_indexing:
+        xapian_folder=os.path.join(lib_folder, '_xapian_db')
+        xapian_db=xapiandb.createDatabase(xapian_folder)
 
     try:
         ii+=1
@@ -786,7 +735,8 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
 
         #------------------Get FileNotes------------------
         #notes=selByDocid(cin, 'DocumentNotes', 'text', docii)
-        notes=selByDocid(cin, 'FileNotes', ['note', 'modifiedTime', 'createdTime'], docii)
+        notes=selByDocid(cin, 'FileNotes', ['note', 'modifiedTime',
+            'createdTime'], docii)
 
         #---------------Get DocumentKeywords---------------
         keywords=selByDocid(cin, 'DocumentKeywords', 'keyword', docii)
@@ -917,7 +867,6 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
 
                 #LOGGER.debug('relpath = %s' %relpath)
                 LOGGER.debug('abspath = %s' %abspath)
-
                 if len(annotations)>0 and filepath in annotations:
                     anno=annotations[filepath]
                     try:
@@ -941,27 +890,30 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
                             abspath))
 
                 #-----------------Update to xapian-----------------
-                try:
-                    rec=xapiandb.indexFile(xapian_folder, filepath, relpath,
-                            {'id': ii}, db=xapian_db)
-                    if rec==1:
+                if do_indexing:
+                    try:
+                        rec=xapiandb.indexFile(xapian_folder, filepath, relpath,
+                                {'id': ii}, db=xapian_db)
+                        if rec==1:
+                            xapian_fail_list.append(filepath)
+                            LOGGER.error('Failed to index attachment %s' %filepath)
+                    except:
                         xapian_fail_list.append(filepath)
-                        LOGGER.error('Failed to index attachment %s' %fii)
-                except:
-                    xapian_fail_list.append(filepath)
-                    LOGGER.exception('Failed to index attachment %s' %fii)
-                #xapian_inq.put((ii, xapian_folder, filepath, relpath,
-                    #{'id': docii}, xapian_db))
-                #tt=threading.Thread(target=xapianwrapper, args=(ii,
-                    #xapian_folder, filepath, relpath, {'id': docii}, xapian_db))
-                #tt.start()
+                        LOGGER.exception('Failed to index attachment %s' %filepath)
 
         if len(file_fail_list)>0:
-            return 2, jobid, '; '.join(file_fail_list)
+            if len(xapian_fail_list)>0:
+                return 4, jobid, '%s\n%s' %('; '.join(file_fail_list),
+                        '; '.join(xapian_fail_list))
+            else:
+                return 2, jobid, '; '.join(file_fail_list)
+        elif len(xapian_fail_list)>0:
+            return 3, jobid, '; '.join(xapian_fail_list)
         else:
             return 0, jobid, None
+
     except Exception as e:
-        print('# <importMendeleyCopyData>: ######### e=',e)
+        LOGGER.exception('Failed to copy data for doc %s' %docii)
         return 1, jobid, None
 
 

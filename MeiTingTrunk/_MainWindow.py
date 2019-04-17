@@ -366,7 +366,7 @@ New session started
             def func(jobid,fname):
                 try:
                     result=sqlitedb.createNewDatabase(fname)
-                    if tools.hasPdftotext() and tools.hasXapian():
+                    if tools.isXapianReady():
                         rec=xapiandb.createDatabase(xapian_folder)
                         if rec is None:
                             self.logger.error('Failed to create xapian database.')
@@ -538,7 +538,7 @@ New session started
         lib_xapian_folder=os.path.join(self.current_lib_folder,'_xapian_db')
         if not os.path.exists(lib_xapian_folder):
 
-            if tools.hasPdftotext() and tools.hasXapian():
+            if tools.isXapianReady():
                 msg=QtWidgets.QMessageBox()
                 msg.setIcon(QtWidgets.QMessageBox.Warning)
                 msg.setWindowTitle('Can not find folder')
@@ -555,7 +555,7 @@ New session started
                     msg.setIcon(QtWidgets.QMessageBox.Warning)
                     msg.setWindowTitle('Failed to create xapian database')
                     msg.setText("Failed to create xapian database")
-                    msg.setInformativeText("Please check xapian-core and xapianbindings are installed and work, then re-open the library. See https://xapian.org/docs/install.html for more details.")
+                    msg.setInformativeText('''Please check xapian-core and xapianbindings are installed and work, then re-open the library. See <a href="https://xapian.org/docs/install.html"> https://xapian.org/docs/install.html </a> for more details.''')
                     msg.exec_()
 
 

@@ -526,3 +526,7 @@ def hasXapian():
         return False
 
     return True
+
+def isXapianReady():
+
+    return hasPdftotext() and hasXapian()

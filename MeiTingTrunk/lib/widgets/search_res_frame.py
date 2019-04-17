@@ -502,7 +502,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
         # add each matched pdf
         if 'pdf' in fields and pdf_match_dict is not None:
             for jj,(kk,vv) in enumerate(pdf_match_dict.items()):
-                addField('Attachment-%d' %(jj+1), vv, crow, kk)
+                addField('PDF-%d' %(jj+1), vv, crow, kk)
                 crow+=1
 
         self.tree.setItemWidget(item,0,frame)
