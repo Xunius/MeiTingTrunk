@@ -89,6 +89,7 @@ class MainFrameDataSlots:
 
             # update meta_dict
             self.meta_dict[docid]=meta_dict
+            meta_dict['id']=docid
             # add to needs review folder
             self.folder_data['-2'].append(docid)
             # scroll to and select row in doc table

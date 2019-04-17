@@ -474,8 +474,8 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
             for jj,docjj in enumerate(members[1:]):
                 # connection lost along the path between 2 vertices
                 sjj=str(scores[jj])
-                if sjj=='0':
-                    sjj='N/A'
+                #if sjj=='0':
+                    #sjj='N/A'
                 itemjj=self.createEntry(docjj, '', sjj)
                 itemii.addChild(itemjj)
 
