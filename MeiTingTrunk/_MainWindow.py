@@ -27,7 +27,7 @@ from PyQt5.QtCore import Qt, QSettings, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 from . import _MainFrame
 from . import resources
-from .lib import sqlitedb
+from .lib import sqlitedb, xapiandb, tools
 from .lib.widgets import PreferenceDialog, ExportDialog, ThreadRunDialog,\
         ImportDialog, AboutDialog
 
@@ -146,7 +146,7 @@ New session started
 
             # search fields
             settings.setValue('search/search_fields', ['Authors', 'Title',
-                'Abstract', 'Keywords', 'Tags', 'Notes', 'Publication'])
+                'Abstract', 'Keywords', 'Tags', 'Notes', 'Publication', 'PDF'])
             settings.setValue('search/desend_folder', True)
 
             # view control
@@ -360,10 +360,18 @@ New session started
             if ext=='':
                 filename='%s.sqlite' %lib_name
                 fname=os.path.join(dirname,filename)
+            lib_folder=os.path.join(dirname, lib_name)
+            xapian_folder=os.path.join(lib_folder, '_xapian_db')
 
             def func(jobid,fname):
                 try:
                     result=sqlitedb.createNewDatabase(fname)
+                    if tools.hasPdftotext() and tools.hasXapian():
+                        rec=xapiandb.createDatabase(xapian_folder)
+                        if rec is None:
+                            self.logger.error('Failed to create xapian database.')
+                    else:
+                        self.logger.info('No pdftotext or xapian found. Skip xapian creation')
                     return 0,jobid,result
                 except Exception:
                     self.logger.exception('Failed to create new database file')
@@ -505,13 +513,14 @@ New session started
             msg.setIcon(QtWidgets.QMessageBox.Warning)
             msg.setWindowTitle('Can not find folder')
             msg.setText("Can not find library folder.")
-            msg.setInformativeText("The library folder\n    %s\nmay have be deleted, renamed or removed. \nA new folder is created, but the PDF files are missing."\
+            msg.setInformativeText("The library folder\n    %s\nmay have be deleted or renamed. \nA new folder is created, but the attachment files are missing."\
                     %self.current_lib_folder)
             msg.exec_()
 
             os.makedirs(self.current_lib_folder)
             self.logger.info('Create lib folder: %s' %self.current_lib_folder)
 
+        #-----------Make sure lib collection folder exists-----------
         lib_collection_folder=os.path.join(self.current_lib_folder,'_collections')
         if not os.path.exists(lib_collection_folder):
 
@@ -519,11 +528,36 @@ New session started
             msg.setIcon(QtWidgets.QMessageBox.Warning)
             msg.setWindowTitle('Can not find folder')
             msg.setText("Can not find library folder.")
-            msg.setInformativeText("The library folder\n    %s\nmay have be deleted, renamed or removed. \nA new folder is created, but the PDF files are missing."\
+            msg.setInformativeText("The library folder\n    %s\nmay have be deleted or renamed. \nA new folder is created, but the attachment files are missing."\
                     %lib_collection_folder)
             msg.exec_()
             os.makedirs(lib_collection_folder)
             self.logger.info('Create lib collection folder: %s' %lib_collection_folder)
+
+        #-----------Make sure lib xapian folder exists-----------
+        lib_xapian_folder=os.path.join(self.current_lib_folder,'_xapian_db')
+        if not os.path.exists(lib_xapian_folder):
+
+            if tools.hasPdftotext() and tools.hasXapian():
+                msg=QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Warning)
+                msg.setWindowTitle('Can not find folder')
+                msg.setText("Can not find xapian database folder.")
+                msg.setInformativeText("The xapian database folder\n    %s\nmay have be deleted or renamed. \nA new database is created, but a re-run of indexing is needed."\
+                        %lib_xapian_folder)
+                msg.exec_()
+                #os.makedirs(lib_xapian_folder)
+                try:
+                    xapiandb.createDatabase(lib_xapian_folder)
+                    self.logger.info('Create lib xapian folder: %s' %lib_xapian_folder)
+                except:
+                    msg=QtWidgets.QMessageBox()
+                    msg.setIcon(QtWidgets.QMessageBox.Warning)
+                    msg.setWindowTitle('Failed to create xapian database')
+                    msg.setText("Failed to create xapian database")
+                    msg.setInformativeText("Please check xapian-core and xapianbindings are installed and work, then re-open the library. See https://xapian.org/docs/install.html for more details.")
+                    msg.exec_()
+
 
         self.main_frame.auto_save_timer.start()
 
@@ -574,7 +608,7 @@ New session started
             self.main_frame.clearData()
             self.is_loaded=False
 
-            self.import_action.setEnabled(False)
+            self.import_action.setEnabled(True)
             self.export_action.setEnabled(False)
             self.save_database_action.setEnabled(False)
             self.close_database_action.setEnabled(False)

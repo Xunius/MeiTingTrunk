@@ -13,15 +13,19 @@ You may use, distribute and modify this code under the
 terms of the GPLv3 license.
 '''
 
+import os
+import platform
 from collections import OrderedDict
 import logging
+import subprocess
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize, QRegExp, QRect,\
         QPoint
 from PyQt5.QtGui import QBrush, QColor, QFont, QSyntaxHighlighter,\
-        QTextCharFormat
+        QTextCharFormat, QFontMetrics
 #from PyQt5.QtWidgets import QDialogButtonBox
-from .. import sqlitefts
+from .threadrun_dialog import Master
+from .. import sqlitefts, xapiandb
 from ..tools import iterTreeWidgetItems
 
 
@@ -56,7 +60,8 @@ class HighLighter(QSyntaxHighlighter):
         keyword.setBackground(brush)
         keyword.setFontWeight(QFont.Bold)
 
-        self.highlightingRules = [(QRegExp(key), keyword) for key in match_words]
+        self.highlightingRules = [(QRegExp(key, Qt.CaseInsensitive), keyword)\
+                for key in match_words]
 
     def highlightBlock(self, text):
 
@@ -400,7 +405,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
         return frame
 
 
-    def addFieldRows(self, parent, fields, meta, search_text):
+    def addFieldRows(self, parent, fields, meta, pdf_match_dict, search_text):
         '''Add detail rows to a matched doc
 
         Args:
@@ -408,6 +413,12 @@ class SearchResFrame(QtWidgets.QScrollArea):
             fields (list): list of matched field names, including 'authors',
                            'title', 'keywords' etc..
             meta (DocMeta): meta data dict for the matched doc.
+            pdf_match_dict (dict or None): dict containing results in
+                full text search, in the format of {rel_path1: snippet1,
+                                                    rel_path2: snippet2,
+                                                    ...
+                                                    }.
+                if None, skip.
             search_text (str): searched text.
 
         A dummy container widget is created, inside which a grid layout is used
@@ -431,6 +442,38 @@ class SearchResFrame(QtWidgets.QScrollArea):
         grid=QtWidgets.QGridLayout(frame)
         crow=grid.rowCount()
 
+        def addField(label, text, crow, relpath=None):
+            '''Add a field to grid layout
+
+            Args:
+                label (str): field name.
+                text (str): search result text.
+                crow (int): current row number of grid layout.
+                relpath (str or None): relpath of PDF file. If not None, will
+                                       create a button instead of a QLabel.
+            '''
+
+            if relpath is not None:
+                labelii=QtWidgets.QPushButton('%s: ' %label)
+                labelii.clicked.connect(lambda: self.openPDF(relpath))
+            else:
+                labelii=QtWidgets.QLabel('%s: ' %label)
+
+            text_editii=AdjustableTextEditWithFold()
+            text_editii.setReadOnly(True)
+            text_editii.setFont(font)
+            text_editii.setText(text)
+            text_editii.setHighlightText(search_text)
+            grid.addWidget(text_editii.fold_button,crow,0)
+            grid.addWidget(labelii,crow,1)
+            grid.addWidget(text_editii,crow,2)
+
+            text_editii.fold_size_sig.connect(lambda x: frame.resize(
+                frame.sizeHint()))
+
+            return
+
+
         for fii in fields:
             if fii=='authors':
                 textii='; '.join(meta['authors_l'])
@@ -446,22 +489,21 @@ class SearchResFrame(QtWidgets.QScrollArea):
                 textii=meta['abstract']
             elif fii=='note':
                 textii=meta['notes']
+            elif fii=='pdf':
+                # add later
+                continue
             else:
                 LOGGER.warning('Wrong field given %s' %fii)
                 raise Exception("Exception")
 
-            labelii=QtWidgets.QLabel('%s: ' %fii)
-            text_editii=AdjustableTextEditWithFold()
-            text_editii.setFont(font)
-            text_editii.setText(textii)
-            text_editii.setHighlightText(search_text)
-            grid.addWidget(text_editii.fold_button,crow,0)
-            grid.addWidget(labelii,crow,1)
-            grid.addWidget(text_editii,crow,2)
-
-            text_editii.fold_size_sig.connect(lambda x: frame.resize(
-                frame.sizeHint()))
+            addField(fii, textii, crow, None)
             crow+=1
+
+        # add each matched pdf
+        if 'pdf' in fields and pdf_match_dict is not None:
+            for jj,(kk,vv) in enumerate(pdf_match_dict.items()):
+                addField('Attachment-%d' %(jj+1), vv, crow, kk)
+                crow+=1
 
         self.tree.setItemWidget(item,0,frame)
         # add doc id to column 5
@@ -505,7 +547,8 @@ class SearchResFrame(QtWidgets.QScrollArea):
         return
 
 
-    def search(self, db, text, field_list, folderid, meta_dict, desend):
+    def search(self, db, text, field_list, folderid, meta_dict, folder_data,
+            desend):
         """Start search
 
         Args:
@@ -516,6 +559,8 @@ class SearchResFrame(QtWidgets.QScrollArea):
             folderid (str): id the folder. Search is done within docs in this
                  folder, also controled by <desend>.
             meta_dict (dict): dict of all meta data in the library.
+            folder_data (dict): documents in each folder. keys: folder id in str,
+                values: list of doc ids.
             desend (bool): whether to walk down the folder tree and include
                  subfolders of folder <folderid>.
 
@@ -524,31 +569,118 @@ class SearchResFrame(QtWidgets.QScrollArea):
         self.tree.clear()
         self.setVisible(True)
         self.meta_dict=meta_dict
+        self.folder_data=folder_data
         self.search_text=text
         self.desend=desend
         LOGGER.info('search text = %s. is desend = %s' %(text, desend))
 
-        search_res=sqlitefts.searchMultipleLike2(db, text, field_list,
+        # Didn't put it to separate thread as access to sqlite db is restricted
+        # to single thread.
+        search_res, search_folderids=sqlitefts.searchMultipleLike2(db, text, field_list,
                 folderid, desend)
-        self.label.setText('%d searches results related to "%s"'\
-                %(len(search_res),text))
-        self.addResultToTree(text, search_res)
+
+        def searchXapian(jobid, dbpath, querystring, fields, docids):
+            try:
+                result=xapiandb.search(dbpath, querystring, fields,
+                        docids=docids)
+                return 0, jobid, result
+            except Exception:
+                LOGGER.exception('Failed to call searchXapian.')
+                return 1, jobid, None
+
+        #---------------Do full text search---------------
+        if 'PDF' in field_list:
+            xapian_db=os.path.join(self.settings.value(
+                'saving/current_lib_folder', type=str), '_xapian_db')
+
+            # filter by docids
+            if folderid=='-1':
+                docids=None
+            elif folderid=='-2':
+                docids=self.folder_data['-2']
+            else:
+                docids=[]
+                for fii in search_folderids:
+                    docids.extend(self.folder_data[str(fii)])
+
+            self.master1=Master(searchXapian, [(0, xapian_db, text, ['pdf',],
+                docids)],
+                    1, self.parent.progressbar,
+                    'busy', self.parent.status_bar, 'Search PDFs...')
+            self.master1.all_done_signal.connect(lambda: \
+                    self.combineXapianResults(text, search_res))
+            self.master1.run()
+        #--------------Do only sqlite search--------------
+        else:
+            self.addResultToTree(text, search_res)
 
         return
 
 
-    def addResultToTree(self, search_text, search_res):
+    @pyqtSlot(str, list)
+    def combineXapianResults(self, search_text, sqlite_results):
+        '''Combine results from sqlite search with xapian search
+
+        Args:
+            search_text (str): searched term.
+            sqlite_res (list): list of doc ids matching search from the sqlite
+                search, together with the field names where the match is found.
+                        E.g.
+                        [(1, 'authors,title'),
+                         (10, 'title,keywords'),
+                         (214, 'abstract,tag'),
+                         ...
+                        ]
+        '''
+
+        rec, _, xapian_results=self.master1.results[0]
+        # xapian_results: dict, key = docid_in_str, value: dict:
+        #                       {relpath1: snippet1,
+        #                        relpath2: snippet2,
+        #                         ... }
+        if rec==1:
+            LOGGER.error('Failed to retrieve xapian search results.')
+        else:
+            sqlite_docs=[ii[0] for ii in sqlite_results]
+
+            for idii in xapian_results.keys():
+                idii=int(idii)
+                if idii in sqlite_docs:
+                    # if doc appear in sqlite search, add 'pdf' to its group
+                    idx=sqlite_docs.index(idii)
+                    sqlite_fields=sqlite_results[idx][1]
+                    sqlite_results[idx]=(idii, '%s,pdf' %sqlite_fields)
+                else:
+                    # add new doc
+                    sqlite_results.append((idii, 'pdf'))
+
+            LOGGER.debug('Combined docs from sqlite and xapian search: %s'\
+                    %sqlite_results)
+
+        self.addResultToTree(search_text, sqlite_results, xapian_results)
+
+        return
+
+
+    def addResultToTree(self, search_text, sqlite_res, xapian_res=None):
         '''Add search results to a QTreeWidget for display
 
         Args:
             search_text (str): searched term.
-            search_res (list): list of doc ids matching search, together with
+            sqlite_res (list): list of doc ids matching search, together with
                 the field names where the match is found. E.g.
                         [(1, 'authors,title'),
                          (10, 'title,keywords'),
                          (214, 'abstract,tag'),
                          ...
                         ]
+        Kwargs:
+            xapian_res (dict or None): full text search resutls from xapian.
+                key = docid_in_str, value: dict:
+                                  {relpath1: snippet1,
+                                    relpath2: snippet2,
+                                     ... }
+                If None, xapian search was not performed.
         '''
 
         def createEntry(docid, gid):
@@ -571,23 +703,31 @@ class SearchResFrame(QtWidgets.QScrollArea):
             return item
 
         #-------------------If no match-------------------
-        if len(search_res)==0:
+        if len(sqlite_res)==0:
             self.noMatchLabel.setVisible(True)
             LOGGER.info('Not result found.')
             return
 
         self.noMatchLabel.setVisible(False)
+        self.label.setText('%d searches results related to "%s"'\
+                %(len(sqlite_res),search_text))
 
         #-------------Create entries for docs-------------
-        for ii,recii in enumerate(search_res):
+        for ii,recii in enumerate(sqlite_res):
             docii, fieldii=recii
             fieldii=list(set(fieldii.split(','))) # str to list
             itemii=createEntry(docii, str(ii+1))
             self.tree.addTopLevelItem(itemii)
 
+            # get xapian search results for doc if exists
+            if xapian_res is not None and docii in xapian_res:
+                pdf_match_dict=xapian_res[docii]['pdf']
+            else:
+                pdf_match_dict=None
+
             # add group members
             self.addFieldRows(itemii, fieldii, self.meta_dict[docii],
-                    search_text)
+                    pdf_match_dict, search_text)
 
         self.tree.expandAll()
 
@@ -620,6 +760,55 @@ class SearchResFrame(QtWidgets.QScrollArea):
             docids=list(set(docids))
             LOGGER.info('Selected docids=%s.' %docids)
             self.create_folder_sig.emit(self.search_text, docids)
+
+        return
+
+
+    @pyqtSlot()
+    def openPDF(self, relpath):
+        '''Open pdf externally
+
+        Args:
+            relpath (str): relative path of PDF file.
+        '''
+
+        lib_folder=self.settings.value('saving/current_lib_folder', type=str)
+        filepath=os.path.join(lib_folder, relpath)
+        LOGGER.debug('Open file at path %s' %filepath)
+
+        if not os.path.exists(filepath):
+            msg=QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            msg.setWindowTitle('Error')
+            msg.setText("Can't find file.")
+            msg.setInformativeText("No such file: %s. Please re-attach the document file." %filepath)
+            msg.exec_()
+            return
+
+        current_os=platform.system()
+        if current_os=='Linux':
+            open_command='xdg-open'
+        elif current_os=='Darwin':
+            open_command='open'
+        elif current_os=='Windows':
+            raise Exception("Currently only support Linux and Mac.")
+        else:
+            raise Exception("Currently only support Linux and Mac.")
+
+        LOGGER.info('OS = %s, open command = %s' %(current_os, open_command))
+
+        try:
+            subprocess.call((open_command, filepath))
+        except Exception:
+            LOGGER.exception('Failed to open file %s' %filepath)
+
+            msg=QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            msg.setWindowTitle('Error')
+            msg.setText("Failed to open file")
+            msg.setInformativeText("Failed to open file s" %filepath)
+            msg.exec_()
+            return
 
         return
 

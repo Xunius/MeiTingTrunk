@@ -31,6 +31,7 @@ try:
     from .tools import autoRename
 except:
     from tools import autoRename
+from . import xapiandb
 
 DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',
@@ -767,7 +768,7 @@ def renameFile(fname, meta_dict, replace_space=False):
     if year is None:
         year='unknown'
     else:
-        year=year.strip()
+        year=str(year).strip()
 
     # get title
     title=meta_dict['title'] or basename
@@ -1201,10 +1202,12 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files,
         lib_name=os.path.split(_)[1]
 
     abs_file_folder=os.path.join(lib_folder,'_collections')
+    abs_xapian_folder=os.path.join(lib_folder,'_xapian_db')
     rel_file_folder=os.path.join('','_collections')
     rename_files=int(rename_files) # make sure this int, not str
     LOGGER.debug('lib_name = %s' %lib_name)
     LOGGER.debug('abs_file_folder = %s' %abs_file_folder)
+    LOGGER.debug('abs_xapian_folder = %s' %abs_xapian_folder)
     LOGGER.debug('rel_file_folder = %s' %rel_file_folder)
     LOGGER.debug('rename_files = %s' %rename_files)
 
@@ -1212,6 +1215,7 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files,
         os.makedirs(abs_file_folder)
 
     files=meta_dict['files_l']
+    files_updated=[]
     if len(files)>0:
         query='''INSERT OR IGNORE INTO DocumentFiles (did, relpath)
         VALUES (?,?)'''
@@ -1258,6 +1262,8 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files,
             rel_fii=os.path.join(rel_file_folder,newfilename)
             cout.execute(query,(docid,rel_fii))
 
+            files_updated.append(rel_fii)
+
             LOGGER.debug('new abspath = %s' %newabsii)
             LOGGER.debug('new relpath = %s' %rel_fii)
 
@@ -1280,9 +1286,19 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files,
                     LOGGER.exception('Failed to move file %s to %s'\
                             %(oldabsii,newabsii))
 
+            #-----------------Update to xapian-----------------
+            try:
+                rec=xapiandb.indexFile(abs_xapian_folder, newabsii, rel_fii,
+                        meta_dict)
+                if rec==1:
+                    LOGGER.error('Failed to index attachment %s' %fii)
+            except:
+                LOGGER.exception('Failed to index attachment %s' %fii)
 
         db.commit()
 
+    # update meta_dict
+    meta_dict['files_l']=files_updated
     LOGGER.info('Done inserting doc %s to DocumentFiles' %docid)
 
     return 0
@@ -1459,7 +1475,6 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files,
     #-------------------Update files-------------------
     if set(old_meta['files_l']) != set(meta_dict['files_l']):
 
-
         LOGGER.debug('Need to update files.')
         delFromTable(db, 'DocumentFiles', docid)
         rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder,
@@ -1469,8 +1484,11 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files,
         # any old file to del?
         del_files=list(set(old_meta['files_l']).difference(set(meta_dict['files_l'])))
         if len(del_files)>0:
-            LOGGER.warning('Deleting old files: %s' %del_files)
+            xapian_folder=os.path.join(lib_folder,'_xapian_db')
+            LOGGER.info('Deleting old files: %s' %del_files)
             for fii in del_files:
+                # del from xapian
+                rec=xapiandb.delXapianDoc(xapian_folder, 'Q%d-%s' %(docid, fii))
                 absii=os.path.join(lib_folder,fii)
                 if os.path.exists(absii):
                     LOGGER.info('Deleting file from disk %s' %absii)
@@ -1585,7 +1603,11 @@ def delDocFromDatabase(db, docid, lib_folder):
     old_files=fetchField(db, query_files, (docid,), 1, 'list')
     delFromTable(db, 'DocumentFiles', docid)
 
-    for fii in old_files:
+    #-----------------Del from xapian-----------------
+    xapian_folder=os.path.join(lib_folder,'_xapian_db')
+    xapiandb.delByDocid(xapian_folder, docid)
+
+    for ii, fii in enumerate(old_files):
         # prepend folder path
         absii=os.path.join(lib_folder,fii)
         if os.path.exists(absii):

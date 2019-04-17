@@ -33,7 +33,10 @@ else:
 
 from . import sqlitedb
 from . import exportpdf
+from . import xapiandb
 from bs4 import BeautifulSoup
+import threading
+from queue import Queue
 
 
 LOGGER=logging.getLogger(__name__)
@@ -95,6 +98,35 @@ DOI_PATTERN=re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
 NOTE_EXCLUDE_PATTERNS=[
         DOI_PATTERN,
         ]
+
+class WorkThread(threading.Thread):
+    def __init__(self,id,workq,outq,func):
+        threading.Thread.__init__(self)
+        self.id=id
+        self.workq=workq
+        self.outq=outq
+        self.func=func
+
+    def run(self):
+        while True:
+            print('# <WorkThread>: Thread %s start processing ... Remaining queue size: %d. Active threads: %d'\
+                %(self.id, self.workq.qsize(), threading.active_count()))
+
+            args=self.workq.get()
+            jobid=args[0]
+            try:
+                rec=self.func(*args)
+                print('############# <run>: rec=',rec)
+                LOGGER.debug('Job %d done. Remaining queue size: %d.'\
+                    %(jobid, self.workq.qsize()))
+            except:
+                rec=(1,jobid,None)
+                LOGGER.debug('Job %d failed. Remaining queue size: %d.'\
+                    %(jobid, self.workq.qsize()))
+            self.workq.task_done()
+            self.outq.put(rec)
+
+
 
 
 def getDocIds(db):
@@ -620,6 +652,10 @@ def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
         LOGGER.debug('lib_folder = %s' %lib_folder)
         LOGGER.debug('rel_lib_folder = %s' %rel_lib_folder)
 
+        #-----------------Create xapian db-----------------
+        xapian_folder=os.path.join('lib_folder', '_xapian_db')
+        xapiandb.createDatabase(xapian_folder)
+
         #----------------Copy folders table----------------
         query='''SELECT id, name, parentId
         FROM Folders
@@ -691,6 +727,27 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
     file_folder=os.path.join(lib_folder,'_collections')
     rel_lib_folder=os.path.join('', lib_name) # relative to storage folder
     rel_file_folder=os.path.join('','_collections')
+    xapian_folder=os.path.join(lib_folder, '_xapian_db')
+    xapian_db=xapiandb.createDatabase(xapian_folder)
+
+    #xapian_inq=Queue()
+    #xapian_outq=Queue()
+    #xapian_tds=[]
+
+    def xapianwrapper(jobid, dbpath, abspath, relpath, meta, db):
+        try:
+            result=xapiandb.indexFile(dbpath, abspath, relpath, meta, db)
+            return 0, jobid, result
+        except:
+            return 1, jobid, None
+
+    '''
+    for jj in range(1):
+        tdii=WorkThread(jj,xapian_inq, xapian_outq, xapianwrapper)
+        xapian_tds.append(tdii)
+        tdii.daemon=True
+        tdii.start()
+    '''
 
     try:
         ii+=1
@@ -827,6 +884,7 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
         meta_dictii['files_l']=[]
 
         file_fail_list=[]
+        xapian_fail_list=[]
         if len(fileurl)>0:
 
             for fileii in fileurl:
@@ -882,11 +940,28 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
                         LOGGER.exception('Failed to copy %s to %s' %(filepath,
                             abspath))
 
+                #-----------------Update to xapian-----------------
+                try:
+                    rec=xapiandb.indexFile(xapian_folder, filepath, relpath,
+                            {'id': ii}, db=xapian_db)
+                    if rec==1:
+                        xapian_fail_list.append(filepath)
+                        LOGGER.error('Failed to index attachment %s' %fii)
+                except:
+                    xapian_fail_list.append(filepath)
+                    LOGGER.exception('Failed to index attachment %s' %fii)
+                #xapian_inq.put((ii, xapian_folder, filepath, relpath,
+                    #{'id': docii}, xapian_db))
+                #tt=threading.Thread(target=xapianwrapper, args=(ii,
+                    #xapian_folder, filepath, relpath, {'id': docii}, xapian_db))
+                #tt.start()
+
         if len(file_fail_list)>0:
             return 2, jobid, '; '.join(file_fail_list)
         else:
             return 0, jobid, None
-    except:
+    except Exception as e:
+        print('# <importMendeleyCopyData>: ######### e=',e)
         return 1, jobid, None
 
 

@@ -18,6 +18,7 @@ import re
 import time
 import platform
 import logging
+import subprocess
 from functools import reduce
 from fuzzywuzzy import fuzz
 from PyQt5 import QtWidgets
@@ -496,3 +497,32 @@ def autoRename(abpath):
     return newname
 
 
+
+def hasPdftotext():
+    '''Check the existance of pdftotext'''
+
+    proc=subprocess.Popen(['which','pdftotext'], stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+    rec=proc.communicate()
+    if len(rec[0])==0 and len(rec[1])>0:
+        return False
+
+    return True
+
+
+
+def hasXapian():
+    '''Check the existance of xapian core and xapian-python'''
+
+    proc=subprocess.Popen(['which','xapian-delve'], stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+    rec=proc.communicate()
+    if len(rec[0])==0 and len(rec[1])>0:
+        return False
+
+    try:
+        import xapian
+    except:
+        return False
+
+    return True

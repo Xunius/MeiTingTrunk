@@ -520,7 +520,7 @@ class MainFrameToolBarSlots:
         self.status_bar.showMessage('Searching ...')
         self.doc_table.setVisible(False)
         self.search_res_frame.search(self.db, text, new_search_fields,
-                current_folder[1], self.meta_dict, desend)
+                current_folder[1], self.meta_dict, self.folder_data, desend)
 
         return
 
@@ -562,14 +562,24 @@ class MainFrameToolBarSlots:
         newitem.setIcon(0,diropen_icon)
         newitem.setFlags(newitem.flags() | Qt.ItemIsEditable)
 
+        # add folder
         self.folder_dict[newid]=(foldername,'-1')
         self.folder_data[newid]=docids
+
+        # add folder to docs
+        for idii in docids:
+            foldersii=self.meta_dict[idii]['folders_l']
+            if (newid, foldername) not in foldersii:
+                foldersii.append((newid, foldername))
+            self.meta_dict[idii]['folders_l']=foldersii
+
         self.libtree.addTopLevelItem(newitem)
         self.libtree.scrollToItem(newitem)
         self.libtree.setCurrentItem(newitem)
 
         self.logger.info('New folder id=%s' %newid)
         self.changed_folder_ids.append(newid)
+        self.changed_doc_ids.extend(docids)
 
         return
 
