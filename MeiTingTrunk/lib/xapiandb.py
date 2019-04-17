@@ -151,11 +151,11 @@ def delXapianDoc(dbpath, qid):
 
     try:
         db=xapian.WritableDatabase(dbpath, xapian.DB_OPEN)
+        db.delete_document(qid)
+        return 0
     except:
         return 1
-    db.delete_document(qid)
 
-    return 0
 
 
 def delByDocid(dbpath, docid):
@@ -173,7 +173,7 @@ def delByDocid(dbpath, docid):
     for idii in qids:
         delXapianDoc(dbpath, idii)
 
-    return
+    return 0
 
 
 def getByDocid(dbpath, docid):
