@@ -83,7 +83,7 @@ def indexFile(dbpath, abspath, relpath, meta_dict, db=None):
     if db is None:
         db=xapian.WritableDatabase(dbpath, xapian.DB_CREATE_OR_OPEN)
 
-    LOGGER.debug('abspath = %s. relpath = %s' %(abspath, relpath))
+    #LOGGER.debug('abspath = %s. relpath = %s' %(abspath, relpath))
 
     #--------------Create xapian document--------------
     doc=xapian.Document()
@@ -91,20 +91,23 @@ def indexFile(dbpath, abspath, relpath, meta_dict, db=None):
     term_generator.set_stemmer(xapian.Stem('en'))
     term_generator.set_document(doc)
 
-    with open(os.devnull, 'w') as devnull:
-        #discard stderr
-        proc=subprocess.Popen(['pdftotext', abspath, '-'],
-                bufsize=0,
-                stdout=subprocess.PIPE, stderr=devnull)
+    #with open(os.devnull, 'w') as devnull:
+    #discard stderr
+    #proc=subprocess.Popen(['pdftotext', abspath, '-'],
+    proc=subprocess.Popen("pdftotext '%s' -" %abspath,
+            bufsize=0,
+            shell=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        # NOTE: don't use proc.communicate(), which is slow af. Writing and
-        # reading from a tmp file is no better
+    # NOTE: don't use proc.communicate(), which is slow af. Writing and
+    # reading from a tmp file is no better
 
-        lines=[]
-        while True:
-            line=proc.stdout.readline()
-            if not line:
-                break
+    lines=[]
+    while True:
+        line=proc.stdout.readline()
+        if not line:
+            break
+        if len(line)>0:
             line=line.decode('utf-8')
             term_generator.index_text(line)
             lines.append(line)
@@ -133,7 +136,8 @@ def indexFile(dbpath, abspath, relpath, meta_dict, db=None):
 
     doc.set_data(json.dumps(fields))
     db.replace_document(idterm, doc)
-    LOGGER.debug('added qid = %s' %idterm)
+    #LOGGER.debug('added qid = %s' %idterm)
+    #print('# <addBooleanTerm>: qid=',idterm)
 
     return 0
 
@@ -155,7 +159,6 @@ def delXapianDoc(dbpath, qid):
         return 0
     except:
         return 1
-
 
 
 def delByDocid(dbpath, docid):
@@ -312,17 +315,41 @@ def search(dbpath, querystring, fields, docids=None):
     return matches
 
 
+def checkDatabase(dbpath, sqlitepath):
+
+    db=xapian.Database(dbpath)
+    enquire=xapian.Enquire(db)
+    enquire.set_query(xapian.Query.MatchAll)
+
+    doc_count=db.get_doccount()
+    mset=enquire.get_mset(0, doc_count)
+
+    for mm in mset:
+        match_fields=json.loads(mm.document.get_data())
+        docid=match_fields['id']
+        qid=match_fields['qid']
+        #print('# <checkDatabase>: docid=',docid,'qid=',qid)
+
+    return
+
+
 
 
 
 
 if __name__=='__main__':
 
-    dbpath='./xapian_db2'
-    dbpath='/home/guangzhi/codes/pyrefman_deleted/men2/_xapian_db'
+    dbpath='./xapian_db'
+    #dbpath='/home/guangzhi/testdb/tt/'
+
+    #aa=checkDatabase(dbpath, None)
+
+    #dbpath='/home/guangzhi/codes/pyrefman_deleted/men2/_xapian_db'
     #recii=indexFile(dbpath, '../samples/testpdf.pdf', 'testpdf.pdf',
             #{'id':0}, None)
+    '''
     aa=search(dbpath, 'enso', ['pdf'], None)
+    print(aa)
 
     '''
     dirname='/home/guangzhi/Documents/Mendeley Desktop'
@@ -332,9 +359,8 @@ if __name__=='__main__':
         pii=os.path.join(dirname,fii)
         recii=indexFile(dbpath, pii, fii,  {'id':ii}, None)
         print('############### ii=',ii,'recii=',recii)
-        if ii>=300:
+        if ii>=50:
             break
-    '''
 
 
     '''
