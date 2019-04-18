@@ -497,7 +497,6 @@ def autoRename(abpath):
     return newname
 
 
-
 def hasPdftotext():
     '''Check the existance of pdftotext'''
 
@@ -510,11 +509,16 @@ def hasPdftotext():
     return True
 
 
-
 def hasXapian():
     '''Check the existance of xapian core and xapian-python'''
 
     proc=subprocess.Popen(['which','xapian-delve'], stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+    rec=proc.communicate()
+    if len(rec[0])==0 and len(rec[1])>0:
+        return False
+
+    proc=subprocess.Popen(['which','omindex'], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
     rec=proc.communicate()
     if len(rec[0])==0 and len(rec[1])>0:
@@ -526,6 +530,7 @@ def hasXapian():
         return False
 
     return True
+
 
 def isXapianReady():
 

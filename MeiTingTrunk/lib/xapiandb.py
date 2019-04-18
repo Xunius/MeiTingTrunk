@@ -13,12 +13,15 @@ terms of the GPLv3 license.
 '''
 
 import os
+from urllib.parse import unquote
+from urllib.parse import urlparse
 import json
 import logging
 from pprint import pprint
 import subprocess
 import xapian
 import tempfile
+import sqlite3
 
 LOGGER=logging.getLogger(__name__)
 
@@ -37,18 +40,6 @@ FIELDS={
         'pdf'         : 'XPDF',
         'id'          : 'XID'
         }
-
-
-def hasPdftotext():
-    '''Check the existance of pdftotext'''
-
-    proc=subprocess.Popen(['which','pdftotext'], stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-    rec=proc.communicate()
-    if len(rec[0])==0 and len(rec[1])>0:
-        return False
-
-    return True
 
 
 def createDatabase(dbpath):
@@ -333,14 +324,117 @@ def checkDatabase(dbpath, sqlitepath):
     return
 
 
+def indexFolder(dbpath, lib_folder):
 
+    proc=subprocess.Popen(['omindex', '-d', 'replace', # replace duplicate
+        '-e', 'skip', # documents without extracted text
+        '-f',         # follow links
+        '--db', dbpath,
+        '--url', '/', lib_folder, '_collections'], stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+
+    rec=proc.communicate()
+
+    print('# <indexFolder>: rec[0]=',rec[0])
+    print('# <indexFolder>: rec[1]=',rec[1])
+
+    return 0
+
+
+def search2(xapianpath, sqlitepath, querystring, docids=None):
+
+    try:
+        db=xapian.Database(xapianpath)
+    except:
+        raise Exception("Failed to connect to xapian database.")
+
+    try:
+        sqlitedb=sqlite3.connect(sqlitepath, check_same_thread=False)
+    except:
+        raise Exception("Failed to connect to sqlite database.")
+
+    #--------------Get path-docid mapping--------------
+    query='''SELECT relpath, did FROM DocumentFiles'''
+    ret=sqlitedb.execute(query)
+    idmap=dict(ret.fetchall())
+
+    #---------------Create query parser---------------
+    query_parser=xapian.QueryParser()
+    query_parser.set_stemmer(xapian.Stem('en'))
+    query_parser.set_stemming_strategy(query_parser.STEM_SOME)
+    query=query_parser.parse_query(querystring)
+
+    #----------------Add docid filter----------------
+    #LOGGER.debug('docids = %s' %docids)
+    if docids is not None:
+        filter_paths=['/%s' %kk for kk,vv in idmap.items() if vv in docids]
+        docid_queries=[xapian.Query('U%s' %str(ii)) for ii in filter_paths]
+        docid_query=xapian.Query(xapian.Query.OP_OR, docid_queries)
+        query=xapian.Query(xapian.Query.OP_FILTER, query, docid_query)
+
+    #------------------Create Enquire------------------
+    enquire=xapian.Enquire(db)
+    enquire.set_query(query)
+
+    #-------------------Get matches-------------------
+    offset=0
+    doc_count=db.get_doccount()
+    mset=enquire.get_mset(offset, doc_count)
+    matches={}
+
+    for mm in mset:
+        dd=mm.document.get_data().decode('utf-8')
+        dlist=dd.split('\n')
+        url=dlist[0]
+        url=converturl2abspath(url)[5:]
+        docid=idmap[url]
+
+        # save match. An awkward format.
+        dictmm={'pdf': {url: url}}
+
+        if docid not in matches:
+            matches[docid]=dictmm
+        else:
+            pdf1=matches[docid].get('pdf',{})
+            pdf2=dictmm.get('pdf',{})
+            pdf1.update(pdf2)
+            matches[docid]['pdf']=pdf1
+
+
+    return matches
+
+
+def converturl2abspath(url):
+    '''Convert a url string to an absolute path
+    '''
+
+    path = unquote(str(urlparse(url).path))
+    return path
 
 
 
 if __name__=='__main__':
 
-    dbpath='./xapian_db'
     #dbpath='/home/guangzhi/testdb/tt/'
+    dbpath='/home/guangzhi/codes/pyrefman_deleted/men/_xapian_dbdd'
+
+    #lib_folder='/home/guangzhi/testxap/'
+    lib_folder='/home/guangzhi/codes/pyrefman_deleted/men/'
+    sqlitepath='/home/guangzhi/codes/pyrefman_deleted/men.sqlite'
+
+    aa=indexFolder(dbpath, lib_folder)
+    #aa=search2(dbpath, 'atmosphere', list(range(0,200)) ,sqlitepath)
+
+    print('# <search2>: aa=',aa)
+
+
+
+
+
+
+
+
+    #dbpath='./xapian_db'
 
     #aa=checkDatabase(dbpath, None)
 
@@ -352,6 +446,7 @@ if __name__=='__main__':
     print(aa)
 
     '''
+    '''
     dirname='/home/guangzhi/Documents/Mendeley Desktop'
     files=os.listdir(dirname)
 
@@ -361,6 +456,7 @@ if __name__=='__main__':
         print('############### ii=',ii,'recii=',recii)
         if ii>=50:
             break
+    '''
 
 
     '''

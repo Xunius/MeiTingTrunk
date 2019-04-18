@@ -579,10 +579,15 @@ class SearchResFrame(QtWidgets.QScrollArea):
         search_res, search_folderids=sqlitefts.searchMultipleLike2(db, text, field_list,
                 folderid, desend)
 
-        def searchXapian(jobid, dbpath, querystring, fields, docids):
+        #def searchXapian(jobid, dbpath, querystring, fields, docids):
+        sqlitepath=db.execute('PRAgMA database_list').fetchall()[0][2]
+        print('# <changeBGColor>: sqlitepath=',sqlitepath)
+
+        def searchXapian(jobid, dbpath, querystring, docids, sqlitepath ):
             try:
-                result=xapiandb.search(dbpath, querystring, fields,
-                        docids=docids)
+                #result=xapiandb.search(dbpath, querystring, fields,
+                        #docids=docids)
+                result=xapiandb.search2(dbpath, querystring, docids, sqlitepath)
                 return 0, jobid, result
             except Exception:
                 LOGGER.exception('Failed to call searchXapian.')
@@ -603,8 +608,9 @@ class SearchResFrame(QtWidgets.QScrollArea):
                 for fii in search_folderids:
                     docids.extend(self.folder_data[str(fii)])
 
-            self.master1=Master(searchXapian, [(0, xapian_db, text, ['pdf',],
-                docids)],
+            #self.master1=Master(searchXapian, [(0, xapian_db, text, ['pdf',],
+            self.master1=Master(searchXapian, [(0, xapian_db, text,
+                docids, sqlitepath)],
                     1, self.parent.progressbar,
                     'busy', self.parent.status_bar, 'Search PDFs...')
             self.master1.all_done_signal.connect(lambda: \
