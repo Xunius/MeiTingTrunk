@@ -23,7 +23,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize, QRegExp, QRect,\
         QPoint
 from PyQt5.QtGui import QBrush, QColor, QFont, QSyntaxHighlighter,\
         QTextCharFormat, QFontMetrics
-#from PyQt5.QtWidgets import QDialogButtonBox
+from PyQt5.QtWidgets import QDialogButtonBox
 from .threadrun_dialog import Master
 from .. import sqlitefts, xapiandb
 from ..tools import iterTreeWidgetItems
@@ -227,16 +227,16 @@ class AdjustableTextEditWithFold(AdjustableTextEdit):
         if nlines>=self.fold_above_nl:
             fontheight=self.fontMetrics().height()
             margin=self.document().documentMargin()
-            self.setMinimumHeight(fontheight+2*margin)
-            self.setMaximumHeight(fontheight+2*margin)
+            self.setMinimumHeight(fontheight*(self.fold_above_nl-1)+2*margin)
+            self.setMaximumHeight(fontheight*(self.fold_above_nl-1)+2*margin)
             self.is_fold=True
             self.fold_button.setArrowType(Qt.RightArrow)
         else:
             # dont understand, but this works
             fontheight=self.fontMetrics().height()
             margin=self.document().documentMargin()
-            self.setMinimumHeight(fontheight+2*margin)
-            self.setMaximumHeight(fontheight+2*margin)
+            self.setMinimumHeight(fontheight*(self.fold_above_nl-1)+2*margin)
+            self.setMaximumHeight(fontheight*(self.fold_above_nl-1)+2*margin)
 
         return
 
@@ -442,6 +442,13 @@ class SearchResFrame(QtWidgets.QScrollArea):
         grid=QtWidgets.QGridLayout(frame)
         crow=grid.rowCount()
 
+        def openSnippetsDialog(snip_list, relpath):
+            diag=SnippetsDialog(self.settings,self)
+            diag.addSnippets(meta['title'], search_text, relpath, snip_list)
+            diag.exec_()
+
+            return
+
         def addField(label, text, crow, relpath=None):
             '''Add a field to grid layout
 
@@ -456,16 +463,35 @@ class SearchResFrame(QtWidgets.QScrollArea):
             if relpath is not None:
                 labelii=QtWidgets.QPushButton('%s: ' %label)
                 labelii.clicked.connect(lambda: self.openPDF(relpath))
+                # if text is list, a list of snippets
+                if isinstance(text, list):
+                    snip_button=QtWidgets.QPushButton('Snippets')
+                    snip_button.clicked.connect(lambda: openSnippetsDialog(
+                        text, relpath))
             else:
                 labelii=QtWidgets.QLabel('%s: ' %label)
 
             text_editii=AdjustableTextEditWithFold()
             text_editii.setReadOnly(True)
             text_editii.setFont(font)
-            text_editii.setText(text)
             text_editii.setHighlightText(search_text)
-            grid.addWidget(text_editii.fold_button,crow,0)
-            grid.addWidget(labelii,crow,1)
+            grid.addWidget(text_editii.fold_button,crow,1)
+
+            if relpath is not None:
+                if isinstance(text, list):
+                    text_editii.fold_above_nl=3
+                    text_editii.setText(text[0])
+                    va=QtWidgets.QVBoxLayout()
+                    va.addWidget(labelii)
+                    va.addWidget(snip_button)
+                    grid.addLayout(va,crow,0)
+                else:
+                    grid.addWidget(labelii,crow,0)
+                    text_editii.setText(text)
+            else:
+                text_editii.setText(text)
+                grid.addWidget(labelii,crow,0)
+
             grid.addWidget(text_editii,crow,2)
 
             text_editii.fold_size_sig.connect(lambda x: frame.resize(
@@ -502,7 +528,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
         # add each matched pdf
         if 'pdf' in fields and pdf_match_dict is not None:
             for jj,(kk,vv) in enumerate(pdf_match_dict.items()):
-                addField('PDF-%d' %(jj+1), vv, crow, kk)
+                addField('File-%d' %(jj+1), vv, crow, kk)
                 crow+=1
 
         self.tree.setItemWidget(item,0,frame)
@@ -581,13 +607,12 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
         #def searchXapian(jobid, dbpath, querystring, fields, docids):
         sqlitepath=db.execute('PRAgMA database_list').fetchall()[0][2]
-        print('# <changeBGColor>: sqlitepath=',sqlitepath)
 
         def searchXapian(jobid, dbpath, querystring, docids, sqlitepath ):
             try:
                 #result=xapiandb.search(dbpath, querystring, fields,
                         #docids=docids)
-                result=xapiandb.search2(dbpath, querystring, docids, sqlitepath)
+                result=xapiandb.search2(dbpath, sqlitepath, querystring, docids)
                 return 0, jobid, result
             except Exception:
                 LOGGER.exception('Failed to call searchXapian.')
@@ -842,4 +867,102 @@ class SearchResFrame(QtWidgets.QScrollArea):
                 self.is_all_fold=True
                 self.tree.setHeaderLabels(['Unfold all', 'Authors', 'Title',
                     'Publication', 'Year', 'id'])
+
+
+
+
+class SnippetsDialog(QtWidgets.QDialog):
+    def __init__(self,settings,parent):
+        '''
+        Args:
+            parent (QWidget): parent widget.
+            settings (QSettings): application settings. See _MainWindow.py
+        '''
+
+        super(SnippetsDialog,self).__init__(parent=parent)
+
+        self.settings=settings
+        self.parent=parent
+
+        self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
+        self.title_label_font=QFont('Serif',12,QFont.Bold)
+        self.sub_title_label_font=QFont('Serif',10,QFont.Bold)
+
+        self.resize(700,800)
+        self.setWindowTitle('Snippets')
+        self.setWindowModality(Qt.ApplicationModal)
+
+        # title label
+        self.title_label=QtWidgets.QLabel('')
+        self.title_label.setStyleSheet(self.label_color)
+        self.title_label.setFont(self.title_label_font)
+        self.title_label.setWordWrap(True)
+
+        ha=QtWidgets.QHBoxLayout()
+        ha.addWidget(self.title_label)
+        #ha.addStretch()
+        #ha.addWidget(self.open_file_button, 0, Qt.AlignRight)
+
+        # snip frame
+        self.snip_frame=self.createSnipFrame()
+
+        # dialog buttons
+        self.buttons=QDialogButtonBox(Qt.Horizontal, self)
+        self.cancel_button=self.buttons.addButton('Cancel',
+                QDialogButtonBox.RejectRole)
+        self.cancel_button.setAutoDefault(True)
+        self.cancel_button.setDefault(True)
+        self.cancel_button.setFocus()
+
+        # open file button
+        self.open_file_button=self.buttons.addButton('Open File',
+                QDialogButtonBox.ApplyRole)
+        self.open_file_button.setAutoDefault(False)
+        self.open_file_button.setDefault(False)
+
+        self.buttons.rejected.connect(self.reject)
+
+        self.v_layout=QtWidgets.QVBoxLayout(self)
+        self.v_layout.addLayout(ha)
+        self.v_layout.addWidget(self.snip_frame)
+        self.v_layout.addWidget(self.buttons, 0, Qt.AlignRight)
+
+
+    def createSnipFrame(self):
+
+        frame=QtWidgets.QWidget(self)
+        scroll=QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(frame)
+        self.grid=QtWidgets.QGridLayout()
+        self.grid.setContentsMargins(20,5,20,20)
+        frame.setLayout(self.grid)
+        #va.setSpacing(int(va.spacing()*2))
+
+        return scroll
+
+
+    def addSnippets(self, title, search_text, relpath, snip_list):
+
+        font=self.settings.value('display/fonts/doc_table',QFont)
+        self.title_label.setText('%s' %title)
+
+        crow=0
+        for ii, sii in enumerate(snip_list):
+            labelii=QtWidgets.QLabel(str(ii+1))
+            text_editii=AdjustableTextEdit()
+
+            text_editii.setReadOnly(True)
+            text_editii.setFont(font)
+            text_editii.setText(sii)
+            text_editii.setHighlightText(search_text)
+
+            self.grid.addWidget(labelii,crow,0)
+            self.grid.addWidget(text_editii,crow,1)
+
+            crow+=1
+
+        return
+
+
 
