@@ -247,6 +247,8 @@ class Master(QObject):
 
 class ThreadRunDialog(QtWidgets.QDialog):
 
+    abort_job_signal=pyqtSignal()
+
     def __init__(self,func, joblist, show_message='', max_threads=3,
             get_results=False, close_on_finish=True,
             progressbar_style='classic',
@@ -353,6 +355,7 @@ class ThreadRunDialog(QtWidgets.QDialog):
         self.master.abortJobs()
         if self.get_results:
             self.results=self.master.results
+        self.abort_job_signal.emit()
         self.reject()
 
         return

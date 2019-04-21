@@ -41,6 +41,7 @@ terms of the GPLv3 license.
 '''
 
 
+import os
 import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTimer, pyqtSlot
@@ -51,7 +52,8 @@ from . import _MainFrameLoadData, _MainFrameDataSlots, _MainFrameToolBarSlots,\
         _MainFrameLibTreeSlots, _MainFrameFilterListSlots, _MainFrameDocTableSlots,\
         _MainFrameMetaTabSlots, _MainFrameOtherSlots, _MainFrameProperties
 from .lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy, \
-        getXExpandYMinSizePolicy, getXExpandYExpandSizePolicy, getHLine
+        getXExpandYMinSizePolicy, getXExpandYExpandSizePolicy, getHLine,\
+        hasXapian
 from .lib.widgets import MyTreeWidget, TableModel,\
         MyHeaderView, MetaTabScroll, CheckDuplicateFrame, NoteTextEdit,\
         SearchResFrame
@@ -344,12 +346,26 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
             search_fields=[]
 
         # add search fields menu
+        lib_xapian_folder=os.path.join(self.settings.value(
+            'saving/current_lib_folder', type=str), '_xapian_db')
+        if hasXapian() and os.path.exists(lib_xapian_folder):
+            has_pdf=True
+        else:
+            has_pdf=False
+
         for fieldii in ['Authors', 'Title', 'Abstract', 'Keywords', 'Tags',
-                'Notes', 'Publication']:
+                'Notes', 'Publication', 'PDF']:
             cbii=QtWidgets.QCheckBox(fieldii, menu)
+            aii=QtWidgets.QWidgetAction(menu)
             if fieldii in search_fields:
                 cbii.setChecked(True)
-            aii=QtWidgets.QWidgetAction(menu)
+            if fieldii=='PDF':
+                # keep a reference
+                self.pdf_search_action=aii
+                self.pdf_search_checkbox=cbii
+                if not has_pdf:
+                    cbii.setChecked(False)
+                    aii.setEnabled(False)
             cbii.stateChanged.connect(aii.trigger)
             aii.setDefaultWidget(cbii)
             aii.setText(fieldii)

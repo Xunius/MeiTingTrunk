@@ -33,6 +33,7 @@ else:
 
 from . import sqlitedb
 from . import exportpdf
+from . import xapiandb
 from bs4 import BeautifulSoup
 
 
@@ -655,7 +656,7 @@ def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
 
 
 def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
-        rename_file, ii, docii):
+        rename_file, ii, docii, do_indexing):
     """Copy document data from Mendeley and commit to output sqlite
 
     Args:
@@ -669,6 +670,7 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
                   doc id in the output sqlite.
         docii (int or None): if int, id of the copied doc. If None, call
                              commit() on <dbout> and close() on <dbin>.
+        do_indexing (bool): do xapian indexing or not.
 
     Returns:
         rec (int): 0 if success copy. 1 if failed. 2 if failed to export
@@ -691,6 +693,10 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
     file_folder=os.path.join(lib_folder,'_collections')
     rel_lib_folder=os.path.join('', lib_name) # relative to storage folder
     rel_file_folder=os.path.join('','_collections')
+
+    if do_indexing:
+        xapian_folder=os.path.join(lib_folder, '_xapian_db')
+        xapian_db=xapiandb.createDatabase(xapian_folder)
 
     try:
         ii+=1
@@ -729,7 +735,8 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
 
         #------------------Get FileNotes------------------
         #notes=selByDocid(cin, 'DocumentNotes', 'text', docii)
-        notes=selByDocid(cin, 'FileNotes', ['note', 'modifiedTime', 'createdTime'], docii)
+        notes=selByDocid(cin, 'FileNotes', ['note', 'modifiedTime',
+            'createdTime'], docii)
 
         #---------------Get DocumentKeywords---------------
         keywords=selByDocid(cin, 'DocumentKeywords', 'keyword', docii)
@@ -827,6 +834,7 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
         meta_dictii['files_l']=[]
 
         file_fail_list=[]
+        xapian_fail_list=[]
         if len(fileurl)>0:
 
             for fileii in fileurl:
@@ -859,7 +867,6 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
 
                 #LOGGER.debug('relpath = %s' %relpath)
                 LOGGER.debug('abspath = %s' %abspath)
-
                 if len(annotations)>0 and filepath in annotations:
                     anno=annotations[filepath]
                     try:
@@ -882,11 +889,31 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
                         LOGGER.exception('Failed to copy %s to %s' %(filepath,
                             abspath))
 
+                #-----------------Update to xapian-----------------
+                if do_indexing:
+                    try:
+                        rec=xapiandb.indexFile(xapian_folder, filepath, relpath,
+                                {'id': ii}, db=xapian_db)
+                        if rec==1:
+                            xapian_fail_list.append(filepath)
+                            LOGGER.error('Failed to index attachment %s' %filepath)
+                    except:
+                        xapian_fail_list.append(filepath)
+                        LOGGER.exception('Failed to index attachment %s' %filepath)
+
         if len(file_fail_list)>0:
-            return 2, jobid, '; '.join(file_fail_list)
+            if len(xapian_fail_list)>0:
+                return 4, jobid, '%s\n%s' %('; '.join(file_fail_list),
+                        '; '.join(xapian_fail_list))
+            else:
+                return 2, jobid, '; '.join(file_fail_list)
+        elif len(xapian_fail_list)>0:
+            return 3, jobid, '; '.join(xapian_fail_list)
         else:
             return 0, jobid, None
-    except:
+
+    except Exception as e:
+        LOGGER.exception('Failed to copy data for doc %s' %docii)
         return 1, jobid, None
 
 

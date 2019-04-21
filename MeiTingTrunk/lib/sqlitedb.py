@@ -18,19 +18,15 @@ import os
 import shutil
 import time
 import re
+import multiprocessing
+from urllib.parse import quote
 from datetime import datetime
 import sqlite3
 import logging
 from send2trash import send2trash
 from collections import MutableMapping
-try:
-    from . import bibparse
-except:
-    import bibparse
-try:
-    from .tools import autoRename
-except:
-    from tools import autoRename
+from .tools import autoRename, isXapianReady
+from . import xapiandb
 
 DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',
@@ -767,7 +763,7 @@ def renameFile(fname, meta_dict, replace_space=False):
     if year is None:
         year='unknown'
     else:
-        year=year.strip()
+        year=str(year).strip()
 
     # get title
     title=meta_dict['title'] or basename
@@ -1078,6 +1074,14 @@ def metaDictToDatabase(db, docid, meta_dict_all, meta_dict, lib_folder,
     if reload_doc:
         meta_dict_all[docid]=getMetaData(db,docid)
 
+    #----------------Call xapian index----------------
+    xapian_folder=os.path.join(lib_folder,'_xapian_db')
+    if isXapianReady() and os.path.exists(xapian_folder):
+        proc=multiprocessing.Process(target=xapiandb.indexFolder, args=(
+            xapian_folder, lib_folder), daemon=False)
+        LOGGER.debug('Start indexing process')
+        proc.start()
+
     LOGGER.info('Done updating doc to database. Need to reload_doc = %s' %reload_doc)
 
     return rec, reload_doc
@@ -1212,6 +1216,7 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files,
         os.makedirs(abs_file_folder)
 
     files=meta_dict['files_l']
+    files_updated=[]
     if len(files)>0:
         query='''INSERT OR IGNORE INTO DocumentFiles (did, relpath)
         VALUES (?,?)'''
@@ -1258,6 +1263,8 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files,
             rel_fii=os.path.join(rel_file_folder,newfilename)
             cout.execute(query,(docid,rel_fii))
 
+            files_updated.append(rel_fii)
+
             LOGGER.debug('new abspath = %s' %newabsii)
             LOGGER.debug('new relpath = %s' %rel_fii)
 
@@ -1280,9 +1287,22 @@ def insertToDocumentFiles(db, docid, meta_dict, lib_folder, rename_files,
                     LOGGER.exception('Failed to move file %s to %s'\
                             %(oldabsii,newabsii))
 
+            '''
+            #-----------------Update to xapian-----------------
+            if isXapianReady():
+                try:
+                    rec=xapiandb.indexFile(abs_xapian_folder, newabsii, rel_fii,
+                            meta_dict)
+                    if rec==1:
+                        LOGGER.error('Failed to index attachment %s' %fii)
+                except:
+                    LOGGER.exception('Failed to index attachment %s' %fii)
+            '''
 
         db.commit()
 
+    # update meta_dict
+    meta_dict['files_l']=files_updated
     LOGGER.info('Done inserting doc %s to DocumentFiles' %docid)
 
     return 0
@@ -1459,7 +1479,6 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files,
     #-------------------Update files-------------------
     if set(old_meta['files_l']) != set(meta_dict['files_l']):
 
-
         LOGGER.debug('Need to update files.')
         delFromTable(db, 'DocumentFiles', docid)
         rec=insertToDocumentFiles(db, docid, meta_dict, lib_folder,
@@ -1469,8 +1488,20 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files,
         # any old file to del?
         del_files=list(set(old_meta['files_l']).difference(set(meta_dict['files_l'])))
         if len(del_files)>0:
-            LOGGER.warning('Deleting old files: %s' %del_files)
+            xapian_folder=os.path.join(lib_folder,'_xapian_db')
+            LOGGER.info('Deleting old files: %s' %del_files)
             for fii in del_files:
+                # del from xapian
+                if isXapianReady() and os.path.exists(xapian_folder):
+                    try:
+                        urlii='U/%s' %quote(fii)
+                        print('# <updateToDatabase>: urlii=',urlii)
+                        rec=xapiandb.delXapianDoc(xapian_folder, urlii)
+                        if rec==1:
+                            LOGGER.error('Failed to delete from xapian.')
+                    except:
+                        LOGGER.exception('Failed to delete from xapian.')
+
                 absii=os.path.join(lib_folder,fii)
                 if os.path.exists(absii):
                     LOGGER.info('Deleting file from disk %s' %absii)
@@ -1585,7 +1616,16 @@ def delDocFromDatabase(db, docid, lib_folder):
     old_files=fetchField(db, query_files, (docid,), 1, 'list')
     delFromTable(db, 'DocumentFiles', docid)
 
-    for fii in old_files:
+    #-----------------Del from xapian-----------------
+    xapian_folder=os.path.join(lib_folder,'_xapian_db')
+    sqlitepath=db.execute('PRAgMA database_list').fetchall()[0][2]
+    if isXapianReady() and os.path.exists(xapian_folder):
+        try:
+            xapiandb.delByDocid2(xapian_folder, sqlitepath, docid)
+        except:
+            LOGGER.exception('Failed to delete from xapian.')
+
+    for ii, fii in enumerate(old_files):
         # prepend folder path
         absii=os.path.join(lib_folder,fii)
         if os.path.exists(absii):

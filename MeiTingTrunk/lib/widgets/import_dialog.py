@@ -19,10 +19,10 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QDialogButtonBox, QStyle
-from ..tools import getHLine
+from ..tools import getHLine, isXapianReady
 from .threadrun_dialog import ThreadRunDialog
 #from import_mendeley import importMendeley
-from .. import import_mendeley
+from .. import import_mendeley, xapiandb
 
 LOGGER=logging.getLogger(__name__)
 
@@ -127,8 +127,6 @@ class ResultDialog(QtWidgets.QDialog):
 
     def accept(self):
         if self.open_lib_checkbox.isChecked():
-            #print('# <accept>: open lib')
-            #self.open_lib_signal.emit()
             super(self.__class__, self).accept()
         else:
             super(self.__class__, self).reject()
@@ -288,6 +286,8 @@ class ImportDialog(QtWidgets.QDialog):
         '''
         #-----------------New sqlite file-----------------
         label=QtWidgets.QLabel('Name your library')
+        label.setStyleSheet(self.label_color)
+        label.setFont(self.title_label_font)
         va.addWidget(label)
 
         self.lib_name_le=QtWidgets.QLineEdit()
@@ -303,8 +303,12 @@ class ImportDialog(QtWidgets.QDialog):
         va.addWidget(getHLine())
 
         #-----------------Sqlite file sel-----------------
-        label=QtWidgets.QLabel('''Select the sqlite database file <br/>
-        Default location: <br/>
+        label=QtWidgets.QLabel('Select the sqlite database file')
+        label.setStyleSheet(self.label_color)
+        label.setFont(self.title_label_font)
+        va.addWidget(label)
+
+        label=QtWidgets.QLabel('''Default location: <br/>
         <br/>
         * Linux: ~/.local/share/data/Mendeley Ltd./Mendeley Desktop/<your_email@www.mendeley.com.sqlite. <br/>
         '''
@@ -324,6 +328,29 @@ class ImportDialog(QtWidgets.QDialog):
         ha.addWidget(button)
 
         va.addLayout(ha)
+
+        """
+        #-------------------Xapian indexing-------------------
+        va.addWidget(getHLine())
+        label=QtWidgets.QLabel('PDF indexing')
+        label.setStyleSheet(self.label_color)
+        label.setFont(self.title_label_font)
+        self.xapian_index_checkbox=QtWidgets.QCheckBox('Index PDF files?')
+        va.addWidget(label)
+        va.addWidget(self.xapian_index_checkbox)
+
+        if isXapianReady():
+            label=QtWidgets.QLabel('Indexing allows full text search in attached PDFs, but would slow down the import process. You can choose to index at a later stage.')
+            label.setWordWrap(True)
+        else:
+            self.xapian_index_checkbox.setEnabled(False)
+            label=QtWidgets.QLabel('''Xapian is not installed. Please refer to <a href="https://xapian.org/docs/install.html"> https://xapian.org/docs/install.html </a> for installation details.''')
+            label.setTextFormat(Qt.RichText)
+            label.setWordWrap(True)
+            label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+            label.setOpenExternalLinks(True)
+        va.addWidget(label)
+        """
 
         #----------------------Notice----------------------
         va.addWidget(getHLine())
@@ -453,16 +480,6 @@ class ImportDialog(QtWidgets.QDialog):
         LOGGER.debug('file_out_name = %s' %file_out_name)
         LOGGER.debug('Launching thread...')
 
-        '''
-        self.master1=Master(import_mendeley.importMendeleyPreprocess,
-                [(0, file_in_name, file_out_name)],
-                1, self.parent.main_frame.progressbar,
-                'busy', self.parent.main_frame.status_bar,
-                'Connecting databases...')
-
-        self.master1.all_done_signal.connect(self.doMendeleyImport2)
-        self.master1.run()
-        '''
         #------------------Run in thread------------------
         self.thread_run_dialog1=ThreadRunDialog(
                 import_mendeley.importMendeleyPreprocess,
@@ -514,6 +531,12 @@ class ImportDialog(QtWidgets.QDialog):
 
             return
 
+        """
+        #------------Get xapian indexing choice------------
+        do_indexing=self.xapian_index_checkbox.isChecked()
+        LOGGER.debug('do_indexing = %s' %do_indexing)
+        """
+
         rename_files=self.settings.value('saving/rename_files', 1)
         LOGGER.debug('rename_files = %s' %rename_files)
 
@@ -521,26 +544,47 @@ class ImportDialog(QtWidgets.QDialog):
         self.job_list=[]
         for ii, docii in enumerate(docids):
             self.job_list.append((ii, dbin, dbout, lib_name, lib_folder,
-                rename_files, ii, docii))
+                rename_files, ii, docii, False))
 
         # this last job signals a sqlite commit
         self.job_list.append((-1, dbin, dbout, lib_name, lib_folder,
-            rename_files, ii, None))
+            rename_files, ii, None, False))
+
+        if isXapianReady():
+            def doXapian(results, xapian_folder, lib_folder):
+                xapiandb.indexFolder(xapian_folder, lib_folder)
+                return results
+
+            xapian_folder=os.path.join(lib_folder,'_xapian_db')
+            post_process_func=doXapian
+            post_process_func_args=(xapian_folder, lib_folder)
+            post_process_progress=1
+            show_message='Transfering data and indexing attachment files...'
+            LOGGER.info('Do xapian indexing')
+        else:
+            post_process_func=None
+            post_process_func_args=()
+            post_process_progress=1
+            show_message='Transfering data...'
 
         #------------------Run in thread------------------
         self.thread_run_dialog2=ThreadRunDialog(
                 import_mendeley.importMendeleyCopyData,
                 self.job_list,
-                show_message='Transfering data...',
+                show_message=show_message,
                 max_threads=1,
                 get_results=False,
                 close_on_finish=False,
                 progressbar_style='classic',
-                post_process_func=None,
+                post_process_func=post_process_func,
+                post_process_func_args=post_process_func_args,
+                post_process_progress=post_process_progress,
                 parent=self)
 
         self.thread_run_dialog2.master.all_done_signal.connect(
                 lambda: self.postImport(file_out_name))
+        self.thread_run_dialog2.abort_job_signal.connect(lambda: self.delFail(
+            (file_out_name, lib_folder, xapian_folder)))
         self.thread_run_dialog2.exec_()
 
         return
@@ -563,6 +607,7 @@ class ImportDialog(QtWidgets.QDialog):
         if rec==0:
             fail_list=[]
             pdf_fail_list=[]
+            xapian_fail_list=[]
 
             for recii, jobii, fail_fileii in step2_results[:-1]:
                 if recii==1:
@@ -575,34 +620,64 @@ class ImportDialog(QtWidgets.QDialog):
                     LOGGER.warning('Failed to export annotated pdf(s) %s'\
                             %fail_fileii)
                     pdf_fail_list.append(entryii)
+                elif recii==3:
+                    entryii='* PDF file(s) = %s' %fail_fileii
+                    LOGGER.warning('Failed to index pdf(s) %s'\
+                            %fail_fileii)
+                    xapian_fail_list.append(entryii)
+                elif recii==4:
+                    pdf_fail, xapian_fail=fail_fileii.split('\n')
+                    entryii='* PDF file(s) = %s' %pdf_fail
+                    LOGGER.warning('Failed to export annotated pdf(s) %s'\
+                            %pdf_fail)
+                    pdf_fail_list.append(entryii)
+
+                    entryii='* PDF file(s) = %s' %xapian_fail
+                    LOGGER.warning('Failed to index pdf(s) %s'\
+                            %xapian_fail)
+                    xapian_fail_list.append(entryii)
 
             #-----------------Show failed jobs-----------------
-            if len(fail_list)>0 or len(pdf_fail_list)>0:
+            if len(fail_list)>0 or len(pdf_fail_list)>0 or\
+                    len(xapian_fail_list)>0:
 
                 msg=ResultDialog()
                 msg.setText('Errors encountered.')
+                info_text=[]
+                fail_str=''
 
-                # only doc transfer failures
-                if len(fail_list)>0 and len(pdf_fail_list)==0:
-                    msg.setInformativeText('Failed to import some documents.')
-                    fail_str='\n'.join(fail_list)
-                    msg.setDetailedText(fail_str)
+                if len(fail_list)>0:
+                    info_text.append('Failed to import some documents.')
+                    fail_str+='''
 
-                # only pdf annotation export failures
-                elif len(fail_list)==0 and len(pdf_fail_list)>0:
-                    msg.setInformativeText('Failed to export annotations in some PDFs.')
-                    fail_str='\n'.join(pdf_fail_list)
-                    msg.setDetailedText(fail_str)
+###############################
+Failed documents:
+###############################
+'''
+                    fail_str+='\n'.join(fail_list)
 
-                # both doc transfer and pdf annotation export failures
-                elif len(fail_list)>0 and len(pdf_fail_list)>0:
-                    msg.setInformativeText('''
-                    Failed to import some documents. <br/>
-                    Failed to export annotations in some PDFs.''')
-                    fail_str1='\n'.join(fail_list)
-                    fail_str2='\n'.join(pdf_fail_list)
-                    msg.setDetailedText('Failed documents:\n%s\n\nFailed PDFs:\n%s'\
-                            %(fail_str1, fail_str2))
+                if len(pdf_fail_list)>0:
+                    info_text.append('Failed to export annotations in some PDFs.')
+                    fail_str+='''
+
+###############################
+Failed PDF annotation export:
+###############################
+'''
+                    fail_str+='\n'.join(pdf_fail_list)
+
+                if len(xapian_fail_list)>0:
+                    info_text.append('Failed to index some PDFs.')
+                    fail_str+='''
+
+###############################
+Failed PDF indexing:
+###############################
+'''
+                    fail_str+='\n'.join(xapian_fail_list)
+
+                msg.setInformativeText('\n'.join(info_text))
+                msg.setDetailedText(fail_str)
 
                 choice=msg.exec_()
 
@@ -639,13 +714,9 @@ class ImportDialog(QtWidgets.QDialog):
             dirname,fname=os.path.split(file_name)
             lib_folder=os.path.join(dirname,os.path.splitext(fname)[0])
 
-            #----------------Remove sqlite file----------------
-            if os.path.exists(file_name):
-                os.remove(file_name)
-                LOGGER.info('Remove sqlite database file %s' %file_name)
-            if os.path.exists(lib_folder):
-                shutil.rmtree(lib_folder)
-                LOGGER.info('Remove lib folder %s' %lib_folder)
+            #----------------Remove file----------------
+            xapian_folder=os.path.join(lib_folder,'_xapian_db')
+            self.delFail((file_name, lib_folder, xapian_folder))
 
             self.thread_run_dialog2.accept()
 
@@ -653,6 +724,19 @@ class ImportDialog(QtWidgets.QDialog):
 
         return
 
+
+    @pyqtSlot(tuple)
+    def delFail(self, files):
+        for fii in files:
+            if os.path.exists(fii):
+                if os.path.isdir(fii):
+                    shutil.rmtree(fii)
+                    LOGGER.info('Remove folder %s' %fii)
+                else:
+                    os.remove(fii)
+                    LOGGER.info('Remove file %s' %fii)
+
+        return
 
 
     def popUpGiveName(self):
