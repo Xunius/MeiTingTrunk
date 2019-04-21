@@ -40,6 +40,10 @@ An open source reference management tool developed in PyQt5 and Python3.
 * Meta data saved in sqlite format, transparent and easy to manipulate.
 * library saved in a portable manner, backup or share using your prefered online/offline tools.
 
+### Full text search (experimental)
+
+* Utilises Xapian engine to enable full text search inside attachment files (including PDFs, docs etc.).
+
 ### Free and open source
 
 * Open to suggestions, bug reports and new ideas.
@@ -67,6 +71,10 @@ Meta data searching.
 
 ![](https://user-images.githubusercontent.com/8076931/55284338-324c0f00-53a7-11e9-97a1-cd0e197ec012.png)
 
+Full text search.
+
+![](https://user-images.githubusercontent.com/8076931/56464555-f42e9200-641e-11e9-96b5-b57889ea11fa.png)
+
 Actions on documents.
 
 ![](https://user-images.githubusercontent.com/8076931/55284334-23fdf300-53a7-11e9-9e34-01a1ae514a72.png)
@@ -74,7 +82,9 @@ Actions on documents.
 
 ## Platforms and Dependencies
 
-Currently only tested in Linux.
+Currently only support Linux and MacOS.
+
+### Python dependencies
 
 * python3+
 * PyQt5
@@ -87,7 +97,11 @@ Currently only tested in Linux.
 * crossrefapi
 * RISparser
 * send2trash
-* python-levenshtein
+* python-levenshtein (optional)
+
+### Other dependencies
+
+* xapian-core, xapian-omega, xapian-bindings (optional), required for full text searching. See https://xapian.org/docs/install.html for installation instructions.
 
 
 ## Install
@@ -131,19 +145,11 @@ This software is still in its very early stage. Please consider helping by tryin
 Major features that are still lacking (I greatly appreciate any help with any of them):
 
 * Format citations into various citation styles, in a format suitable to paste into word editors.
-* Full text searching inside PDFs.
 * Import from Zotero and EndNote.
 * Other document types aside articles and books.
 * Packaging into a format suitable for a few mainstream Linux package management tools.
 * Of cource, any stability or performance improvements.
 
-
-A few ideas that I'd like to hear from your opinions:
-
-* An embedded PDF viewer?
-* A PDF preview tab?
-* Markdown syntax support in the note tab?
-* Custom fields design in the meta data tab?
 
 
 ## Licence
