@@ -206,7 +206,8 @@ class MainFrameDataSlots:
             # remove doc from current folder when restoring
             if docid in self.folder_data[current_folderid]:
                 self.folder_data[current_folderid].remove(docid)
-                self.loadDocTable(folder=self._current_folder,sel_row=None,sortidx=4)
+                self.loadDocTable(folder=self._current_folder,
+                        sel_row=None,sortidx=None)
 
         # add highlight to folder
         hi_color=self.settings.value('display/folder/highlight_color_br',

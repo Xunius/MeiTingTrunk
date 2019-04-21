@@ -258,9 +258,9 @@ class MainFrameOtherSlots:
 
                 # TODO: keep a record of previous sortidx?
                 if folder=='All' and folderid=='-1':
-                    self.loadDocTable(None,sortidx=4,sel_row=0)
+                    self.loadDocTable(None,sortidx=None,sel_row=0)
                 else:
-                    self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
+                    self.loadDocTable((folder,folderid),sortidx=None,sel_row=0)
                 #self.doc_table.selectRow(0)
 
         return
@@ -290,9 +290,9 @@ class MainFrameOtherSlots:
 
                 # TODO: keep a record of previous sortidx?
                 if folder=='All' and folderid=='-1':
-                    self.loadDocTable(None,sortidx=4,sel_row=0)
+                    self.loadDocTable(None,sortidx=None,sel_row=0)
                 else:
-                    self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
+                    self.loadDocTable((folder,folderid),sortidx=None,sel_row=0)
                 #self.doc_table.selectRow(0)
 
         return

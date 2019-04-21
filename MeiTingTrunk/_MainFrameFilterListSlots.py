@@ -46,7 +46,7 @@ class MainFrameFilterListSlots:
                     filter_type,filter_text,folderid)
 
             if len(filter_docids)>0:
-                self.loadDocTable(None,filter_docids,sortidx=4,sel_row=0)
+                self.loadDocTable(None,filter_docids,sortidx=None,sel_row=0)
 
             sel=self.filter_type_combbox.currentText()
 
@@ -152,8 +152,8 @@ class MainFrameFilterListSlots:
 
                 # TODO: keep a record of previous sortidx?
                 if folder=='All' and folderid=='-1':
-                    self.loadDocTable(None,sortidx=4,sel_row=0)
+                    self.loadDocTable(None,sortidx=None,sel_row=0)
                 else:
-                    self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
+                    self.loadDocTable((folder,folderid),sortidx=None,sel_row=0)
 
         return

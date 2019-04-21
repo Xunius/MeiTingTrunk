@@ -80,7 +80,8 @@ class MainFrameMetaTabSlots:
         if docid in self.folder_data['-2']:
             self.folder_data['-2'].remove(docid)
 
-        self.loadDocTable(folder=self._current_folder,sortidx=4,sel_row=idx.row())
+        self.loadDocTable(folder=self._current_folder,sortidx=None,
+                sel_row=idx.row())
 
         return
 

@@ -338,7 +338,7 @@ class MainFrameDocTableSlots:
                 self.changed_doc_ids.append(docii)
 
         # refresh to show read change
-        self.loadDocTable(folder=self._current_folder,sortidx=4,
+        self.loadDocTable(folder=self._current_folder,sortidx=None,
                 sel_row=None)
 
         return
@@ -440,7 +440,8 @@ class MainFrameDocTableSlots:
 
         if reload_table:
             #current_row=self.doc_table.currentIndex().row()
-            self.loadDocTable(folder=(foldername,folderid),sortidx=4,sel_row=None)
+            self.loadDocTable(folder=(foldername,folderid),sortidx=None,
+                    sel_row=None)
             #self.selDoc(self.doc_table.currentIndex(),None)
 
 
@@ -495,7 +496,8 @@ class MainFrameDocTableSlots:
 
             if reload_table:
                 #current_row=self.doc_table.currentIndex().row()
-                self.loadDocTable(folder=self._current_folder,sortidx=4,sel_row=None)
+                self.loadDocTable(folder=self._current_folder,sortidx=None,
+                        sel_row=None)
                 #self.selDoc(self.doc_table.currentIndex(),None)
 
         return
@@ -524,7 +526,7 @@ class MainFrameDocTableSlots:
 
         row=self.doc_table.currentIndex().row()
         # didn't find a better way to refresh the table view
-        self.loadDocTable(folder=self._current_folder,sortidx=4,
+        self.loadDocTable(folder=self._current_folder,sortidx=None,
                 sel_row=row)
 
         return
@@ -613,7 +615,7 @@ class MainFrameDocTableSlots:
                 self.logger.info('Deleted %s from meta_dict' %idii)
 
             if reload_table:
-                self.loadDocTable(folder=self._current_folder, sortidx=4,
+                self.loadDocTable(folder=self._current_folder, sortidx=None,
                         sel_row=None)
 
         return

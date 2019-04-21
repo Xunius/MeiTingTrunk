@@ -55,9 +55,9 @@ class MainFrameLibTreeSlots:
                 %(folder, folderid))
 
         if item==self.all_folder:
-            self.loadDocTable(folder=None,sortidx=4,sel_row=0)
+            self.loadDocTable(folder=None,sortidx=None,sel_row=0)
         else:
-            self.loadDocTable((folder,folderid),sortidx=4,sel_row=0)
+            self.loadDocTable((folder,folderid),sortidx=None,sel_row=0)
 
         if item==self.all_folder:
             self.add_button.setDisabled(True)

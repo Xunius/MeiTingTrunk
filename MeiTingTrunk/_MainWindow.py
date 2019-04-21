@@ -155,6 +155,10 @@ New session started
                 'Toggle BibTex Tab', 'Toggle Scratch Pad Tab',
                 'Toggle Status bar'])
 
+            # sortidx in doc table
+            settings.setValue('view/sortidx', 4)
+            settings.setValue('view/sortorder', 0)
+
             settings.sync()
         else:
             settings=QSettings(settings_path,QSettings.IniFormat)

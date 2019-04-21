@@ -15,10 +15,12 @@ terms of the GPLv3 license.
 from datetime import datetime
 import operator
 import logging
+from queue import Queue
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant, pyqtSignal,\
-        pyqtSlot, QMimeData, QByteArray
+        pyqtSlot, QMimeData, QByteArray, QThread, QTimer
 from PyQt5.QtGui import QPixmap, QBrush, QColor, QIcon, QFont
+from ..._MainFrameOtherSlots import SettingsThread
 
 
 LOGGER=logging.getLogger(__name__)
@@ -26,6 +28,9 @@ LOGGER=logging.getLogger(__name__)
 
 
 class TableModel(QAbstractTableModel):
+
+    sort_change_sig=pyqtSignal(int, int)  # column idx, sort order
+
     def __init__(self, parent, datain, headerdata, settings):
         '''
         Args:
@@ -58,6 +63,8 @@ class TableModel(QAbstractTableModel):
                 in self.icon_section.keys()]
         self.check_sec_indices=[self.headerdata.index(kk) for kk
                 in self.check_section.keys()]
+
+        self.sort_change_sig.connect(self.saveSort, Qt.QueuedConnection)
 
 
     def rowCount(self,p):
@@ -172,7 +179,31 @@ class TableModel(QAbstractTableModel):
                 str(operator.itemgetter(col)(x)) or '')
         if order==Qt.DescendingOrder:
             self.arraydata.reverse()
+
+        # for some reason there is always a lag if I do anything with settings
+        # here. Therefore this short delay
+        QTimer.singleShot(10, lambda: self.sort_change_sig.emit(col, order))
         self.layoutChanged.emit()
+
+        return
+
+
+    @pyqtSlot(int, int)
+    def saveSort(self, col, order):
+        '''Save sorting column and order to settings
+
+        Args:
+            col (int): column index to sort.
+            order (int): sort order, 1=Qt.DescendingOrder, 0=Qt.AscendingOrder.
+        '''
+
+        self.setting_thread=SettingsThread(self.settings,
+                'view/sortidx', col)
+        self.setting_thread.start()
+        self.setting_thread=SettingsThread(self.settings,
+                'view/sortorder', order)
+        self.setting_thread.start()
+        LOGGER.debug('Saved sortidx = %s. sortorder = %s' %(col, order))
 
         return
 
