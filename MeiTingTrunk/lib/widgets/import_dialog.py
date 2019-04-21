@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import QDialogButtonBox, QStyle
 from ..tools import getHLine, isXapianReady
 from .threadrun_dialog import ThreadRunDialog
 #from import_mendeley import importMendeley
-from .. import import_mendeley
+from .. import import_mendeley, xapiandb
 
 LOGGER=logging.getLogger(__name__)
 
@@ -127,8 +127,6 @@ class ResultDialog(QtWidgets.QDialog):
 
     def accept(self):
         if self.open_lib_checkbox.isChecked():
-            #print('# <accept>: open lib')
-            #self.open_lib_signal.emit()
             super(self.__class__, self).accept()
         else:
             super(self.__class__, self).reject()
@@ -331,6 +329,7 @@ class ImportDialog(QtWidgets.QDialog):
 
         va.addLayout(ha)
 
+        """
         #-------------------Xapian indexing-------------------
         va.addWidget(getHLine())
         label=QtWidgets.QLabel('PDF indexing')
@@ -351,6 +350,7 @@ class ImportDialog(QtWidgets.QDialog):
             label.setTextInteractionFlags(Qt.TextBrowserInteraction)
             label.setOpenExternalLinks(True)
         va.addWidget(label)
+        """
 
         #----------------------Notice----------------------
         va.addWidget(getHLine())
@@ -480,16 +480,6 @@ class ImportDialog(QtWidgets.QDialog):
         LOGGER.debug('file_out_name = %s' %file_out_name)
         LOGGER.debug('Launching thread...')
 
-        '''
-        self.master1=Master(import_mendeley.importMendeleyPreprocess,
-                [(0, file_in_name, file_out_name)],
-                1, self.parent.main_frame.progressbar,
-                'busy', self.parent.main_frame.status_bar,
-                'Connecting databases...')
-
-        self.master1.all_done_signal.connect(self.doMendeleyImport2)
-        self.master1.run()
-        '''
         #------------------Run in thread------------------
         self.thread_run_dialog1=ThreadRunDialog(
                 import_mendeley.importMendeleyPreprocess,
@@ -541,9 +531,11 @@ class ImportDialog(QtWidgets.QDialog):
 
             return
 
+        """
         #------------Get xapian indexing choice------------
         do_indexing=self.xapian_index_checkbox.isChecked()
         LOGGER.debug('do_indexing = %s' %do_indexing)
+        """
 
         rename_files=self.settings.value('saving/rename_files', 1)
         LOGGER.debug('rename_files = %s' %rename_files)
@@ -552,26 +544,47 @@ class ImportDialog(QtWidgets.QDialog):
         self.job_list=[]
         for ii, docii in enumerate(docids):
             self.job_list.append((ii, dbin, dbout, lib_name, lib_folder,
-                rename_files, ii, docii, do_indexing))
+                rename_files, ii, docii, False))
 
         # this last job signals a sqlite commit
         self.job_list.append((-1, dbin, dbout, lib_name, lib_folder,
-            rename_files, ii, None, do_indexing))
+            rename_files, ii, None, False))
+
+        if isXapianReady():
+            def doXapian(results, xapian_folder, lib_folder):
+                xapiandb.indexFolder(xapian_folder, lib_folder)
+                return results
+
+            xapian_folder=os.path.join(lib_folder,'_xapian_db')
+            post_process_func=doXapian
+            post_process_func_args=(xapian_folder, lib_folder)
+            post_process_progress=1
+            show_message='Transfering data and indexing attachment files...'
+            LOGGER.info('Do xapian indexing')
+        else:
+            post_process_func=None
+            post_process_func_args=()
+            post_process_progress=1
+            show_message='Transfering data...'
 
         #------------------Run in thread------------------
         self.thread_run_dialog2=ThreadRunDialog(
                 import_mendeley.importMendeleyCopyData,
                 self.job_list,
-                show_message='Transfering data...',
+                show_message=show_message,
                 max_threads=1,
                 get_results=False,
                 close_on_finish=False,
                 progressbar_style='classic',
-                post_process_func=None,
+                post_process_func=post_process_func,
+                post_process_func_args=post_process_func_args,
+                post_process_progress=post_process_progress,
                 parent=self)
 
         self.thread_run_dialog2.master.all_done_signal.connect(
                 lambda: self.postImport(file_out_name))
+        self.thread_run_dialog2.abort_job_signal.connect(lambda: self.delFail(
+            (file_out_name, lib_folder, xapian_folder)))
         self.thread_run_dialog2.exec_()
 
         return
@@ -701,13 +714,9 @@ Failed PDF indexing:
             dirname,fname=os.path.split(file_name)
             lib_folder=os.path.join(dirname,os.path.splitext(fname)[0])
 
-            #----------------Remove sqlite file----------------
-            if os.path.exists(file_name):
-                os.remove(file_name)
-                LOGGER.info('Remove sqlite database file %s' %file_name)
-            if os.path.exists(lib_folder):
-                shutil.rmtree(lib_folder)
-                LOGGER.info('Remove lib folder %s' %lib_folder)
+            #----------------Remove file----------------
+            xapian_folder=os.path.join(lib_folder,'_xapian_db')
+            self.delFail((file_name, lib_folder, xapian_folder))
 
             self.thread_run_dialog2.accept()
 
@@ -715,6 +724,19 @@ Failed PDF indexing:
 
         return
 
+
+    @pyqtSlot(tuple)
+    def delFail(self, files):
+        for fii in files:
+            if os.path.exists(fii):
+                if os.path.isdir(fii):
+                    shutil.rmtree(fii)
+                    LOGGER.info('Remove folder %s' %fii)
+                else:
+                    os.remove(fii)
+                    LOGGER.info('Remove file %s' %fii)
+
+        return
 
 
     def popUpGiveName(self):

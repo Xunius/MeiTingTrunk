@@ -555,8 +555,13 @@ New session started
                     msg.setIcon(QtWidgets.QMessageBox.Warning)
                     msg.setWindowTitle('Failed to create xapian database')
                     msg.setText("Failed to create xapian database")
-                    msg.setInformativeText('''Please check xapian-core and xapianbindings are installed and work, then re-open the library. See <a href="https://xapian.org/docs/install.html"> https://xapian.org/docs/install.html </a> for more details.''')
+                    msg.setInformativeText('''Please check xapian-core, xapian-omega and xapianbindings are installed and work, then re-open the library. See <a href="https://xapian.org/docs/install.html"> https://xapian.org/docs/install.html </a> for more details.''')
                     msg.exec_()
+                else:
+                    self.main_frame.enablePDFSearch()
+        else:
+            if tools.isXapianReady():
+                self.main_frame.enablePDFSearch()
 
 
         self.main_frame.auto_save_timer.start()

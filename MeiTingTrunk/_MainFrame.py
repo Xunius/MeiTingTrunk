@@ -359,9 +359,13 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
             aii=QtWidgets.QWidgetAction(menu)
             if fieldii in search_fields:
                 cbii.setChecked(True)
-            if fieldii=='PDF' and not has_pdf:
-                cbii.setChecked(False)
-                aii.setEnabled(False)
+            if fieldii=='PDF':
+                # keep a reference
+                self.pdf_search_action=aii
+                self.pdf_search_checkbox=cbii
+                if not has_pdf:
+                    cbii.setChecked(False)
+                    aii.setEnabled(False)
             cbii.stateChanged.connect(aii.trigger)
             aii.setDefaultWidget(cbii)
             aii.setText(fieldii)

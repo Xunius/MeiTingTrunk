@@ -736,6 +736,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
         #-------------------If no match-------------------
         if len(sqlite_res)==0:
             self.noMatchLabel.setVisible(True)
+            self.label.setText('No match found.')
             LOGGER.info('Not result found.')
             return
 

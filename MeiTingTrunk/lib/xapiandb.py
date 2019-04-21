@@ -17,10 +17,8 @@ from urllib.parse import unquote, quote
 from urllib.parse import urlparse
 import json
 import logging
-from pprint import pprint
 import subprocess
 import xapian
-import tempfile
 import sqlite3
 import multiprocessing
 
@@ -325,24 +323,6 @@ def search(dbpath, querystring, fields, docids=None):
     return matches
 
 
-def checkDatabase(dbpath, sqlitepath):
-
-    db=xapian.Database(dbpath)
-    enquire=xapian.Enquire(db)
-    enquire.set_query(xapian.Query.MatchAll)
-
-    doc_count=db.get_doccount()
-    mset=enquire.get_mset(0, doc_count)
-
-    for mm in mset:
-        match_fields=json.loads(mm.document.get_data())
-        docid=match_fields['id']
-        qid=match_fields['qid']
-        #print('# <checkDatabase>: docid=',docid,'qid=',qid)
-
-    return
-
-
 class Worker(multiprocessing.Process):
     def __init__(self, id, func, jobq, outq):
         super(Worker,self).__init__()
@@ -469,6 +449,25 @@ def writeToXapian(dbpath, jobq):
 #                           Use xapian-omega                           #
 #######################################################################
 
+class OmindexWorker(multiprocessing.Process):
+    def __init__(self, dbpath, lib_folder):
+        super(Worker,self).__init__()
+        self.func=indexFolder
+        self.dbpath=dbpath
+        self.lib_folder=lib_folder
+
+    def run(self):
+        while True:
+            args=self.jobq.get()
+            self.jobq.task_done()
+            if args is None:
+                self.outq.put(None)
+                break
+            res=self.func(*args)
+            self.outq.put(res)
+
+        return
+
 
 def indexFolder(dbpath, lib_folder):
     '''Use omindex to index a folder
@@ -547,7 +546,7 @@ def search2(xapianpath, sqlitepath, querystring, docids=None):
     #----------------Add docid filter----------------
     if docids is not None:
         # get relpath(s) from docid
-        filter_paths=['/%s' %kk for kk,vv in idmap.items() if vv in docids]
+        filter_paths=[quote('/%s' %kk) for kk,vv in idmap.items() if vv in docids]
         docid_queries=[xapian.Query('U%s' %str(ii)) for ii in filter_paths]
         docid_query=xapian.Query(xapian.Query.OP_OR, docid_queries)
         query=xapian.Query(xapian.Query.OP_FILTER, query, docid_query)
@@ -585,9 +584,8 @@ def search2(xapianpath, sqlitepath, querystring, docids=None):
         #
         #        newdocument.set_data(record);
         #
-        # then re-compile xapian-omega, and change the command in indexFolder()
-        # to point to the new exe (if it is installed to a diff location). This
-        # is tricker than allowing the
+        # then re-compile xapian-omega.
+        # . This is tricker than allowing the
         # user to use package managers to install xapian. Plus, their snippet()
         # function seems to only give 1 snippet at most. Probably not worth
         # doing snippet in that case.
@@ -608,7 +606,7 @@ def search2(xapianpath, sqlitepath, querystring, docids=None):
             dump=' '.join(dlist[ii:])
             snip_size=400
             if len(dump)>0:
-                snips=getSnippets(mset, dump, snip_size)
+                snips=getSnippets(mset, dump[5:], snip_size)
             else:
                 snips=[]
             dictmm={'pdf': {url: snips}}
@@ -696,7 +694,7 @@ def delByDocid2(dbpath, sqlitepath, docid):
 
 def getSnippets(mset, text, snip_size):
 
-    block_size=snip_size*2
+    block_size=snip_size+200  # this seems to require a number > snip_size
     snippets=[]
     idx1=0
     while True:
@@ -729,12 +727,40 @@ if __name__=='__main__':
     sqlitepath='/home/guangzhi/codes/pyrefman_deleted/men.sqlite'
 
     #aa=indexFolder(dbpath, lib_folder)
-    aa=search2(dbpath, sqlitepath, 'atmosphere', list(range(0,200)))
+    #aa=search2(dbpath, sqlitepath, 'atmosphere', list(range(0,200)))
 
     #bb=getByDocid2(dbpath, sqlitepath, 1008)
-    #bb=delByDocid2(dbpath, sqlitepath, 1008)
+    pp=multiprocessing.Process(target=indexFolder, args=(dbpath,lib_folder))
+    pp.start()
 
+    '''
+    jobq=multiprocessing.JoinableQueue()
+    outq=multiprocessing.Queue()
 
+    def func(arg):
+        print(arg)
+    #worker=Worker(0, func, jobq, outq)
+    worker=Worker(0, indexFolder, jobq, outq)
+    worker.daemon=False
+    worker.start()
+
+    import time
+
+    for ii in range(15):
+        time.sleep(1)
+        print(ii)
+
+        if ii==5:
+            jobq.put((dbpath, lib_folder))
+            #jobq.put(('aaa',))
+            jobq.put(None)
+
+        if ii==10:
+            #jobq.put(('aaa',))
+            jobq.put((dbpath, lib_folder))
+            jobq.put(None)
+
+    '''
 
 
 

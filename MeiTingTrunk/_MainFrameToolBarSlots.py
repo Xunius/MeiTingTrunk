@@ -525,6 +525,19 @@ class MainFrameToolBarSlots:
         return
 
 
+    def enablePDFSearch(self):
+
+        self.pdf_search_action.setEnabled(True)
+
+        search_fields=self.settings.value('search/search_fields',[],str)
+        if isinstance(search_fields,str) and search_fields=='':
+            search_fields=[]
+        if 'PDF' in search_fields:
+            self.pdf_search_checkbox.setChecked(True)
+
+        return
+
+
     @pyqtSlot(str,list)
     def createFolderFromSearch(self, search_text, docids):
         """Create a folder and populate with docs selected from search results
