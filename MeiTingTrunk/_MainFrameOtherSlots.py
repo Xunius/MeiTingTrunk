@@ -315,6 +315,14 @@ class MainFrameOtherSlots:
         '''
 
         self.clearMetaTab()
+        # hide duplicate frame and search frame.
+        if self.duplicate_result_frame.isVisible():
+            self.duplicate_result_frame.setVisible(False)
+        if self.search_res_frame.isVisible():
+            self.search_res_frame.setVisible(False)
+        if not self.doc_table.isVisible():
+            self.doc_table.setVisible(True)
+
         self.doc_table.model().arraydata=[]
         self.doc_table.model().layoutChanged.emit()
         self.libtree.clear()
