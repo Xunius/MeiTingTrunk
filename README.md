@@ -101,7 +101,7 @@ Currently only support Linux and MacOS.
 
 ### Other dependencies
 
-* xapian-core, xapian-omega, xapian-bindings (optional), required for full text searching. See https://xapian.org/docs/install.html for installation instructions.
+* xapian-core, xapian-omega, xapian-bindings (all optional), required for full text searching. See https://xapian.org/docs/install.html for installation instructions.
 
 
 ## Install
