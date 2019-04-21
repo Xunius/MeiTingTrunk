@@ -443,8 +443,8 @@ class SearchResFrame(QtWidgets.QScrollArea):
         crow=grid.rowCount()
 
         def openSnippetsDialog(snip_list, relpath):
-            diag=SnippetsDialog(self.settings,self)
-            diag.addSnippets(meta['title'], search_text, relpath, snip_list)
+            diag=SnippetsDialog(relpath, self.settings, self)
+            diag.addSnippets(meta['title'], search_text, snip_list)
             diag.exec_()
 
             return
@@ -873,7 +873,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
 
 
 class SnippetsDialog(QtWidgets.QDialog):
-    def __init__(self,settings,parent):
+    def __init__(self,relpath, settings,parent):
         '''
         Args:
             parent (QWidget): parent widget.
@@ -882,6 +882,7 @@ class SnippetsDialog(QtWidgets.QDialog):
 
         super(SnippetsDialog,self).__init__(parent=parent)
 
+        self.relpath=relpath
         self.settings=settings
         self.parent=parent
 
@@ -920,6 +921,8 @@ class SnippetsDialog(QtWidgets.QDialog):
                 QDialogButtonBox.ApplyRole)
         self.open_file_button.setAutoDefault(False)
         self.open_file_button.setDefault(False)
+        self.open_file_button.clicked.connect(lambda: self.parent.openPDF(
+            self.relpath))
 
         self.buttons.rejected.connect(self.reject)
 
@@ -943,7 +946,7 @@ class SnippetsDialog(QtWidgets.QDialog):
         return scroll
 
 
-    def addSnippets(self, title, search_text, relpath, snip_list):
+    def addSnippets(self, title, search_text, snip_list):
 
         font=self.settings.value('display/fonts/doc_table',QFont)
         self.title_label.setText('%s' %title)
