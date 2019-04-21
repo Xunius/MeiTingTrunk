@@ -26,6 +26,7 @@ MeiTingTrunk/lib/risparse.py
 MeiTingTrunk/lib/sqlitedb.py
 MeiTingTrunk/lib/sqlitefts.py
 MeiTingTrunk/lib/tools.py
+MeiTingTrunk/lib/xapiandb.py
 MeiTingTrunk/lib/pylatexenc/__init__.py
 MeiTingTrunk/lib/pylatexenc/_utf8latexmap.py
 MeiTingTrunk/lib/pylatexenc/latex2text.py
