@@ -44,6 +44,7 @@ An open source reference management tool developed in PyQt5 and Python3.
 
 * Utilises Xapian engine to enable full text search inside attachment files (including PDFs, docs etc.).
 
+
 ### Free and open source
 
 * Open to suggestions, bug reports and new ideas.
@@ -101,7 +102,7 @@ Currently only support Linux and MacOS.
 
 ### Other dependencies
 
-* xapian-core, xapian-omega, xapian-bindings (all optional), required for full text searching. See https://xapian.org/docs/install.html for installation instructions.
+* xapian-core, xapian-omega, xapian-bindings (all optional), required for full text searching. See https://xapian.org/docs/install.html for installation instructions. Also checkout the [wiki page](https://github.com/Xunius/MeiTingTrunk/wiki/Enable-snippets-in-full-text-search-results) on how to enable snippets.
 
 
 ## Install
