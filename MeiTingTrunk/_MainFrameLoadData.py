@@ -250,8 +250,12 @@ class MainFrameLoadData:
                    within the folder. If None, load the <All> folder.
             docids (list or None): if list, a list of doc ids to load. If None,
                                    load according to the <folder> arg.
-            sortidx (int or None): int in [0,9], index of the column to sort
-                                   the table. If None, use current sortidx.
+            sortidx (int or None or False): int in [0,9], index of the column
+                to sort the table. If None, use current sortidx.
+                If False, don't do sorting. This last case is for adding new
+                docs to the folder and I want the new docs to appear at the
+                end, so scrolling to and selecting them is easier, and makes
+                sense.
             sortorder (int): sort order, Qt.AscendingOrder (0), or
                              Qt.DescendingOrder (1), order to sort the columns.
                            with.
@@ -290,14 +294,15 @@ class MainFrameLoadData:
         tablemodel.arraydata=data
 
         #--------------------Sort rows--------------------
-        if sortidx is None:
-            sortidx=self.settings.value('view/sortidx', 4, type=int)
-            sortorder=self.settings.value('view/sortorder', 0, type=int)
-            tablemodel.sort(sortidx, sortorder)
-        else:
-            #if sortidx is not None and sortidx in range(tablemodel.columnCount(None)):
-            self.logger.info('sort idx = %s. sortorder = %s' %(sortidx, sortorder))
-            tablemodel.sort(sortidx, sortorder)
+        if sortidx != False:
+            if sortidx is None:
+                sortidx=self.settings.value('view/sortidx', 4, type=int)
+                sortorder=self.settings.value('view/sortorder', 0, type=int)
+                tablemodel.sort(sortidx, sortorder)
+            else:
+                #if sortidx is not None and sortidx in range(tablemodel.columnCount(None)):
+                self.logger.info('sort idx = %s. sortorder = %s' %(sortidx, sortorder))
+                tablemodel.sort(sortidx, sortorder)
 
         if len(data)>0:
             self.enableMetaTab()

@@ -94,7 +94,13 @@ class MainFrameDataSlots:
             self.folder_data['-2'].append(docid)
             # scroll to and select row in doc table
             self.doc_table.scrollToBottom()
-            self.loadDocTable(docids=self._current_docids+[docid,],sel_row=None)
+            self.loadDocTable(docids=self._current_docids+[docid,],
+                    sel_row=None, sortidx=False)
+
+            # use sortidx=False to signal don't do sorting. This is
+            # for adding new docs to the folder and I want the new docs to
+            # appear at the end, so scrolling to and selecting them is easier,
+            # and makes sense.
 
             #xx=self.doc_table.model().rowCount(None)
             # NOTE that the below method may not work when table was empty before
