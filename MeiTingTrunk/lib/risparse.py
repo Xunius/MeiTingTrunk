@@ -251,14 +251,14 @@ def parseMeta(metadict, path_prefix):
     #--------------------Get type--------------------
     doctype=getField(metadict,'type','article')
     doctype=TYPE_DICT[doctype]
-    entries=['TY - %s' %doctype,]
+    entries=['TY  - %s' %doctype,]
 
     LOGGER.debug('doctype (TY) = %s' %doctype)
 
     #-------------------Get authors-------------------
     authors=sqlitedb.zipAuthors(metadict['firstNames_l'], metadict['lastName_l'])
     for aii in authors:
-        entries.append('AU - %s' %aii)
+        entries.append('AU  - %s' %aii)
 
         LOGGER.debug('authors (AU) = %s' %aii)
     #authors=latexencode.utf8tolatex(authors)
@@ -266,7 +266,7 @@ def parseMeta(metadict, path_prefix):
     #----------------------Get id----------------------
     citationkey=metadict['citationkey']
     if citationkey:
-        entries.append('ID - %s' %citationkey)
+        entries.append('ID  - %s' %citationkey)
 
         LOGGER.debug('citationkey (ID) = %s' %citationkey)
 
@@ -283,23 +283,23 @@ def parseMeta(metadict, path_prefix):
             ii=''
         time.append(ii)
     if year!='':
-        entries.append('PY - %s' %time[0])
-    time='%s/%s/%s/' %(time[0],time[1],time[2])
-    entries.append('DA - %s' %time)
-    entries.append('Y1 - %s' %time)
+        entries.append('PY  - %s' %time[0])
+        entries.append('Y1  - %s' %year)
+        time='%s/%s/%s' %(time[0],time[1],time[2])
+        entries.append('DA  - %s' %time)
 
-    LOGGER.debug('time (PY, DA, Y1) = %s' %time)
+        LOGGER.debug('time (PY, DA, Y1) = %s' %time)
 
     #--------------------Get pages--------------------
     pages=getField(metadict,'pages','')
     if pages!='':
         pmatch=page_re.match(pages)
         if pmatch is None:
-            entries.append('SP - %s' %str(pages))
+            entries.append('SP  - %s' %str(pages))
             LOGGER.debug('pages (SP) = %s' %(str(pages)))
         else:
-            entries.append('SP - %s' %str(pmatch.group(1)))
-            entries.append('EP - %s' %str(pmatch.group(2)))
+            entries.append('SP  - %s' %str(pmatch.group(1)))
+            entries.append('EP  - %s' %str(pmatch.group(2)))
 
             LOGGER.debug('pages (SP) = %s' %(str(pmatch.group(1))))
             LOGGER.debug('pages (EP) = %s' %(str(pmatch.group(2))))
@@ -314,7 +314,7 @@ def parseMeta(metadict, path_prefix):
     if country!='':
         loc=u'%s, %s' %(loc,country)
     if len(loc)>0:
-        entries.append('CY - %s' %loc)
+        entries.append('CY  - %s' %loc)
 
     LOGGER.debug('city (CY) = %s' %loc)
 
@@ -323,7 +323,7 @@ def parseMeta(metadict, path_prefix):
     if files:
         # can only store 2 files?
         for fii in files[:2]:
-            entries.append('L1 - %s' %os.path.join(path_prefix,fii))
+            entries.append('L1  - %s' %os.path.join(path_prefix,fii))
 
             LOGGER.debug('file (L1) = %s' %fii)
 
@@ -337,7 +337,7 @@ def parseMeta(metadict, path_prefix):
 
         if kk =='keywords_l' and len(vv)>0:
             for kii in vv:
-                entries.append('KW - %s' %kii)
+                entries.append('KW  - %s' %kii)
 
                 LOGGER.debug('keywords (KW) = %s' %kii)
 
@@ -351,11 +351,10 @@ def parseMeta(metadict, path_prefix):
         kk=KEYWORD_DICT.get(kk,None)
         if kk is None:
             continue
-            entries.append('%s - %s' %(kk,vv))
+        entries.append('%s  - %s' %(kk,vv))
+        LOGGER.debug('other key (%s) = %s' %(kk,vv))
 
-            LOGGER.debug('other key (%s) = %s' %(kk,vv))
-
-    entries.append('ER -\n')
+    entries.append('ER  - \n')
     string='\n'.join(entries)
 
     LOGGER.info('Done writing to RIS format')
