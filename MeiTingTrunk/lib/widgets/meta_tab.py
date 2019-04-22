@@ -17,7 +17,7 @@ import os
 import re
 import logging
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, QPoint, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSignal, QPoint, pyqtSlot, QSize
 from PyQt5.QtGui import QIcon, QFont, QFontMetrics
 from PyQt5.QtWidgets import QDialogButtonBox, QStyle
 from .. import sqlitedb
@@ -226,6 +226,14 @@ class FileLineEdit(QtWidgets.QLineEdit):
         self.lib_folder=lib_folder
         self.parent=parent
 
+        self.type_label=QtWidgets.QLabel()
+        self.file_type_icon=QIcon.fromTheme('emblem-documents',
+            self.style().standardIcon(QStyle.SP_FileIcon)).pixmap(
+                    QSize(16,16))
+        self.link_type_icon=QIcon.fromTheme('emblem-symbolic-link',
+            self.style().standardIcon(QStyle.SP_FileLinkIcon)).pixmap(
+                    QSize(16,16))
+
         self.editingFinished.connect(self.checkNewValue) # focus out or return
 
 
@@ -244,6 +252,21 @@ class FileLineEdit(QtWidgets.QLineEdit):
         # It seems that it requires a 20 pixel extra space
         super(FileLineEdit,self).setText(
              self.fm.elidedText(self.short_text,Qt.ElideRight,self.width()-20))
+
+        # get file path
+        if os.path.isabs(text):
+            filepath=text
+        else:
+            filepath=os.path.join(self.lib_folder, text)
+
+        if os.path.islink(filepath):
+            self.type_label.setPixmap(self.link_type_icon)
+            self.type_label.setToolTip('Attachment file is a symbolic link.')
+            LOGGER.debug('file path is a link: %s' %filepath)
+        else:
+            self.type_label.setPixmap(self.file_type_icon)
+            self.type_label.setToolTip('Attachment file is not a symbolic link.')
+            LOGGER.debug('file path is not a link: %s' %filepath)
 
         return
 
@@ -586,6 +609,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
             self.fields_dict['files_l'].index(le)))
 
         le.del_button=button
+        h_layout.addWidget(le.type_label)
         h_layout.addWidget(le)
         h_layout.addWidget(button)
 
@@ -617,9 +641,11 @@ class MetaTabScroll(QtWidgets.QScrollArea):
 
         def delFile(le):
             self.v_layout.removeWidget(le.del_button)
+            self.v_layout.removeWidget(le.type_label)
             self.v_layout.removeWidget(le)
             le.deleteLater()
             le.del_button.deleteLater()
+            le.type_label.deleteLater()
             # NOTE: you can't del a element in list if it is iterating
             #self.fields_dict['files_l'].remove(le)
             # keep a record of the current idx in the vertical layout

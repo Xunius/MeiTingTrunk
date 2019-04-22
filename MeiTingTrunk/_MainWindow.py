@@ -129,7 +129,7 @@ New session started
             settings.setValue('saving/storage_folder', storage_folder)
 
             # file copy/link
-            settings.setValue('saving/file_move_manner', 'link')
+            settings.setValue('saving/file_move_manner', 'copy')
             # 'copy' or 'link'
 
             # auto save
@@ -311,7 +311,9 @@ New session started
                         'Save changes and close?',
                         QtWidgets.QMessageBox.Yes |\
                         QtWidgets.QMessageBox.Discard |\
-                        QtWidgets.QMessageBox.Cancel)
+                        QtWidgets.QMessageBox.Cancel,
+                        QtWidgets.QMessageBox.Yes # default
+                        )
             else:
                 choice=QtWidgets.QMessageBox.question(self, 'Confirm Close',
                         'Close MeiTing Trunk?',

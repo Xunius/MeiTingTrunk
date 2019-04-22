@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: meitingtrunk
-Version: 0.1a16
+Version: 0.1a17
 Summary: An open source reference management tool developed in PyQt5 and Python3.
 Home-page: https://github.com/Xunius/MeiTingTrunk
 Author: Guangzhi XU
@@ -51,6 +51,7 @@ Description: # MeiTing Trunk
         ### Full text search (experimental)
         
         * Utilises Xapian engine to enable full text search inside attachment files (including PDFs, docs etc.).
+        
         
         ### Free and open source
         
@@ -109,7 +110,7 @@ Description: # MeiTing Trunk
         
         ### Other dependencies
         
-        * xapian-core, xapian-omega, xapian-bindings (optional), required for full text searching. See https://xapian.org/docs/install.html for installation instructions.
+        * xapian-core, xapian-omega, xapian-bindings (all optional), required for full text searching. See https://xapian.org/docs/install.html for installation instructions. Also checkout the [wiki page](https://github.com/Xunius/MeiTingTrunk/wiki/Enable-snippets-in-full-text-search-results) on how to enable snippets.
         
         
         ## Install
