@@ -16,7 +16,6 @@ terms of the GPLv3 license.
 import os
 import re
 import logging
-import tempfile
 from pprint import pprint
 from RISparser import readris, read
 from RISparser.config import LIST_TYPE_TAGS, TAG_KEY_MAPPING

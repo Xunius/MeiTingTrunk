@@ -29,7 +29,7 @@ from . import _MainFrame
 from . import resources
 from .lib import sqlitedb, tools
 from .lib.widgets import PreferenceDialog, ExportDialog, ThreadRunDialog,\
-        ImportDialog, AboutDialog
+        ImportDialog, AboutDialog, MergeNameDialog
 if tools.isXapianReady():
     from .lib import xapiandb
 
@@ -274,11 +274,14 @@ New session started
         self.tool_menu=self.menu_bar.addMenu('&Tools')
         self.import_action=QtWidgets.QAction('&Import', self)
         self.export_action=QtWidgets.QAction('&Export', self)
+        self.merge_name_action=QtWidgets.QAction('&Merge Names', self)
         self.tool_menu.addAction(self.import_action)
         self.tool_menu.addAction(self.export_action)
+        self.tool_menu.addAction(self.merge_name_action)
         if not self.is_loaded:
             self.export_action.setEnabled(False)
             self.save_database_action.setEnabled(False)
+            self.merge_name_action.setEnabled(False)
             self.close_database_action.setEnabled(False)
 
         #--------------------Help menu--------------------
@@ -293,6 +296,7 @@ New session started
         preference_action.triggered.connect(self.preferenceTriggered)
         self.import_action.triggered.connect(self.importTriggered)
         self.export_action.triggered.connect(self.exportTriggered)
+        self.merge_name_action.triggered.connect(self.mergeNameTriggered)
         self.help_menu.triggered.connect(self.helpMenuTriggered)
         quit_action.triggered.connect(self.close)
         self.view_menu.triggered.connect(self.viewChangeTriggered)
@@ -578,6 +582,7 @@ New session started
 
         self.import_action.setEnabled(True)
         self.export_action.setEnabled(True)
+        self.merge_name_action.setEnabled(True)
         self.save_database_action.setEnabled(True)
         self.close_database_action.setEnabled(True)
 
@@ -623,6 +628,7 @@ New session started
 
             self.import_action.setEnabled(True)
             self.export_action.setEnabled(False)
+            self.merge_name_action.setEnabled(False)
             self.save_database_action.setEnabled(False)
             self.close_database_action.setEnabled(False)
 
@@ -673,6 +679,16 @@ New session started
     def exportTriggered(self):
 
         diag=ExportDialog(self.settings,parent=self)
+        diag.exec_()
+
+        return
+
+
+    @pyqtSlot()
+    def mergeNameTriggered(self):
+
+        diag=MergeNameDialog(self.main_frame.meta_dict, self.settings,
+                parent=self)
         diag.exec_()
 
         return
