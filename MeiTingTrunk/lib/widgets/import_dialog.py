@@ -22,7 +22,9 @@ from PyQt5.QtWidgets import QDialogButtonBox, QStyle
 from ..tools import getHLine, isXapianReady
 from .threadrun_dialog import ThreadRunDialog
 #from import_mendeley import importMendeley
-from .. import import_mendeley, xapiandb
+from .. import import_mendeley
+if isXapianReady():
+    from .. import xapiandb
 
 LOGGER=logging.getLogger(__name__)
 

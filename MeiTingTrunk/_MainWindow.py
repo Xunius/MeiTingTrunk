@@ -27,9 +27,11 @@ from PyQt5.QtCore import Qt, QSettings, QTimer, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 from . import _MainFrame
 from . import resources
-from .lib import sqlitedb, xapiandb, tools
+from .lib import sqlitedb, tools
 from .lib.widgets import PreferenceDialog, ExportDialog, ThreadRunDialog,\
         ImportDialog, AboutDialog
+if tools.isXapianReady():
+    from .lib import xapiandb
 
 #from . import __version__
 from .version import __version__

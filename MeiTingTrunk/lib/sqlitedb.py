@@ -26,7 +26,8 @@ import logging
 from send2trash import send2trash
 from collections import MutableMapping
 from .tools import autoRename, isXapianReady
-from . import xapiandb
+if isXapianReady():
+    from . import xapiandb
 
 DOC_ATTRS=[\
 'issn', 'issue', 'language', 'read', 'type', 'confirmed',

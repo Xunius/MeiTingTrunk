@@ -33,7 +33,9 @@ else:
 
 from . import sqlitedb
 from . import exportpdf
-from . import xapiandb
+from . import tools
+if tools.isXapianReady():
+    from . import xapiandb
 from bs4 import BeautifulSoup
 
 

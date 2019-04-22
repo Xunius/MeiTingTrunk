@@ -25,8 +25,10 @@ from PyQt5.QtGui import QBrush, QColor, QFont, QSyntaxHighlighter,\
         QTextCharFormat, QFontMetrics
 from PyQt5.QtWidgets import QDialogButtonBox
 from .threadrun_dialog import Master
-from .. import sqlitefts, xapiandb
-from ..tools import iterTreeWidgetItems
+from .. import sqlitefts
+from ..tools import iterTreeWidgetItems, isXapianReady
+if isXapianReady():
+    from .. import xapiandb
 
 
 LOGGER=logging.getLogger(__name__)
