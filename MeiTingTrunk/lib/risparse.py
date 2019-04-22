@@ -16,8 +16,9 @@ terms of the GPLv3 license.
 import os
 import re
 import logging
+import tempfile
 from pprint import pprint
-from RISparser import readris
+from RISparser import readris, read
 from RISparser.config import LIST_TYPE_TAGS, TAG_KEY_MAPPING
 try:
     from . import sqlitedb
@@ -81,14 +82,45 @@ def splitNames(entry):
     firstnames=[]
     lastnames=[]
     for nii in entry['authors']:
-        lii,fii=nii.split(',',1)
-        firstnames.append(fii.strip())
-        lastnames.append(lii.strip())
+        nameii=nii.split(',',1)
+        if len(nameii)>1:
+            fii,lii=nameii
+            fii=fii.strip()
+            lii=lii.strip()
+        else:
+            fii=''
+            lii=nameii[0].strip()
+        firstnames.append(fii)
+        lastnames.append(lii)
 
     entry['firstNames_l']=firstnames
     entry['lastName_l']=lastnames
 
     return entry
+
+
+def correctEncoding(fin):
+    '''Correct for BOM encoding issues
+
+    Args:
+        fin (file object): opened file object.
+
+    Returns:
+        lines (list): list of lines read from fin.
+
+    See https://stackoverflow.com/a/17912811/2005415 for details
+    '''
+
+    lines=fin.readlines()
+    l1=lines[0]
+    if len(l1) >= 3 and (l1[0], l1[1], l1[2]) == ('\xef', '\xbb', '\xbf'):
+        lines[0]=l1[3:]
+    elif len(l1) >= 1 and l1[0] == '\ufeff':
+        lines[0]=l1[1:]
+    else:
+        pass
+
+    return lines
 
 
 def readRISFile(filename):
@@ -105,9 +137,16 @@ def readRISFile(filename):
         return None
 
     results=[]
+
     with open(filename,'r') as fin:
 
-        entries=readris(fin)
+        lines=correctEncoding(fin)
+        # NOTE that an BOM encoding bug in RISparser makes some files encoded
+        # in utf-8-sig failed to be read by readris(). When decoded by utf-8,
+        # these files gives a first char of '\ufeff', and RISparser will fail
+        # to recognize it. So read all lines in and use read() instead.
+        #entries=readris(fin)
+        entries=read(lines)
         LOGGER.info('Read in RIS file: %s' %filename)
 
         for eii in entries:
@@ -367,6 +406,7 @@ def parseMeta(metadict, path_prefix):
 if __name__=='__main__':
 
     filename='./MeiTingTrunk/samples/sample_ris2.ris'
+    filename='/home/guangzhi/btsync_manjaro/aaa.txt'
 
     '''
     print('list tags',LIST_TYPE_TAGS)
@@ -376,7 +416,6 @@ if __name__=='__main__':
         for eii in entries:
             pprint(eii)
     '''
-    __import__('pdb').set_trace()
     results=readRISFile(filename)
     km=TAG_KEY_MAPPING
 
