@@ -18,6 +18,7 @@ UR  - https://doi.org/10.1007/s00382-018-4523-6
 DO  - 10.1007/s00382-018-4523-6
 ID  - Li2018
 ER  - 
+
 TY  - JOUR
 AU  - Nayak, Sridhara
 AU  - Dairaku, Koji
@@ -34,7 +35,7 @@ KW  - bbb
 KW  - alksdjf
 L1  - /home/guangzhi/codes/pyRefman/sample_pdf.pdf
 L2  - /home/guangzhi/codes/pyRefman/lib/mypdf3.pdf
-N1  - note1 
+N1  - note1
 N1  - note2
 EP  - 4401
 VL  - 51
@@ -45,6 +46,7 @@ UR  - https://doi.org/10.1007/s00382-017-3866-8
 DO  - 10.1007/s00382-017-3866-8
 ID  - Nayak2018
 ER  - 
+
 TY  - BOOK
 T1  - Managing the risks of extreme events and disasters to advance climate change adaptation: special report of the intergovernmental panel on climate change
 A1  - Field, Christopher B

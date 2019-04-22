@@ -38,6 +38,7 @@ TYPE_DICT={'Report': 'RPRT',\
            'JournalArticle': 'JOUR',\
            'article': 'JOUR',\
            'Book': 'BOOK',\
+           'book': 'BOOK',\
            'BookSection': 'CHAP',\
            'ConferenceProceedings': 'CONF',\
            'Generic': 'GEN',\
@@ -139,15 +140,9 @@ def readRISFile(filename):
                     if tii in eii:
                         eii['title']=eii[tii]
                         break
+                    eii['title']='Unknonw'
 
             LOGGER.debug('title = %s' %eii['title'])
-
-            # citationkey
-            citationkey=eii.get('id')
-            if citationkey:
-                eii['citationkey']=citationkey
-
-            LOGGER.debug('citationkey = %s' %eii['citationkey'])
 
             # date
             if 'date' in eii:
@@ -156,7 +151,23 @@ def readRISFile(filename):
                 eii['month']=month
                 eii['day']=day
 
-            LOGGER.debug('year = %s. month = %s. day = %s' %(year,month,day))
+                LOGGER.debug('year = %s. month = %s. day = %s' %(year,month,day))
+
+            if 'publication_year' in eii:
+                eii['year']=eii['publication_year']
+                LOGGER.debug('year = %s' %eii['year'])
+
+            # citationkey
+            citationkey=eii.get('id')
+            if citationkey:
+                eii['citationkey']=citationkey
+            else:
+                a1=eii.get('first_authors')
+                if a1:
+                    a1=a1[0].split(',')[1]
+                    citationkey='%s%s' %(a1, eii['year'])
+                    eii['citationkey']=citationkey
+                    LOGGER.debug('citationkey = %s' %eii['citationkey'])
 
             # pages
             sp=eii.get('start_page', 'n/a')
@@ -167,7 +178,7 @@ def readRISFile(filename):
             if 'journal_name' in eii and 'publication' not in eii:
                 eii['publication']=eii['journal_name']
 
-            LOGGER.debug('publication = %s' %eii['publication'])
+                LOGGER.debug('publication = %s' %eii['publication'])
 
             # keywords
             kw=eii.get('keywords')
@@ -356,7 +367,7 @@ def parseMeta(metadict, path_prefix):
 
 if __name__=='__main__':
 
-    filename='../testris4.ris'
+    filename='./MeiTingTrunk/samples/sample_ris2.ris'
 
     '''
     print('list tags',LIST_TYPE_TAGS)
@@ -366,6 +377,7 @@ if __name__=='__main__':
         for eii in entries:
             pprint(eii)
     '''
+    __import__('pdb').set_trace()
     results=readRISFile(filename)
     km=TAG_KEY_MAPPING
 
@@ -375,6 +387,6 @@ if __name__=='__main__':
 
         #rii=parseMeta(ii)
         #pprint(rii)
-        rii=metaDictToRIS(0,ii)
+        rii=metaDictToRIS(0,ii, 'aaa')
         print(rii)
 
