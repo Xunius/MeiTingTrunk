@@ -257,7 +257,7 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
 
         #----------------Check among docds----------------
         if docid2 is None:
-            jobid=0
+            jobid2=0
             for ii in range(n):
                 docii=docids1[ii]
                 _, authorsii, titleii, jyii=getFromCache(cache_dict, docii)
@@ -281,11 +281,11 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
                             self.scores_dict[(docii, docjj)]=0
                             continue
 
-                        job_list.append((jobid,
+                        job_list.append((jobid2,
                             getFromCache(cache_dict, docii),
                             getFromCache(cache_dict, docjj),
                             self.min_score))
-                        jobid+=1
+                        jobid2+=1
 
 
         #-----------------nxm compare-----------------
@@ -295,7 +295,7 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
                 docid2=[docid2,]
 
             m=len(docid2)
-            jobid=0
+            jobid2=0
 
             for ii in range(m):
                 docii=docid2[ii]
@@ -318,12 +318,11 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
                             self.scores_dict[(docii, docjj)]=0
                             continue
 
-                        job_list.append((jobid,
+                        job_list.append((jobid2,
                             getFromCache(cache_dict, docii),
                             getFromCache(cache_dict, docjj),
                             self.min_score))
-                        jobid+=1
-                        jobid+=1
+                        jobid2+=1
 
         return 0,jobid,job_list
 
@@ -352,6 +351,7 @@ class CheckDuplicateFrame(QtWidgets.QScrollArea):
         return
 
 
+    @pyqtSlot()
     def collectResults(self):
         '''Collect matching results and send results to GUI'''
 
