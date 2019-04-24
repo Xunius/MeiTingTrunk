@@ -535,3 +535,27 @@ def hasXapian():
 def isXapianReady():
 
     return hasPdftotext() and hasXapian()
+
+
+class Cache(object):
+    def __init__(self, func):
+        self.func=func
+        self.store_dict={}
+
+    def get(self, key, args=(), update=False):
+        '''
+        if not update:
+            return self.store_dict.setdefault(key, self.func(*args))
+        else:
+            self.store_dict[key]=self.func(*args)
+            return self.store_dict[key]
+        '''
+        if not update and key in self.store_dict:
+            print('# <get>: get existing for key=',key)
+            return self.store_dict[key]
+
+        print('# <get>: compute new for key=',key)
+        value=self.func(*args)
+        self.store_dict[key]=value
+
+        return value

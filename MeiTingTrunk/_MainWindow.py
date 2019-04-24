@@ -512,6 +512,7 @@ New session started
 
         self.current_lib=lib_name
         self.current_lib_folder=lib_folder
+        self.merge_scores_dict={}
         self.settings.setValue('saving/current_lib_folder', self.current_lib_folder)
         self.setWindowTitle('MEI-TING TRUNK %s: %s' %(__version__, lib_name))
 
@@ -687,7 +688,8 @@ New session started
     @pyqtSlot()
     def mergeNameTriggered(self):
 
-        diag=MergeNameDialog(self.main_frame.meta_dict, self.settings,
+        diag=MergeNameDialog(self.main_frame.meta_dict, self.merge_scores_dict,
+                self.settings,
                 parent=self)
         diag.exec_()
 

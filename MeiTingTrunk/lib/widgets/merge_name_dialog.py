@@ -20,7 +20,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 from PyQt5.QtGui import QFont, QBrush, QFontMetrics
 from PyQt5.QtWidgets import QDialogButtonBox, QStyle
-from ..tools import getHLine, isXapianReady, dfsCC
+from ..tools import getHLine, isXapianReady, dfsCC, Cache
 from .threadrun_dialog import ThreadRunDialog, Master
 from .. import sqlitedb
 
@@ -28,9 +28,10 @@ LOGGER=logging.getLogger(__name__)
 
 
 
+
 class MergeNameDialog(QtWidgets.QDialog):
 
-    def __init__(self, meta_dict, settings, parent):
+    def __init__(self, meta_dict, scores_dict, settings, parent):
         '''
         Args:
             parent (QWidget): parent widget.
@@ -42,6 +43,9 @@ class MergeNameDialog(QtWidgets.QDialog):
         self.meta_dict=meta_dict
         self.settings=settings
         self.parent=parent
+
+        self.scores_dict=scores_dict
+        self.cate_dict={}
 
         self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
         self.title_label_font=QFont('Serif',12,QFont.Bold)
@@ -178,7 +182,7 @@ class MergeNameDialog(QtWidgets.QDialog):
 
         self.search_button=QtWidgets.QToolButton(self)
         self.search_button.setText('Search For Similary Terms')
-        self.search_button.clicked.connect(self.findSimilar)
+        self.search_button.clicked.connect(self.searchButtonClicked)
         ha.addWidget(self.search_button)
         va.addLayout(ha)
 
@@ -212,112 +216,52 @@ class MergeNameDialog(QtWidgets.QDialog):
         terms=sqlitedb.fetchMetaData(self.meta_dict, key, docids,
                 unique=True,sort=True)
 
-        terms=list(set(terms))
         n_unique=len(terms)
         self.number_label.setText('NO. of unique terms in library = <span style="font:bold;">%d</span>' %n_unique)
 
         #va.addStretch()
         self.text_list=terms
 
-        return scroll
-
-
-
-
-    def loadAuthorName(self):
-        '''Load author name merge'''
-
-        scroll,va=self.createFrame('Merge Author Names')
-        self.current_task='authors'
-
-        docids=list(self.meta_dict.keys())
-        print('# <loadAuthorName>: len(docids)=',len(docids))
-
-        folderdata=sqlitedb.fetchMetaData(self.meta_dict, 'authors_l', docids,
-                unique=False,sort=False)
-
-        folderdata=list(set(folderdata))
-        n_unique=len(folderdata)
-        self.number_label.setText('NO. of unique names in library = <span style="font:bold;">%d</span>' %n_unique)
-
-        #va.addStretch()
-        self.text_list=folderdata
+        if self.current_task in self.cate_dict:
+            self.addResults(self.cate_dict[self.current_task])
 
         return scroll
 
 
-    def loadJournalName(self):
-        '''Load journal name merge'''
+    @pyqtSlot()
+    def searchButtonClicked(self):
 
-        scroll,va=self.createFrame('Merge Journal Names')
-        self.current_task='journal'
+        # if in cache, call addResults()
+        if self.current_task in self.cate_dict:
+            print('# <searchButtonClicked>: using exising for ', self.current_task)
+            self.addResults(self.cate_dict[self.current_task])
+        else:
+            print('# <searchButtonClicked>: call findsimilar')
+            self.thread_run_dialog1=ThreadRunDialog(
+                    self.prepareJoblist,
+                    [(0, self.text_list)],
+                    show_message='Preparing job list...',
+                    max_threads=1,
+                    get_results=True,
+                    close_on_finish=True,
+                    progressbar_style='busy',
+                    post_process_func=None,
+                    parent=self)
 
-        docids=list(self.meta_dict.keys())
-        print('# <loadAuthorName>: len(docids)=',len(docids))
-
-        folderdata=sqlitedb.fetchMetaData(self.meta_dict,'publication',docids,
-                unique=True,sort=True)
-
-        folderdata=list(set(folderdata))
-        n_unique=len(folderdata)
-        self.number_label.setText('NO. of unique names in library = <span style="font:bold;">%d</span>' %n_unique)
-
-        #va.addStretch()
-        self.text_list=folderdata
-
-        return scroll
-
-    def loadKeywords(self):
-        '''Load keywords merge'''
-
-        scroll,va=self.createFrame('Merge Keywords')
-        self.current_task='keywords'
-
-        docids=list(self.meta_dict.keys())
-        print('# <loadAuthorName>: len(docids)=',len(docids))
-
-        folderdata=sqlitedb.fetchMetaData(self.meta_dict,'keywords_l',docids,
-                unique=True,sort=True)
-
-        folderdata=list(set(folderdata))
-        n_unique=len(folderdata)
-        self.number_label.setText('NO. of unique names in library = <span style="font:bold;">%d</span>' %n_unique)
-
-        #va.addStretch()
-        self.text_list=folderdata
-
-        return scroll
-
-
-
-    def findSimilar(self):
-
-        self.scores_dict={}
-        self.min_score=80
-
-        self.thread_run_dialog1=ThreadRunDialog(
-                self.prepareJoblist,
-                [(0, self.text_list)],
-                show_message='Preparing job list...',
-                max_threads=1,
-                get_results=True,
-                close_on_finish=True,
-                progressbar_style='busy',
-                post_process_func=None,
-                parent=self)
-
-        self.thread_run_dialog1.master.all_done_signal.connect(
-                self.jobListReady)
-        self.thread_run_dialog1.exec_()
+            self.thread_run_dialog1.master.all_done_signal.connect(
+                    self.jobListReady)
+            self.thread_run_dialog1.exec_()
 
         return
 
 
     def prepareJoblist(self, jobid, text_list):
 
+
         n=len(text_list)
         print('# <prepareJoblist>: n=',n )
         job_list=[]
+        sdict=self.cate_dict.setdefault(self.current_task, {})
 
         #-----------------Prepare joblist-----------------
         jobid2=0
@@ -326,24 +270,28 @@ class MergeNameDialog(QtWidgets.QDialog):
             for jj in range(n):
                 tjj=text_list[jj]
                 if ii>=jj:
-                    self.scores_dict[(tii, tjj)]=0
+                    sdict.setdefault((tii, tjj), 0)
                 else:
                     # shortcut: skip if 1st letter don't match
                     if tii[0].lower() != tjj[0].lower():
-                        self.scores_dict[(tii, tjj)]=0
+                        sdict[(tii, tjj)]=0
                         continue
                     # shortcut: skip if string len diff >= 50%
                     if abs(len(tii)-len(tjj))>=\
                             max(len(tii), len(tjj))//2:
-                        self.scores_dict[(tii, tjj)]=0
+                        sdict[(tii, tjj)]=0
                         continue
 
-                    job_list.append((jobid2, tii, tjj))
-                    #if jobid2%100==0:
-                        #print('# <prepareJoblist>: jobid2=',jobid2,tii,tjj)
-                    jobid2+=1
+                    # shortcut: if in cache:
+                    if (tii, tjj) in self.scores_dict:
+                        sdict[(tii, tjj)]=self.scores_dict[(tii, tjj)]
+                        continue
 
+                    if (tii, tjj) not in sdict:
+                        job_list.append((jobid2, tii, tjj))
+                        jobid2+=1
 
+        print('# <prepareJoblist>: len(job_list)=', len(job_list))
         return 0,jobid,job_list
 
 
@@ -379,6 +327,11 @@ class MergeNameDialog(QtWidgets.QDialog):
             self.thread_run_dialog2.master.all_done_signal.connect(
                     self.collectResults)
             self.thread_run_dialog2.exec_()
+        else:
+            #self.collectResults()
+            sdict=self.cate_dict[self.current_task]
+            self.scores_dict.update(sdict)
+            self.addResults(sdict)
 
         return
 
@@ -388,23 +341,25 @@ class MergeNameDialog(QtWidgets.QDialog):
         '''Collect matching results and send results to GUI'''
 
         new=self.thread_run_dialog2.results
+        sdict=self.cate_dict[self.current_task]
         for recii,jobidii,resii in new:
             if recii==0:
                 kii,vii=resii
-                #print('# <collectResults>: kii=',kii,'vii=',vii,'resii=',resii)
-                self.scores_dict[kii]=vii
+                sdict[kii]=vii
 
+        self.cate_dict[self.current_task]=sdict
+        self.scores_dict.update(sdict)
         LOGGER.info('Duplicate search results collected.')
-        self.addResults()
+        self.addResults(sdict)
 
         return
 
 
     @pyqtSlot()
-    def addResults(self):
+    def addResults(self, sdict):
         '''Add matching results to treewidget'''
 
-        edges=[kk for kk,vv in self.scores_dict.items() if vv>=self.min_score]
+        edges=[kk for kk,vv in sdict.items() if vv>=self.spinbox.value()]
         # if no duplicates, return
         if len(edges)==0:
             self.no_dup_label.setVisible(True)
@@ -437,9 +392,9 @@ class MergeNameDialog(QtWidgets.QDialog):
 
             members=groups[gii]
             textii=members[0]
-            others=members[1:]
+            #others=members[1:]
             newgid=ii+1
-            print('# <addResults>: ii=',ii,'gii=',gii,'members=',members)
+            #print('# <addResults>: ii=',ii,'gii=',gii,'members=',members)
 
             #----------------Add to group_dict----------------
             self.group_dict[newgid]={'header': textii, 'members' : members}
@@ -739,8 +694,8 @@ class MergeFrame(QtWidgets.QScrollArea):
     def delValueButtonClicked(self, gid, widget):
 
         grid=widget.layout()
-        nrow=grid.rowCount()
-        button=self.sender()
+        #nrow=grid.rowCount()
+        #button=self.sender()
         idx=grid.indexOf(self.sender())
         rowid=grid.getItemPosition(idx)[0]
 
