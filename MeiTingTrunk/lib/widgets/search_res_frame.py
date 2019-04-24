@@ -26,7 +26,7 @@ from PyQt5.QtGui import QBrush, QColor, QFont, QSyntaxHighlighter,\
 from PyQt5.QtWidgets import QDialogButtonBox
 from .threadrun_dialog import Master
 from .. import sqlitefts
-from ..tools import iterTreeWidgetItems, isXapianReady
+from ..tools import iterTreeWidgetItems, isXapianReady, getSqlitePath
 if isXapianReady():
     from .. import xapiandb
 
@@ -608,7 +608,7 @@ class SearchResFrame(QtWidgets.QScrollArea):
                 folderid, desend)
 
         #def searchXapian(jobid, dbpath, querystring, fields, docids):
-        sqlitepath=db.execute('PRAgMA database_list').fetchall()[0][2]
+        sqlitepath=getSqlitePath(db)
 
         def searchXapian(jobid, dbpath, querystring, docids, sqlitepath ):
             try:

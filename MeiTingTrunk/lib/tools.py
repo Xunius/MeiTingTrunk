@@ -193,8 +193,8 @@ def parseAuthors(authorlist):
     lastnames=[]
     for nii in authorlist:
         nii=nii.split(',',1)
-        lastnames.append(nii[0] if len(nii)>1 else nii[0])
-        firstnames.append(nii[1] if len(nii)>1 else '')
+        lastnames.append(nii[0].strip() if len(nii)>1 else nii[0])
+        firstnames.append(nii[1].strip() if len(nii)>1 else '')
     #authors=sqlitedb.zipAuthors(firstnames,lastnames)
 
     return firstnames,lastnames,authorlist
@@ -559,3 +559,10 @@ class Cache(object):
         self.store_dict[key]=value
 
         return value
+
+
+def getSqlitePath(connection):
+    '''Get the database path from connection
+    '''
+
+    return connection.execute('PRAgMA database_list').fetchall()[0][2]

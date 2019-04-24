@@ -25,7 +25,7 @@ import sqlite3
 import logging
 from send2trash import send2trash
 from collections import MutableMapping
-from .tools import autoRename, isXapianReady
+from .tools import autoRename, isXapianReady, parseAuthors
 if isXapianReady():
     from . import xapiandb
 
@@ -1649,3 +1649,72 @@ def delDocFromDatabase(db, docid, lib_folder):
     LOGGER.info('Done deleting doc from database.')
 
     return 0
+
+
+def replaceTerm(db, field, old_terms, new_term):
+    print('# <replaceTerm>: old_terms=',old_terms)
+    print('# <replaceTerm>: new_term=',new_term)
+    if field=='Authors':
+        firstnames, lastnames, authors=parseAuthors(old_terms)
+        newf, newlast, newauthor=parseAuthors([new_term,])
+        newf=newf[0]
+        newlast=newlast[0]
+
+        print('# <replaceTerm>: firstnames=', firstnames)
+        print('# <replaceTerm>: lastnames=', lastnames)
+        print('# <replaceTerm>: newf=', newf)
+        print('# <replaceTerm>: enwlast=', newlast)
+
+        #query='''UPDATE DocumentContributors SET
+        #firstNames = REPLACE(firstNames, ?, ?),
+        #lastName = REPLACE(lastName, ?, ?)
+        #WHERE (DocumentContributors.firstNames = ? AND DocumentContributors.lastName = ?)
+        #'''
+        query='''UPDATE DocumentContributors SET
+        firstNames = ?,
+        lastName = ?
+        WHERE (firstNames = ? AND lastName = ?)
+        '''
+
+        for fii, lii in zip(firstnames, lastnames):
+            if fii==newf and lii==newlast:
+                continue
+            print('# <replaceTerm>: updating', fii, lii)
+            db.execute(query, (newf, newlast, fii, lii))
+
+            q2='''SELECT firstNames, lastName FROM
+            DocumentContributors
+            WHERE (firstNames = ? AND lastName = ?)
+            '''
+            ret=db.execute(q2, (fii, lii))
+            print(ret.fetchall())
+
+
+    else:
+
+        if field=='Journals':
+            table_name='Documents'
+            column_name='publication'
+        elif field=='Keywords':
+            table_name='DocumentKeywords'
+            column_name='text'
+        elif field=='Tags':
+            table_name='DocumentTags'
+            column_name='tag'
+
+        query='''UPDATE %s SET %s = REPLACE(%s, ?, ?)
+        WHERE %s = ?
+        ''' %(table_name, column_name, column_name, column_name)
+
+        for ii in old_terms:
+            if ii==new_term:
+                continue
+            print('# <replaceTerm>: updating', ii)
+            db.execute(query, (ii, new_term, ii))
+
+    print('# <replaceTerm>: query=',query)
+
+    db.commit()
+    return
+
+

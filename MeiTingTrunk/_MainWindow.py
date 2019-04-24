@@ -480,6 +480,7 @@ New session started
 
             return
 
+        '''
         self.main_frame.status_bar.showMessage('Opening database...')
         QtWidgets.QApplication.processEvents() # needed?
         # progressbar won't work atm, as the sqlitedb is in the same GUI thread.
@@ -504,6 +505,8 @@ New session started
         #self.main_frame.progressbar.setVisible(False)
 
         self.is_loaded=True
+        '''
+        self.loadSqlite(fname, load_to_gui=True)
 
         # get sqlite file name without ext as library name
         storage_folder,filename=os.path.split(fname)
@@ -609,6 +612,47 @@ New session started
         return
 
 
+    def loadSqlite(self, fname, load_to_gui=True):
+
+        print('# <loadSqlite>: ############### loading!1')
+
+        self.main_frame.status_bar.showMessage('Opening database...')
+        QtWidgets.QApplication.processEvents() # needed?
+        # progressbar won't work atm, as the sqlitedb is in the same GUI thread.
+        #self.main_frame.progressbar.setVisible(True)
+        #self.main_frame.progressbar.setMaximum(0)
+        try:
+            db = sqlite3.connect(fname)
+            self.logger.info('Connected to database: %s' %fname)
+        except:
+            self.logger.exception('Failed to connect to database %s' %fname)
+            return
+
+        self.db=db
+        # read and parse data
+        meta_dict,folder_data,folder_dict=sqlitedb.readSqlite(db)
+
+        # clear 'Opening database' message. This has to happen before loadLibTree()
+        # otherwise table row message will be cleared.
+        self.main_frame.status_bar.clearMessage()
+
+        # load data into GUI
+        if load_to_gui:
+            self.main_frame.loadLibTree(db,meta_dict,folder_data,folder_dict)
+        else:
+            # this is for updating some data from sqlite without re-loading
+            # gui
+            self.main_frame.db=db
+            self.main_frame.meta_dict=meta_dict
+            self.main_frame.folder_data=folder_data
+            self.main_frame.folder_dict=folder_dict
+        #self.main_frame.progressbar.setVisible(False)
+
+        self.is_loaded=True
+
+        return
+
+
     @pyqtSlot()
     def saveDatabaseTriggered(self):
         self.main_frame.saveToDatabase()
@@ -688,10 +732,20 @@ New session started
     @pyqtSlot()
     def mergeNameTriggered(self):
 
-        diag=MergeNameDialog(self.main_frame.meta_dict, self.merge_scores_dict,
+        # NOTE that need to make sure this won't get called before main_frame
+        # has read in a lib
+        diag=MergeNameDialog(self.main_frame.db, self.main_frame.meta_dict,
+                self.merge_scores_dict,
                 self.settings,
                 parent=self)
-        diag.exec_()
+        reload_gui=diag.exec_()
+        if reload_gui:
+            self.main_frame.clearData()
+            self.main_frame.loadLibTree(self.main_frame.db,
+                    self.main_frame.meta_dict,
+                    self.main_frame.folder_data,
+                    self.main_frame.folder_dict)
+            self.logger.info('Reload data to gui.')
 
         return
 

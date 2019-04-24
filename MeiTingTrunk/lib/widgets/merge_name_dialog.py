@@ -20,7 +20,8 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 from PyQt5.QtGui import QFont, QBrush, QFontMetrics
 from PyQt5.QtWidgets import QDialogButtonBox, QStyle
-from ..tools import getHLine, isXapianReady, dfsCC, Cache, parseAuthors
+from ..tools import getHLine, isXapianReady, dfsCC, Cache, parseAuthors,\
+        getSqlitePath
 from .threadrun_dialog import ThreadRunDialog, Master
 from .. import sqlitedb
 
@@ -31,7 +32,7 @@ LOGGER=logging.getLogger(__name__)
 
 class MergeNameDialog(QtWidgets.QDialog):
 
-    def __init__(self, meta_dict, scores_dict, settings, parent):
+    def __init__(self, db, meta_dict, scores_dict, settings, parent):
         '''
         Args:
             parent (QWidget): parent widget.
@@ -40,12 +41,14 @@ class MergeNameDialog(QtWidgets.QDialog):
 
         super().__init__(parent=parent)
 
+        self.db=db
         self.meta_dict=meta_dict
         self.settings=settings
         self.parent=parent
 
         self.scores_dict=scores_dict
         self.cate_dict={}
+        self.reload_gui=False
 
         self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
         self.title_label_font=QFont('Serif',12,QFont.Bold)
@@ -101,6 +104,11 @@ class MergeNameDialog(QtWidgets.QDialog):
         self.cate_list.currentItemChanged.connect(self.cateSelected)
         self.cate_list.setCurrentRow(0)
 
+
+    def exec_(self):
+
+        super().exec_()
+        return self.reload_gui
 
 
     @pyqtSlot(QtWidgets.QListWidgetItem)
@@ -176,7 +184,7 @@ class MergeNameDialog(QtWidgets.QDialog):
 
         #---------------Start search button---------------
         self.number_label=QtWidgets.QLabel('NO. of unique names in library =')
-        label.setTextFormat(Qt.RichText)
+        #label.setTextFormat(Qt.RichText)
         ha=QtWidgets.QHBoxLayout()
         ha.addWidget(self.number_label)
 
@@ -217,7 +225,9 @@ class MergeNameDialog(QtWidgets.QDialog):
                 unique=True,sort=True)
 
         n_unique=len(terms)
-        self.number_label.setText('NO. of unique terms in library = <span style="font:bold;">%d</span>' %n_unique)
+        print('# <loadTab>: n_unique=',n_unique)
+        self.number_label.setText('NO. of unique terms in library = %s'\
+                %str(n_unique))
 
         #va.addStretch()
         self.text_list=terms
@@ -226,6 +236,15 @@ class MergeNameDialog(QtWidgets.QDialog):
             self.addResults(self.cate_dict[self.current_task])
 
         return scroll
+
+
+    @pyqtSlot()
+    def delFromCache(self, key):
+        if key in self.cate_dict:
+            print('# <delFromCache>: ############## del key',key)
+            del self.cate_dict[key]
+
+        return
 
 
     @pyqtSlot()
@@ -250,6 +269,9 @@ class MergeNameDialog(QtWidgets.QDialog):
 
             self.thread_run_dialog1.master.all_done_signal.connect(
                     self.jobListReady)
+            self.thread_run_dialog1.abort_job_signal.connect(lambda:\
+                    (self.delFromCache(self.current_task),
+                        self.thread_run_dialog1.master.all_done_signal.disconnect()))
             self.thread_run_dialog1.exec_()
 
         return
@@ -326,6 +348,8 @@ class MergeNameDialog(QtWidgets.QDialog):
 
             self.thread_run_dialog2.master.all_done_signal.connect(
                     self.collectResults)
+            self.thread_run_dialog2.abort_job_signal.connect(lambda:\
+                    self.delFromCache(self.current_task))
             self.thread_run_dialog2.exec_()
         else:
             #self.collectResults()
@@ -405,6 +429,7 @@ class MergeNameDialog(QtWidgets.QDialog):
         return
 
 
+    @pyqtSlot()
     def doMerge(self):
 
         LOGGER.info('task = %s' %self.current_task)
@@ -416,9 +441,10 @@ class MergeNameDialog(QtWidgets.QDialog):
 
         job_list=[]
 
-        for gidii,gdictii in group_dict.items():
+        #for gidii,gdictii in group_dict.items():
+        for gidii in group_dict:
             print('# <doMerge>: gid=',gidii)
-            print('# <doMerge>: gdict=',gdictii)
+            #print('# <doMerge>: gdict=',gdictii)
 
             if gidii not in sel_groups:
                 print('# <doMerge>: ################## skip', gidii)
@@ -430,7 +456,8 @@ class MergeNameDialog(QtWidgets.QDialog):
             textwidget=button_le_dict[checked]
             newterm=textwidget.text()
             print('# <doMerge>: sel text', newterm)
-            members=gdictii['members']
+            #members=gdictii['members']
+            members=[button_le_dict[tii].text() for tii in rgroupii.buttons()]
             print('# <doMerge>: members=', members)
 
             job_list.append((members, newterm))
@@ -442,21 +469,27 @@ class MergeNameDialog(QtWidgets.QDialog):
         # probably can't use signal as i have to wait for it to complete.
         self.parent.saveDatabaseTriggered()
 
-        if self.current_task=='Authors':
-            #sqlitedb.replaceTerm(
-            firstnames, lastnames, authors=parseAuthors(members)
-            newf, newlast, newauthor=parseAuthors([newterm,])
+        for old_listii, newtermii in job_list:
+            sqlitedb.replaceTerm(self.db, self.current_task, old_listii,
+                    newtermii)
 
-            print('# <doMerge>: firstnames=', firstnames)
-            print('# <doMerge>: lastnames=', lastnames)
-            print('# <doMerge>: newf=', newf)
-            print('# <doMerge>: enwlast=', newlast)
-        elif self.current_task=='Journals':
-            pass
-        elif self.current_task=='Keywords':
-            pass
-        elif self.current_task=='Tags':
-            pass
+        #----------------Remove from cache----------------
+        del self.cate_dict[self.current_task]
+
+        #--------------------Clear gui--------------------
+        self.merge_frame.clearMergeGrid()
+
+        #-------------------Reload data-------------------
+        self.parent.loadSqlite(getSqlitePath(self.db), load_to_gui=False)
+
+        #--------------------Reload data--------------------
+        old=self.meta_dict
+        self.meta_dict=self.parent.main_frame.meta_dict
+        print('# <doMerge>: old is new', old is self.meta_dict, old == self.meta_dict)
+        #self.loadTab(self.current_task)
+        self.cateSelected(self.cate_list.currentItem())
+        self.reload_gui=True
+
 
         return
 
@@ -566,10 +599,26 @@ class MergeFrame(QtWidgets.QScrollArea):
     def clearMergeGrid(self):
         '''Clear grid layout'''
 
+
+        def clearLayout(layout):
+            while layout.count():
+                child = layout.takeAt(0)
+                if child.widget():
+                    try:
+                        clearLayout(child.widget().layout())
+                    except:
+                        pass
+                    child.widget().deleteLater()
+            return
+
+        '''
         while self.merge_grid.count():
             child = self.merge_grid.takeAt(0)
             if child.widget():
+                self.clearMergeGrid(child.widget())
                 child.widget().deleteLater()
+        '''
+        clearLayout(self.merge_grid)
 
         self.collect_dict={}
         self.button_le_dict={}
@@ -664,22 +713,11 @@ class MergeFrame(QtWidgets.QScrollArea):
     @pyqtSlot(int, QtWidgets.QWidget)
     def radioButtonStateChange(self, on, widget):
 
-        print('# <radioButtonStateChange>: on', on, type(on))
         grid=widget.layout()
-        #nrow=grid.rowCount()
-        #ncol=grid.columnCount()
-        #sender=self.sender()
-        #print('# <radioButtonStateChange>: ', on, nrow, ncol)
-
-        print('# <radioButtonStateChange>: sender=',self.sender())
         idx=grid.indexOf(self.sender())
-        print('# <radioButtonStateChange>: idx=',idx)
         rowid=grid.getItemPosition(idx)[0]
-        print('# <radioButtonStateChange>: rowid=',rowid)
 
         textwidget=grid.itemAtPosition(rowid, 2).widget()
-        text=textwidget.text()
-        print('# <radioButtonStateChange>: rowid=',rowid, text)
         if on:
             textwidget.setReadOnly(False)
         else:
@@ -694,18 +732,10 @@ class MergeFrame(QtWidgets.QScrollArea):
         nrow=grid.rowCount()
         ncol=grid.columnCount()
         sender=self.sender()
-        print('# <groupCheckStateChange>: ', on, nrow, ncol)
-        #button=self.sender()
-        #idx=grid.indexOf(self.sender())
-        #rowid=grid.getItemPosition(idx)[0]
-
-        #textwidget=grid.itemAtPosition(rowid, 2).widget()
-        #text=textwidget.text()
 
         for ii in range(nrow):
             for jj in range(ncol):
                 itemij=grid.itemAtPosition(ii, jj)
-                print('# <groupCheckStateChange>: ii=',ii,'jj=',jj,itemij)
                 if itemij:
                     wij=itemij.widget()
                     if wij == sender:
