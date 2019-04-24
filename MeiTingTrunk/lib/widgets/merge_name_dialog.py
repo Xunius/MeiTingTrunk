@@ -20,7 +20,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 from PyQt5.QtGui import QFont, QBrush, QFontMetrics
 from PyQt5.QtWidgets import QDialogButtonBox, QStyle
-from ..tools import getHLine, isXapianReady, dfsCC, Cache
+from ..tools import getHLine, isXapianReady, dfsCC, Cache, parseAuthors
 from .threadrun_dialog import ThreadRunDialog, Master
 from .. import sqlitedb
 
@@ -414,6 +414,8 @@ class MergeNameDialog(QtWidgets.QDialog):
         button_le_dict=self.merge_frame.button_le_dict
         sel_groups=self.merge_frame.getCheckedGroups()
 
+        job_list=[]
+
         for gidii,gdictii in group_dict.items():
             print('# <doMerge>: gid=',gidii)
             print('# <doMerge>: gdict=',gdictii)
@@ -423,20 +425,37 @@ class MergeNameDialog(QtWidgets.QDialog):
                 continue
 
             rgroupii=collect_dict[gidii]
-
             checked=rgroupii.checkedButton()
             # get the corresponding textedit/lineedit
             textwidget=button_le_dict[checked]
-            print('# <doMerge>: sel text', textwidget.text())
+            newterm=textwidget.text()
+            print('# <doMerge>: sel text', newterm)
             members=gdictii['members']
             print('# <doMerge>: members=', members)
 
-        if self.current_task=='authors':
+            job_list.append((members, newterm))
+
+        if len(job_list)==0:
+            return
+
+        #-----------------Call save first-----------------
+        # probably can't use signal as i have to wait for it to complete.
+        self.parent.saveDatabaseTriggered()
+
+        if self.current_task=='Authors':
+            #sqlitedb.replaceTerm(
+            firstnames, lastnames, authors=parseAuthors(members)
+            newf, newlast, newauthor=parseAuthors([newterm,])
+
+            print('# <doMerge>: firstnames=', firstnames)
+            print('# <doMerge>: lastnames=', lastnames)
+            print('# <doMerge>: newf=', newf)
+            print('# <doMerge>: enwlast=', newlast)
+        elif self.current_task=='Journals':
             pass
-
-
-
-        elif self.current_task=='journal':
+        elif self.current_task=='Keywords':
+            pass
+        elif self.current_task=='Tags':
             pass
 
         return
@@ -594,12 +613,11 @@ class MergeFrame(QtWidgets.QScrollArea):
         for jj,vjj in enumerate(members):
 
             radiojj=QtWidgets.QRadioButton()
-            if jj==0:
-                radiojj.setChecked(True)
 
             text_editjj=QtWidgets.QLineEdit()
             text_editjj.setFont(font)
             text_editjj.setText(vjj)
+            text_editjj.setReadOnly(True)
 
             # create a del file button
             button=QtWidgets.QPushButton()
@@ -631,12 +649,43 @@ class MergeFrame(QtWidgets.QScrollArea):
             grid.addWidget(button,crow,3)
             rgroup.addButton(radiojj)
             self.button_le_dict[radiojj]=text_editjj
+
+
+            radiojj.toggled.connect(lambda on: self.radioButtonStateChange(
+                on, tmpw))
+            if jj==0:
+                radiojj.setChecked(True)
             crow+=1
 
         self.merge_grid.addWidget(tmpw)
 
         return
 
+    @pyqtSlot(int, QtWidgets.QWidget)
+    def radioButtonStateChange(self, on, widget):
+
+        print('# <radioButtonStateChange>: on', on, type(on))
+        grid=widget.layout()
+        #nrow=grid.rowCount()
+        #ncol=grid.columnCount()
+        #sender=self.sender()
+        #print('# <radioButtonStateChange>: ', on, nrow, ncol)
+
+        print('# <radioButtonStateChange>: sender=',self.sender())
+        idx=grid.indexOf(self.sender())
+        print('# <radioButtonStateChange>: idx=',idx)
+        rowid=grid.getItemPosition(idx)[0]
+        print('# <radioButtonStateChange>: rowid=',rowid)
+
+        textwidget=grid.itemAtPosition(rowid, 2).widget()
+        text=textwidget.text()
+        print('# <radioButtonStateChange>: rowid=',rowid, text)
+        if on:
+            textwidget.setReadOnly(False)
+        else:
+            textwidget.setReadOnly(True)
+
+        return
 
     @pyqtSlot(int, QtWidgets.QWidget)
     def groupCheckStateChange(self, on, widget):
