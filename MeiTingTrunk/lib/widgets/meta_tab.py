@@ -22,7 +22,7 @@ from PyQt5.QtGui import QIcon, QFont, QFontMetrics
 from PyQt5.QtWidgets import QDialogButtonBox, QStyle
 from .. import sqlitedb
 from ..tools import getHLine, getXExpandYMinSizePolicy, parseAuthors,\
-        getXExpandYExpandSizePolicy
+        getXExpandYExpandSizePolicy, createDelButton
 from .. import _crossref
 
 LOGGER=logging.getLogger(__name__)
@@ -586,25 +586,7 @@ class MetaTabScroll(QtWidgets.QScrollArea):
         # create a del file button
         button=QtWidgets.QPushButton()
         font_height=le.fm.height()
-        button.setFixedWidth(int(font_height))
-        button.setFixedHeight(int(font_height))
-        button.setText('\u2715')
-        button.setStyleSheet('''
-        QPushButton {
-            border: 1px solid rgb(190,190,190);
-            background-color: rgb(190,190,190);
-            border-radius: %dpx;
-            font: bold %dpx;
-            color: white;
-            text-align: center;
-            padding-bottom: 2px;
-            }
-
-        QPushButton:pressed {
-            border-style: inset;
-            }
-        ''' %(int(font_height/2), max(1,font_height-2))
-        )
+        button=createDelButton(font_height)
         button.clicked.connect(lambda: self.delFileButtonClicked(
             self.fields_dict['files_l'].index(le)))
 
