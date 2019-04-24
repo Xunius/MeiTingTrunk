@@ -611,19 +611,15 @@ def fetchMetaData(meta_dict, key, docids, unique, sort):
     return result
 
 
-def filterDocs(meta_dict, folder_data, filter_type, filter_text,
-        current_folder):
+def filterDocs(meta_dict, docids, filter_type, filter_text):
     """Filter docs using a given filter text
 
     Args:
         meta_dict (dict): meta data of all documents. keys: docid,
             values: DocMeta dict.
-        folder_data (dict): documents in each folder. keys: folder id in str,
-            values: list of doc ids.
+        docids (list): list of int doc ids to perform filter.
         filter_type (str): defines the field of the filter_text.
         filter_text (str): filtering text.
-        current_folder (str): id of folder. Docs are selected from docs in
-                              this folder.
 
     Returns: results (list): ids of docs within folder given by
              <current_folder>, containing the text <filter_text> in the field
@@ -631,10 +627,6 @@ def filterDocs(meta_dict, folder_data, filter_type, filter_text,
     """
 
     results=[]
-    if current_folder=='-1':
-        docids=meta_dict.keys()
-    else:
-        docids=folder_data[current_folder]
 
     if filter_type=='Filter by authors':
         t_last,t_first=map(str.strip,filter_text.split(','))
@@ -660,7 +652,6 @@ def filterDocs(meta_dict, folder_data, filter_type, filter_text,
             keywords=meta_dict[kk]['keywords_l'] or []
             if filter_text in keywords:
                 results.append(kk)
-
 
     return results
 

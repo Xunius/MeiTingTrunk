@@ -39,11 +39,17 @@ class MainFrameFilterListSlots:
         filter_type=self.filter_type_combbox.currentText()
         filter_text=item.text()
         current_folder=self._current_folder
+
         if current_folder:
             folderid=current_folder[1]
 
-            filter_docids=sqlitedb.filterDocs(self.meta_dict,self.folder_data,
-                    filter_type,filter_text,folderid)
+            if folderid=='-1':
+                docids=self.meta_dict.keys()
+            else:
+                docids=self.folder_data[folderid]
+
+            filter_docids=sqlitedb.filterDocs(self.meta_dict, docids,
+                    filter_type, filter_text)
 
             if len(filter_docids)>0:
                 self.loadDocTable(None,filter_docids,sortidx=None,sel_row=0)
