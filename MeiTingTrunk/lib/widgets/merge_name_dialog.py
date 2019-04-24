@@ -21,9 +21,11 @@ from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 from PyQt5.QtGui import QFont, QBrush, QFontMetrics
 from PyQt5.QtWidgets import QDialogButtonBox, QStyle
 from ..tools import getHLine, isXapianReady, dfsCC, Cache, parseAuthors,\
-        getSqlitePath
+        getSqlitePath, createDelButton
 from .threadrun_dialog import ThreadRunDialog, Master
+from .doc_table import MyHeaderView, TableModel
 from .. import sqlitedb
+from ..._MainFrameLoadData import prepareDocs
 
 LOGGER=logging.getLogger(__name__)
 
@@ -322,6 +324,7 @@ class MergeNameDialog(QtWidgets.QDialog):
         '''After getting all jobs, launch threads and process jobs
         '''
 
+        QtWidgets.QApplication.processEvents() # needed?
         rec,jobid,job_list=self.thread_run_dialog1.results[0]
         print('# <jobListReady>: rec=',rec, len(job_list))
         LOGGER.debug('rec from job list prepare = %s' %rec)
@@ -432,6 +435,12 @@ class MergeNameDialog(QtWidgets.QDialog):
     @pyqtSlot()
     def doMerge(self):
 
+        choice=QtWidgets.QMessageBox.question(self, 'Confirm Merge',
+                'Changes can not be reverted. Confirm?',
+                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        if choice==QtWidgets.QMessageBox.No:
+            return
+
         LOGGER.info('task = %s' %self.current_task)
 
         collect_dict=self.merge_frame.collect_dict
@@ -518,7 +527,7 @@ class MergeFrame(QtWidgets.QScrollArea):
         super(self.__class__, self).__init__(parent=parent)
 
         self.settings=settings
-        #self.tree=tree
+        self.parent=parent
 
         frame=QtWidgets.QWidget()
         frame.setStyleSheet('background-color:white')
@@ -647,7 +656,7 @@ class MergeFrame(QtWidgets.QScrollArea):
         grid=QtWidgets.QGridLayout(tmpw)
         crow=0
         del_group_button=QtWidgets.QToolButton(self)
-        del_group_button.setText('Delete Group')
+        del_group_button.setText('Del Group')
         del_group_button.clicked.connect(lambda: self.delGroupClicked(gid, tmpw))
         grid.addWidget(del_group_button, 0, 0)
 
@@ -668,34 +677,22 @@ class MergeFrame(QtWidgets.QScrollArea):
             text_editjj.setText(vjj)
             text_editjj.setReadOnly(True)
 
-            # create a del file button
-            button=QtWidgets.QPushButton()
+            # create a del entry button
             font_height=QFontMetrics(text_editjj.font()).height()
-            button.setFixedWidth(int(font_height))
-            button.setFixedHeight(int(font_height))
-            button.setText('\u2715')
-            button.setStyleSheet('''
-            QPushButton {
-                border: 1px solid rgb(190,190,190);
-                background-color: rgb(190,190,190);
-                border-radius: %dpx;
-                font: bold %dpx;
-                color: white;
-                text-align: center;
-                padding-bottom: 2px;
-                }
-
-            QPushButton:pressed {
-                border-style: inset;
-                }
-            ''' %(int(font_height/2), max(1,font_height-2))
-            )
+            button=createDelButton(font_height)
             button.clicked.connect(lambda: self.delValueButtonClicked(
                 gid, tmpw))
+
+            # create a show details button
+            detail_button=QtWidgets.QToolButton()
+            detail_button.setText('Docs')
+            detail_button.clicked.connect(lambda x, t=vjj: self.openRelatedDialog(
+                t))
 
             grid.addWidget(radiojj,crow,1)
             grid.addWidget(text_editjj,crow,2)
             grid.addWidget(button,crow,3)
+            grid.addWidget(detail_button,crow,4)
             rgroup.addButton(radiojj)
             self.button_le_dict[radiojj]=text_editjj
 
@@ -844,15 +841,148 @@ class MergeFrame(QtWidgets.QScrollArea):
         return
 
 
-
-
-
-
-
-
-
     @pyqtSlot()
     def previewMerge(self):
         pass
 
 
+    @pyqtSlot(bool, str)
+    def openRelatedDialog(self, filter_text):
+
+        current_task=self.parent.current_task
+        meta_dict=self.parent.meta_dict
+
+        if current_task=='Authors':
+            filter_type='Filter by authors'
+        elif current_task=='Journals':
+            filter_type='Filter by publications'
+        elif current_task=='Keywords':
+            filter_type='Filter by keywords'
+        elif current_task=='Tags':
+            filter_type='Filter by tags'
+
+        filter_docids=sqlitedb.filterDocs(meta_dict,
+                meta_dict.keys(),
+                filter_type, filter_text)
+
+        print('# <openRelatedDialog>: filter_docids=',filter_docids)
+
+        if not hasattr(self, 'related_doc_diag'):
+            print('# <openRelatedDialog>: create new diag')
+            self.related_doc_diag=RelatedDocsDialog(meta_dict,
+                    self.settings, self)
+
+        if len(filter_docids)>0:
+            self.related_doc_diag.loadDocTable(filter_docids)
+        self.related_doc_diag.show()
+
+        return
+
+
+class RelatedDocsDialog(QtWidgets.QDialog):
+
+    def __init__(self, meta_dict, settings, parent):
+        super().__init__(parent=parent)
+
+        self.meta_dict=meta_dict
+        self.settings=settings
+        self.parent=parent
+
+        self.resize(700,600)
+        self.setWindowTitle('Related documents')
+        self.setWindowModality(Qt.NonModal)
+
+        v_layout=QtWidgets.QVBoxLayout(self)
+        #h_layout=QtWidgets.QHBoxLayout()
+        #h_layout.setContentsMargins(10,40,10,20)
+
+        self.doc_table=self.createDocTable()
+        v_layout.addWidget(self.doc_table)
+
+        self.buttons=QDialogButtonBox(QDialogButtonBox.Ok,
+            Qt.Horizontal, self)
+
+        self.buttons.accepted.connect(self.accept)
+        #self.buttons.rejected.connect(self.reject)
+        v_layout.addWidget(self.buttons)
+
+
+    def createDocTable(self):
+
+        tv=QtWidgets.QTableView(self)
+
+        hh=MyHeaderView(self)
+
+        tv.setHorizontalHeader(hh)
+        tv.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        tv.setShowGrid(True)
+        #tv.setSortingEnabled(True)
+
+        #tv.setDragEnabled(True)
+        #tv.setSectionsMovable(True)
+        #tv.setDragDropMode(QtWidgets.QAbstractItemView.DragDrop)
+
+        header=['docid','favourite','read','has_file','author','title',
+                'journal','year','added','confirmed']
+        tablemodel=TableModel(self,[],header,self.settings)
+        #tablemodel.dataChanged.connect(self.modelDataChanged)
+        tv.setModel(tablemodel)
+        hh.setModel(tablemodel)
+        hh.initresizeSections()
+        tv.setColumnHidden(0,True) # doc id column, hide
+        tv.setColumnHidden(9,True) # needs review column, shown as bold/normal
+
+        #tv.selectionModel().currentChanged.connect(self.selDoc)
+        #tv.clicked.connect(self.docTableClicked)
+        #tablemodel.rowsInserted.connect(self.model_insert_row)
+        #tv.setContextMenuPolicy(Qt.CustomContextMenu)
+        #tv.customContextMenuRequested.connect(self.docTableMenu)
+
+        #tv.doubleClicked.connect(self.docDoubleClicked)
+        tv.setAlternatingRowColors(True)
+
+        # NOTE: this seems to be change somewhere between PyQt5.6.0 and
+        # PyQt5.12.1 that the latter default to setWordWrap(True)
+        tv.setWordWrap(False)
+
+        tv.setStyleSheet('''alternate-background-color: rgb(230,230,249);
+                background-color: none''')
+
+        return tv
+
+
+    def loadDocTable(self, docids=None, sortidx=4, sortorder=0, sel_row=None):
+        """Load the doc table
+
+        Kwargs:
+            folder ((fname_in_str, fid_in_str) or None ): if tuple, load docs
+                   within the folder. If None, load the <All> folder.
+            docids (list or None): if list, a list of doc ids to load. If None,
+                                   load according to the <folder> arg.
+            sortidx (int or None or False): int in [0,9], index of the column
+                to sort the table. If None, use current sortidx.
+                If False, don't do sorting. This last case is for adding new
+                docs to the folder and I want the new docs to appear at the
+                end, so scrolling to and selecting them is easier, and makes
+                sense.
+            sortorder (int): sort order, Qt.AscendingOrder (0), or
+                             Qt.DescendingOrder (1), order to sort the columns.
+                           with.
+            sel_row (int or None): index of the row to select after loading.
+                                   If None, don't change selection.
+        """
+
+        tablemodel=self.doc_table.model()
+        #hh=self.doc_table.horizontalHeader()
+
+        #-------------Format data to table rows-------------
+        data=prepareDocs(self.meta_dict, docids)
+        tablemodel.arraydata=data
+
+        if len(data)>0:
+            #--------------------Sort rows--------------------
+            tablemodel.sort(sortidx, sortorder)
+
+        tablemodel.layoutChanged.emit()
+
+        return
