@@ -13,11 +13,12 @@ You may use, distribute and modify this code under the
 terms of the GPLv3 license.
 '''
 
+import os
+import logging
 from PyQt5.QtGui import QPixmap
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QDialogButtonBox
 from PyQt5.QtCore import Qt
-import logging
 
 LOGGER=logging.getLogger(__name__)
 REPO_URL='https://github.com/Xunius/MeiTingTrunk'
@@ -51,9 +52,19 @@ class AboutDialog(QtWidgets.QDialog):
                 0 , Qt.AlignHCenter)
         va.addWidget(QtWidgets.QLabel(REPO_URL), 0 , Qt.AlignHCenter)
 
+        logfolder=os.path.abspath(__file__)
+        logfolder=os.path.dirname(logfolder)
+        logfolder=os.path.dirname(logfolder)
+        logfolder=os.path.dirname(logfolder)
+        logfile1=os.path.join(logfolder, 'MTT.log')
+        logfile2=os.path.join(logfolder, 'MTT.log.1')
+        va.addWidget(QtWidgets.QLabel('Log files are at:'), 0,
+                Qt.AlignHCenter)
+        va.addWidget(QtWidgets.QLabel('%s and\n %s' %(logfile1, logfile2)), 0,
+                Qt.AlignHCenter)
+
         self.buttons=QDialogButtonBox(QDialogButtonBox.Ok, Qt.Horizontal, self)
         self.buttons.accepted.connect(self.accept)
-
         va.addWidget(self.buttons)
 
 
