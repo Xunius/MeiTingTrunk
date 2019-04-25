@@ -613,8 +613,14 @@ New session started
 
 
     def loadSqlite(self, fname, load_to_gui=True):
+        '''Load data from sqlite and optionally load int gui
 
-        print('# <loadSqlite>: ############### loading!1')
+        Args:
+            fname (str): file path to the sqlite database.
+        Kwargs:
+            load_to_gui (bool): if True, call main_frame.loadLibTree() to
+                update GUI data. Otherwise only store data.
+        '''
 
         self.main_frame.status_bar.showMessage('Opening database...')
         QtWidgets.QApplication.processEvents() # needed?
@@ -646,7 +652,6 @@ New session started
             self.main_frame.meta_dict=meta_dict
             self.main_frame.folder_data=folder_data
             self.main_frame.folder_dict=folder_dict
-        #self.main_frame.progressbar.setVisible(False)
 
         self.is_loaded=True
 

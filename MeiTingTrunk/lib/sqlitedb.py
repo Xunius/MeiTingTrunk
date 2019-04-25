@@ -1643,24 +1643,30 @@ def delDocFromDatabase(db, docid, lib_folder):
 
 
 def replaceTerm(db, field, old_terms, new_term):
-    print('# <replaceTerm>: old_terms=',old_terms)
-    print('# <replaceTerm>: new_term=',new_term)
+    '''Replace terms
+
+    Args:
+        db (sqlite connection): sqlite connection.
+        field (str): field of replacement, one of 'Authors', 'Journals',
+                     'Keywords', 'Tags'.
+        old_terms (list): list of terms to replace.
+        new_term (str): new term to use.
+    '''
+
+    LOGGER.debug('new_term = %s' %new_term)
+    LOGGER.debug('old_terms = %s' %old_terms)
+
     if field=='Authors':
         firstnames, lastnames, authors=parseAuthors(old_terms)
         newf, newlast, newauthor=parseAuthors([new_term,])
         newf=newf[0]
         newlast=newlast[0]
 
-        print('# <replaceTerm>: firstnames=', firstnames)
-        print('# <replaceTerm>: lastnames=', lastnames)
-        print('# <replaceTerm>: newf=', newf)
-        print('# <replaceTerm>: enwlast=', newlast)
+        LOGGER.debug('firstnames = %s' %firstnames)
+        LOGGER.debug('lastnames = %s' %lastnames)
+        LOGGER.debug('new firstname = %s' %newf)
+        LOGGER.debug('new lastnames = %s' %newlast)
 
-        #query='''UPDATE DocumentContributors SET
-        #firstNames = REPLACE(firstNames, ?, ?),
-        #lastName = REPLACE(lastName, ?, ?)
-        #WHERE (DocumentContributors.firstNames = ? AND DocumentContributors.lastName = ?)
-        #'''
         query='''UPDATE DocumentContributors SET
         firstNames = ?,
         lastName = ?
@@ -1670,19 +1676,9 @@ def replaceTerm(db, field, old_terms, new_term):
         for fii, lii in zip(firstnames, lastnames):
             if fii==newf and lii==newlast:
                 continue
-            print('# <replaceTerm>: updating', fii, lii)
+            LOGGER.debug('Updating %s %s' %(fii, lii))
             db.execute(query, (newf, newlast, fii, lii))
-
-            q2='''SELECT firstNames, lastName FROM
-            DocumentContributors
-            WHERE (firstNames = ? AND lastName = ?)
-            '''
-            ret=db.execute(q2, (fii, lii))
-            print(ret.fetchall())
-
-
     else:
-
         if field=='Journals':
             table_name='Documents'
             column_name='publication'
@@ -1693,19 +1689,18 @@ def replaceTerm(db, field, old_terms, new_term):
             table_name='DocumentTags'
             column_name='tag'
 
-        query='''UPDATE %s SET %s = REPLACE(%s, ?, ?)
+        query='''UPDATE %s SET
+        %s = ?
         WHERE %s = ?
-        ''' %(table_name, column_name, column_name, column_name)
+        ''' %(table_name, column_name, column_name)
 
         for ii in old_terms:
             if ii==new_term:
                 continue
-            print('# <replaceTerm>: updating', ii)
-            db.execute(query, (ii, new_term, ii))
-
-    print('# <replaceTerm>: query=',query)
+            db.execute(query, (new_term, ii))
 
     db.commit()
+
     return
 
 
