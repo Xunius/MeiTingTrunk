@@ -80,6 +80,10 @@ Actions on documents.
 
 ![](https://user-images.githubusercontent.com/8076931/55284334-23fdf300-53a7-11e9-9e34-01a1ae514a72.png)
 
+Merge inconsistent journal names
+
+![](https://user-images.githubusercontent.com/8076931/56706874-299ded00-6749-11e9-96ee-d59f76f874e2.png)
+
 
 ## Platforms and Dependencies
 
