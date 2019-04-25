@@ -43,6 +43,7 @@ MeiTingTrunk/lib/widgets/fail_dialog.py
 MeiTingTrunk/lib/widgets/folder_tree.py
 MeiTingTrunk/lib/widgets/import_dialog.py
 MeiTingTrunk/lib/widgets/indexing_dialog.py
+MeiTingTrunk/lib/widgets/merge_name_dialog.py
 MeiTingTrunk/lib/widgets/meta_tab.py
 MeiTingTrunk/lib/widgets/preference_dialog.py
 MeiTingTrunk/lib/widgets/search_res_frame.py
