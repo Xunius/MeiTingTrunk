@@ -192,6 +192,8 @@ class MergeNameDialog(QtWidgets.QDialog):
         self.spinbox.setMinimum(10)
         self.spinbox.setMaximum(100)
         self.spinbox.setValue(80)
+        self.spinbox.valueChanged.connect(self.spinboxChanged)
+        self.spinbox_old_value=80
 
         ha=QtWidgets.QHBoxLayout()
         ha.addWidget(label3)
@@ -256,6 +258,21 @@ class MergeNameDialog(QtWidgets.QDialog):
             self.addResults(self.cate_dict[self.current_task])
 
         return scroll
+
+
+    @pyqtSlot(int)
+    def spinboxChanged(self, value):
+        '''Clear cateogry cache when Spinbox value changes
+
+        Args:
+            value (int): new spinbox value.
+        '''
+        if self.spinbox_old_value!=value:
+            if self.current_task in self.cate_dict:
+                del self.cate_dict[self.current_task]
+                self.spinbox_old_value=value
+
+        return
 
 
     @pyqtSlot()
@@ -430,6 +447,7 @@ class MergeNameDialog(QtWidgets.QDialog):
         # if no duplicates, return
         if len(edges)==0:
             self.no_dup_label.setVisible(True)
+            self.merge_frame.clearMergeLayout()
             LOGGER.info('No duplicate found.')
             return
 
