@@ -34,56 +34,315 @@ ALT_KEYS={
 
 INV_ALT_KEYS=dict([(vv,kk) for kk,vv in ALT_KEYS.items()])
 
-TYPE_DICT={'Report': 'RPRT',\
-           'JournalArticle': 'JOUR',\
-           'article': 'JOUR',\
-           'Book': 'BOOK',\
-           'book': 'BOOK',\
-           'BookSection': 'CHAP',\
-           'ConferenceProceedings': 'CONF',\
-           'Generic': 'GEN',\
-           'Bill': 'BILL',\
-           'Case': 'CASE',\
-           'ComputerProgram': 'COMP',\
-           'EncyclopediaArticle': 'ENCYC',\
-           'Film': 'VIDEO',\
-           'Hearing': 'HEAR',\
-           'MagazineArticle': 'MGZN',\
-           'NewspaperArticle': 'NEWS',\
-           'Patent': 'PAT',\
-           'Statute': 'STAT',\
-           'Thesis': 'THES',\
-           'WebPage': 'ELEC',\
-           'WorkingPaper': 'MANSCPT'}
+TYPE_DICT={'Report'                : 'RPRT',
+           'JournalArticle'        : 'JOUR',
+           'article'               : 'JOUR',
+           'Book'                  : 'BOOK',
+           'book'                  : 'BOOK',
+           'BookSection'           : 'CHAP',
+           'ConferenceProceedings' : 'CONF',
+           'Generic'               : 'GEN',
+           'Bill'                  : 'BILL',
+           'Case'                  : 'CASE',
+           'ComputerProgram'       : 'COMP',
+           'EncyclopediaArticle'   : 'ENCYC',
+           'Film'                  : 'VIDEO',
+           'Hearing'               : 'HEAR',
+           'MagazineArticle'       : 'MGZN',
+           'NewspaperArticle'      : 'NEWS',
+           'Patent'                : 'PAT',
+           'Statute'               : 'STAT',
+           'Thesis'                : 'THES',
+           'WebPage'               : 'ELEC',
+           'WorkingPaper'          : 'MANSCPT'
+           }
+
+INV_TYPE_DICT=dict([(vv,kk) for kk,vv in TYPE_DICT.items()])
+
+KEYWORD_DICT={'title'       : 'TI',
+              'issue'       : 'IS',
+              'publication' : 'JO',
+              'volume'      : 'VL',
+              'doi'         : 'DO',
+              'abstract'    : 'AB',
+              'edition'     : 'ET',
+              'ISBN'        : 'SN',
+              'isbn'        : 'SN',
+              'ISSN'        : 'SN',
+              'issn'        : 'SN',
+              'publisher'   : 'PB',
+              'notes'       : 'N1',
+              'editor'      : 'ED'
+              }
 
 
-KEYWORD_DICT={'title': 'TI',\
-              'issue': 'IS',\
-              'publication': 'JO',\
-              'volume': 'VL',\
-              'doi': 'DO',\
-              'abstract': 'AB',\
-              'edition': 'ET',\
-              'ISBN': 'SN',\
-              'isbn': 'SN',\
-              'ISSN': 'SN',\
-              'issn': 'SN',\
-              'publisher': 'PB',\
-              #'keywords': 'KW',\
-              #'path': 'L1',\
-              'notes': 'N1',\
-              'editor': 'ED'}
+DEFAULT_RIS2META_MAP={
+        'first_authors'        : 'authors_l',
+        'secondary_authors'    : 'authors_l',
+        'secondary_authors'    : 'authors_l',
+        'tertiary_authors'     : 'authors_l',
+        'subsidiary_authors'   : 'authors_l',
+        'abstract'             : 'abstract',
+        'author_address'       : None,
+        'accession_number'     : None,
+        'authors'              : 'authors_l',
+        'custom1'              : None,
+        'custom2'              : None,
+        'custom3'              : None,
+        'custom4'              : None,
+        'custom5'              : None,
+        'custom6'              : None,
+        'custom7'              : None,
+        'custom8'              : None,
+        'caption'              : None,
+        'call_number'          : None,
+        'place_published'      : 'city',
+        'date'                 : 'month',
+        'name_of_database'     : None,
+        'doi'                  : 'doi',
+        'database_provider'    : None,
+        'end_page'             : None,
+        'edition'              : 'edition',
+        'id'                   : 'citationkey',
+        'number'               : 'issue',
+        'alternate_title1'     : 'publication',
+        'alternate_title2'     : 'publication',
+        'alternate_title3'     : 'publication',
+        'journal_name'         : 'publication',
+        'keywords'             : 'keywords_l',
+        'file_attachments1'    : 'files_l',
+        'file_attachments2'    : 'files_l',
+        'figure'               : 'files_l',
+        'language'             : 'language',
+        'label'                : None,
+        'note'                 : None,    #####
+        'type_of_work'         : 'genre',
+        'notes'                : 'notes',
+        #'abstract'            : None,    #####
+        'number_of_Volumes'    : None,
+        'original_publication' : None,
+        'publisher'            : 'publisher',
+        'year'                 : 'year',
+        'reviewed_item'        : 'reviewedArticle',
+        'research_notes'       : 'notes',   #########
+        'reprint_edition'      : 'reprintEdition',
+        'version'              : 'sections',
+        'issn'                 : 'issn',
+        'start_page'           : None,
+        'start_page'           : None,
+        'short_title'          : 'shortTitle',
+        'primary_title'        : 'title',
+        'secondary_title'      : 'title',
+        'tertiary_title'       : 'title',
+        'translated_author'    : None,    #############
+        'title'                : 'title',
+        'translated_title'     : None,    #############
+        'type_of_reference'    : None,
+        'unknown_tag'          : None,
+        'url'                  : 'urls_l',   ############
+        'volume'               : 'volume',
+        'publication_year'     : 'year',
+        'access_date'          : 'dateAccessed'
+        }
 
 
 
-def splitNames(entry):
+def RIStoMetaDoc(ris_dict):
+
+    meta={}
+    got_keys=[]  # store keys accessed from ris_dict
+
+    def getKey(key):
+        if key in ris_dict:
+            got_keys.append(key)
+            return ris_dict[key]
+        else:
+            raise KeyError
+
+    #---------------------Get type---------------------
+    meta['type']=INV_TYPE_DICT[ris_dict['type_of_reference']]
+    got_keys.append('type_of_reference')
+
+    #-------------------Get authors-------------------
+    try:
+        authors=getKey('authors')
+    except KeyError:
+        authors=[]
+        for kii in ['first_authors', 'secondary_authors',
+                'tertiary_authors', 'subsidiary_authors']:
+            aii=ris_dict.get(kii)
+            if aii:
+                authors.extend(aii)
+                got_keys.append(kii)
+
+    firstnames, lastnames=splitNames(authors)
+    meta['firstNames_l']=firstnames
+    meta['lastName_l']=lastnames
+
+    #--------------------Get title--------------------
+    try:
+        title=getKey('title')
+    except KeyError:
+        title=None
+        for tii in ['primary_title', 'short_title', 'secondary_title',
+                'tertiary_title', 'translated_title']:
+            if tii in ris_dict:
+                title=ris_dict[tii]
+                got_keys.append(tii)
+                break
+
+    if title:
+        meta['title']=title
+
+    #---------------------Get date---------------------
+    if 'date' in ris_dict:
+        # try /year/month/day format
+        try:
+            year,month,day=ris_dict['date'].split('/')
+        except:
+            pass
+        else:
+            got_keys.append('date')
+            #ris_dict['year']=year
+            #ris_dict['month']=month
+            #ris_dict['day']=day
+            meta['year']=year
+            meta['month']=month
+            meta['day']=day
+
+    #---------------------Get year---------------------
+    try:
+        year=getKey('publication_year')  # 'Y1'
+    except KeyError:
+        try:
+            year=getKey('year')  # 'PY'
+        except KeyError:
+            if 'year' in meta:
+                year=meta['year']
+            else:
+                year=None
+
+    if year:
+        meta['year']=year
+
+    #-----------------Get citationkey-----------------
+    try:
+        citationkey=getKey('id')
+    except KeyError:
+        if len(authors)>0:
+            a1=authors[0].split(',', 1)[1]
+            if year:
+                citationkey='%s%s' %(a1, str(year))
+            else:
+                citationkey=a1
+        citationkey=None
+
+    if citationkey:
+        meta['citationkey']=citationkey
+
+    #--------------------Get pages--------------------
+    pages=[]
+    try:
+        sp=getKey('start_page')
+    except KeyError:
+        pass
+    else:
+        pages.append(sp)
+    try:
+        ep=getKey('end_page')
+    except KeyError:
+        pass
+    else:
+        pages.append(ep)
+
+    pages='-'.join(pages)
+    if pages:
+        meta['pages']=pages
+
+    #-----------------Get publication-----------------
+    try:
+        publication=getKey('journal_name')  # 'JO
+    except KeyError:
+        try:
+            publication=getKey('secondary_title')  # 'T2'
+        except KeyError:
+            try:
+                publication=getKey('alternate_title1')  # 'J2'
+            except KeyError:
+                publication=None
+
+    if publication:
+        meta['publication']=publication
+
+    #-------------------Get keywords-------------------
+    try:
+        kw=getKey('keywords')
+    except KeyError:
+        pass
+    else:
+        meta['keywords_l']=kw
+
+    #--------------------Get files--------------------
+    files=[]
+    for kk in ['file_attachemnts1', 'file_attachments2']:
+        try:
+            fkk=getKey(kk)
+            files.append(fkk)
+        except:
+            pass
+    meta['files_l']=files
+
+    #--------------------Get notes--------------------
+    try:
+        notes=getKey('notes')
+    except KeyError:
+        pass
+    else:
+        meta['notes']='\n\n'.join(notes)
+
+    #---------------------Get urls---------------------
+    try:
+        urls=getKey('url')
+    except KeyError:
+        pass
+    else:
+        meta['urls_l']=[urls,]
+
+    #--------------------All others--------------------
+    left_keys=list(set(ris_dict.keys()).difference(got_keys))
+    LOGGER.debug('left_keys: %s' %left_keys)
+
+    for kk in left_keys:
+        vv=ris_dict[kk]
+        # what this key maps to in DocMeta
+        kk2=DEFAULT_RIS2META_MAP[kk]
+        if kk2 is None:
+            continue
+        # update if not already covered
+        if kk2 not in meta:
+            LOGGER.debug('Update key = %s, newkey = %s, value = %s'\
+                    %(kk, kk2, vv))
+            if kk2.endswith('_l'):
+                if isinstance(vv, (list, tuple)):
+                    meta[kk2]=vv
+                else:
+                    meta[kk2]=[vv,]
+            else:
+                meta[kk2]=vv
+
+    return meta
+
+
+
+
+def splitNames(author_list):
 
     firstnames=[]
     lastnames=[]
-    for nii in entry['authors']:
+    for nii in author_list:
         nameii=nii.split(',',1)
         if len(nameii)>1:
-            fii,lii=nameii
+            lii,fii=nameii
             fii=fii.strip()
             lii=lii.strip()
         else:
@@ -92,10 +351,7 @@ def splitNames(entry):
         firstnames.append(fii)
         lastnames.append(lii)
 
-    entry['firstNames_l']=firstnames
-    entry['lastName_l']=lastnames
-
-    return entry
+    return firstnames, lastnames
 
 
 def correctEncoding(fin):
@@ -149,99 +405,10 @@ def readRISFile(filename):
         LOGGER.info('Read in RIS file: %s' %filename)
 
         for eii in entries:
-            #eii=altKeys(eii,ALT_KEYS)
-
-            # type
-            if eii['type_of_reference']=='JOUR':
-                eii['type']='article'
-            if eii['type_of_reference']=='BOOK':
-                eii['type']='book'
-
-            # authors
-            if 'authors' not in eii:
-                authors=[]
-                for kii in ['first_authors', 'secondary_authors',
-                        'tertiary_authors', 'subsidiary_authors']:
-                    aii=eii.get(kii)
-                    if aii:
-                        authors.extend(aii)
-                eii['authors']=authors
-            eii=splitNames(eii)
-
-            LOGGER.debug('authors = %s' %eii['authors'])
-
-            # title
-            title=eii.get('title')
-            if not title:
-                for tii in ['primary_title', 'secondary_title', 'tertiary_title',
-                        'translated_title']:
-                    if tii in eii:
-                        eii['title']=eii[tii]
-                        break
-                    eii['title']='Unknonw'
-
-            LOGGER.debug('title = %s' %eii['title'])
-
-            # date
-            if 'date' in eii:
-                year,month,day=eii['date'].split('/')
-                eii['year']=year
-                eii['month']=month
-                eii['day']=day
-
-                LOGGER.debug('year = %s. month = %s. day = %s' %(year,month,day))
-
-            if 'publication_year' in eii:
-                eii['year']=eii['publication_year']
-                LOGGER.debug('year = %s' %eii['year'])
-
-            # citationkey
-            citationkey=eii.get('id')
-            if citationkey:
-                eii['citationkey']=citationkey
-            else:
-                a1=eii.get('first_authors')
-                if a1:
-                    a1=a1[0].split(',')[1]
-                    citationkey='%s%s' %(a1, eii['year'])
-                    eii['citationkey']=citationkey
-                    LOGGER.debug('citationkey = %s' %eii['citationkey'])
-
-            # pages
-            sp=eii.get('start_page', 'n/a')
-            ep=eii.get('end_page', 'n/a')
-            eii['pages']='%s-%s' %(sp,ep)
-
-            # publication
-            if 'journal_name' in eii and 'publication' not in eii:
-                eii['publication']=eii['journal_name']
-
-                LOGGER.debug('publication = %s' %eii['publication'])
-
-            # keywords
-            kw=eii.get('keywords')
-            if kw:
-                eii['keywords_l']=kw
-
-            # files
-            f1=eii.get('file_attachments1')
-            f2=eii.get('file_attachments2')
-            files=[fii for fii in [f1,f2] if fii]
-            eii['files_l']=files
-
-            # notes
-            notes=eii.get('notes')
-            if notes:
-                eii['notes']='\n\n'.join(notes)
-
-            # urls
-            urls=eii.get('url')
-            if urls:
-                eii['urls_l']=[urls,]
-
-            docii=sqlitedb.DocMeta()
-            docii.update(eii)
-            results.append(docii)
+            metadocii=sqlitedb.DocMeta()
+            docii=RIStoMetaDoc(eii)
+            metadocii.update(docii)
+            results.append(metadocii)
 
     return results
 
@@ -404,8 +571,8 @@ def parseMeta(metadict, path_prefix):
 
 if __name__=='__main__':
 
-    filename='./MeiTingTrunk/samples/sample_ris2.ris'
-    filename='/home/guangzhi/btsync_manjaro/aaa.txt'
+    filename='/home/guangzhi/btsync_manjaro/aaa(1).txt'
+    filename='./MeiTingTrunk/samples/sample_ris1.ris'
 
     '''
     print('list tags',LIST_TYPE_TAGS)
