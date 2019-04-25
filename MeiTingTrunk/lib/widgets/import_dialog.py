@@ -17,7 +17,7 @@ import shutil
 import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtWidgets import QDialogButtonBox, QStyle
 from ..tools import getHLine, isXapianReady
 from .threadrun_dialog import ThreadRunDialog
@@ -219,10 +219,13 @@ class ImportDialog(QtWidgets.QDialog):
             self.content_vlayout.removeWidget(self.content_frame)
 
         if item_text=='Import From Mendeley':
+            self.import_button.setEnabled(True)
             self.content_frame=self.loadImportMendeley()
         elif item_text=='Import From Zotero':
+            self.import_button.setEnabled(False)
             self.content_frame=self.loadImportZotero()
         elif item_text=='Import From EndNote':
+            self.import_button.setEnabled(False)
             self.content_frame=self.loadImportEndNote()
 
         self.content_vlayout.insertWidget(0,self.content_frame)
@@ -420,8 +423,170 @@ class ImportDialog(QtWidgets.QDialog):
     def loadImportEndNote(self):
         '''Load EndNote import category page'''
 
-        scroll,va=self.createFrame('Import From EndNote')
+        scroll,va=self.createFrame('Instructions on how to import from EndNote')
         self.current_task='endnote'
+
+        bs_tag='<span style="font:bold;">'
+        be_tag='</span>'
+
+        label1=QtWidgets.QLabel('''
+        <p>
+        To import data from EndNote, the first step is exporting your library
+        from EndNote to a format understood by MMT.
+        The recommended format is %sRIS%s.
+        </p>
+
+        <ol>
+            <li>
+            To do the export, go to %sFiles -> Export%s.
+            In %sOutput Style%s, select %sRefMan (RIS) Export%s.
+            See Figure 1 below.
+            If that option is not shown, click %sSelect Another Style%s, then search
+            for %sRIS%s, see Figure 2 below.
+            </li>
+
+            <li>
+            Then save the export to a .txt file. You can optionally rename it so
+            it has a '.ris' extension.
+            </li>
+
+            <li>
+            Then in MeiTingTrunk, create a folder to store the new documents,
+            then click the down-arrow next to the %sAdd%s button, select
+            %sAdd RIS File%s. Select the exported .ris file (if you have changed
+            the extension to .ris, otherwise, select All Files to make the .txt file
+            selectable).
+            </li>
+
+            <li>
+            If everything works correctly, the documents in your EndNote should now
+            appear. You can verify the attachment PDFs by doulbe clicking on one
+            of them with attachments.
+            </li>
+        </ol>
+        ''' %(
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag
+        ))
+        label1.setTextFormat(Qt.RichText)
+        label1.setWordWrap(True)
+        va.addWidget(label1)
+
+        fig1_label=QtWidgets.QLabel()
+        fig1_label.resize(600,600)
+        fig1=QPixmap(':/en_import_1.png')
+        fig1_label.setPixmap(fig1.scaled(fig1_label.size()))
+        fig1_label.setStyleSheet('border: 2px solid;')
+        va.addWidget(fig1_label)
+        va.addWidget(QtWidgets.QLabel('Figure 1'), 0, Qt.AlignHCenter)
+
+        fig2_label=QtWidgets.QLabel()
+        fig2_label.resize(600,600)
+        fig2=QPixmap(':/en_import_2.png')
+        fig2_label.setPixmap(fig2.scaled(fig2_label.size()))
+        fig2_label.setStyleSheet('border: 2px solid;')
+        va.addWidget(fig2_label)
+        va.addWidget(QtWidgets.QLabel('Figure 2'), 0, Qt.AlignHCenter)
+
+        va.addWidget(getHLine())
+
+        label4=QtWidgets.QLabel('Linking attachments')
+        label4.setStyleSheet(self.label_color)
+        label4.setFont(self.title_label_font)
+        va.addWidget(label4)
+
+        label2=QtWidgets.QLabel('''
+        <p>
+        If your documents have PDF attachments, you need to modify the exported ris
+        file as such:
+        </p>
+
+        <ol>
+            <li>
+            <p>
+            Open it in a text editor, and search for the string %s"internal-pdf://"%s.
+            This is the scheme used by EndNote to link to files. You will need to
+            replace all occurrences of %s"internal-pdf://"%s with the %sabsolute path%s
+            of the folder containing the %sPDF%s folder. This %sPDF%s folder can
+            be found in the EndNote data folder.
+            </P
+
+            <p>
+            For instance, the EndNote data folder is located at
+            %s/Users/user_name/Documents/My EndNote Library.Data%s. Then the %sPDF%s folder is
+            %s/Users/user_name/Documents/My EndNote Library.Data/PDF/%s.
+            </p>
+            </li>
+
+            <li>
+            In the editor, do a global search/replace, to replace all %sinternal-pdf://%s
+            with
+            %s/Users/user_name/Documents/My EndNote Library.Data/PDF/%s.
+            </li>
+
+            <li>
+            You will have to repeat this to re-build your EndNote library
+            structure, though.
+            </li>
+        </ol>
+        ''' %(
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag
+        ))
+
+        label2.setTextFormat(Qt.RichText)
+        label2.setWordWrap(True)
+        va.addWidget(label2)
+
+        label5=QtWidgets.QLabel('Notes')
+        label5.setStyleSheet(self.label_color)
+        label5.setFont(self.title_label_font)
+        va.addWidget(label5)
+
+        label3=QtWidgets.QLabel('''
+        <ul>
+            <li>
+            %sNOTE%s: if your %sPDF%s folder path contains spaces, like the example
+            shown above, my experience is there is no need to escape them like this
+            %s/Users/user_name/Documents/My\ EndNote\ Library.Data/PDF%s.
+            But if your attachments can't not be found inside MTT, try escaping
+            them and see if that works.
+            </li>
+
+            <li>
+            %sNOTE 2:%s The RIS format has specific requirements on the tag format.
+            In particular, the "end of record tag" %s"ER  - \n"%s requires a trailing
+            space before the new line character. If your text editor (like mine)
+            is configured to auto-remove trailing whitespaces, this will
+            make the RIS import fail. So be sure to toggle that feature off
+            when you are editting the RIS file.
+            </li>
+        </ul>
+        ''' %(
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag,
+            bs_tag, be_tag
+        ))
+        label3.setTextFormat(Qt.RichText)
+        label3.setWordWrap(True)
+        va.addWidget(label3)
+
 
         return scroll
 
