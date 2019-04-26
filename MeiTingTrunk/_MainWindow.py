@@ -279,6 +279,7 @@ New session started
         self.tool_menu.addAction(self.export_action)
         self.tool_menu.addAction(self.merge_name_action)
         if not self.is_loaded:
+            self.import_action.setEnabled(False)
             self.export_action.setEnabled(False)
             self.save_database_action.setEnabled(False)
             self.merge_name_action.setEnabled(False)
@@ -676,7 +677,7 @@ New session started
             self.main_frame.clearData()
             self.is_loaded=False
 
-            self.import_action.setEnabled(True)
+            self.import_action.setEnabled(False)
             self.export_action.setEnabled(False)
             self.merge_name_action.setEnabled(False)
             self.save_database_action.setEnabled(False)
