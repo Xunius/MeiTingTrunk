@@ -42,6 +42,7 @@ terms of the GPLv3 license.
 
 
 import os
+import platform
 import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTimer, pyqtSlot
@@ -649,6 +650,10 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         v_layout.addWidget(self.note_textedit)
         frame.setLayout(v_layout)
         scroll.setWidget(frame)
+
+        # This only works in Linux currently
+        if platform.system()!='Linux':
+            button.setEnabled(False)
 
         return scroll
 

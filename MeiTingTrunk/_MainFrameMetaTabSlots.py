@@ -15,108 +15,128 @@ terms of the GPLv3 license.
 
 import os
 import tempfile
+import logging
 from subprocess import Popen
 import subprocess
 import multiprocessing
 import threading
-#import pyinotify
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QTemporaryFile,\
         QProcess
 from PyQt5 import QtWidgets, QtGui
-from .lib.widgets import Master
-from concurrent.futures import ThreadPoolExecutor as Pool
+from .lib.widgets import Master, ChooseAppDialog
+import platform
 
-def Popen_forked(jobid, *args, **kwargs):  # pylint: disable=invalid-name
-    """Forks process and runs Popen with the given args and kwargs."""
-    try:
-        pid = os.fork()
-    except OSError:
-        return False
-    if pid == 0:
-        os.setsid()
-        print(args)
-        kwargs['stdin'] = open(os.devnull, 'r')
-        kwargs['stdout'] = kwargs['stderr'] = open(os.devnull, 'w')
-        proc=Popen(*args, **kwargs)
-        proc.wait()
-        print('# <Popen_forked>: close wait')
-        os._exit(0)  # pylint: disable=protected-access
+CURRENT_OS=platform.system()
+if CURRENT_OS=='Linux':
+    import pyinotify
+elif CURRENT_OS=='Darwin':
+    pass
+
+
+
+
+def getTerminal():
+    '''Get the default terminal'''
+
+    term=os.environ.get('TERMCMD', os.environ['TERM'])
+
+    # Handle aliases of xterm and urxvt, rxvt.
+    # Match 'xterm', 'xterm-256color'
+    if term.startswith('xterm'):
+        term = 'xterm'
+    if term in ['urxvt', 'rxvt-unicode']:
+        term = 'urxvt'
+    if term in ['rxvt', 'rxvt-256color']:
+        term = 'rxvt'
+
+    # check term
+    prop=subprocess.Popen('which %s' %term, shell=True, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+    rec=prop.communicate()
+    if len(rec[0])==0 and len(rec[1])>0:
+        term='xterm'
+
+    # Choose correct cmdflag accordingly
+    if term in ['xfce4-terminal', 'mate-terminal', 'terminator']:
+        cmdflag = '-x'
+    elif term in ['xterm', 'urxvt', 'rxvt', 'lxterminal',
+                  'konsole', 'lilyterm', 'cool-retro-term',
+                  'terminology', 'pantheon-terminal', 'termite',
+                  'st', 'stterm']:
+        cmdflag = '-e'
+    elif term in ['gnome-terminal', ]:
+        cmdflag = '--'
+    elif term in ['tilda', ]:
+        cmdflag = '-c'
     else:
-        os.wait()
-    return True
+        cmdflag = '-e'
 
+    return term, cmdflag
 
-def popenAndCall(onExit, popenArgs):
-    """
-    Runs the given args in a subprocess.Popen, and then calls the function
-    onExit when the subprocess completes.
-    onExit is a callable object, and popenArgs is a list/tuple of args that
-    would give to subprocess.Popen.
-    """
-    import psutil
-    def runInThread(onExit, popenArgs):
-        print(popenArgs)
-        tmppath=popenArgs[0][-1]
-        proc = subprocess.Popen(*popenArgs)
-        proc.wait()
-
-        # find the latest editor process in the list of all running processes
-        editor_processes = []
-        for p in psutil.process_iter():
-            try:
-                process_name = p.name()
-                if editor_cmd in process_name:
-                    editor_processes.append((process_name, p.pid))
-            except:
-                pass
-        editor_proc = psutil.Process(editor_processes[-1][1])
-
-        print(editor_proc)
-        rec=editor_proc.wait()
-
-        print('# <runInThread>: onexit', tmppath)
-        onExit(tmppath)
-        os.remove(tmppath)
-        return
-    thread = threading.Thread(target=runInThread, args=(onExit, popenArgs))
-    thread.start()
-    # returns immediately after the thread starts
-    return thread
 
 class EditorWorker(QObject):
-    file_close_sig = pyqtSignal()
-    edit_done_sig = pyqtSignal()
 
-    def __init__(self, command, parent=None):
+    file_close_sig = pyqtSignal()  # emit on file closing/writing
+    edit_done_sig = pyqtSignal()   # emit after text reading in
+
+    def __init__(self, command, old_text, parent=None):
+        '''Worker to handle launching external editor and reading in saved text
+
+        Args:
+            command (list): list of command strings to pass to QProcess.
+            old_text (str): exisiting texts in textedit.
+        Kwargs:
+            parent (QObject): parent widget.
+        '''
+
         super(EditorWorker, self).__init__(parent)
+
         self._temp_file = QTemporaryFile(self)
         self._process = QProcess(self)
-        #self._process.finished.connect(self.on_file_close)
         self.file_close_sig.connect(self.on_file_close)
         self._text = ""
+
+        # write existing lines
         if self._temp_file.open():
-            #program, *arguments = command
-            self._process.start(
-                program, arguments + [self._temp_file.fileName()]
-            )
+            self._temp_file.write(old_text.encode('utf-8'))
+            self._temp_file.close()
+
+        # launch editor
+        if self._temp_file.open():
+
             tmpfile=self._temp_file.fileName()
-            # start a thread to monitor file saving/closing
-            self.monitor_thread = threading.Thread(target=self.monitorFile,
-                    args=(tmpfile, self.file_close_sig))
-            self.monitor_thread.start()
+            program = command[0]
+            arguments=command[1:]
+
+            try:
+                self._process.start(program, arguments + [self._temp_file.fileName()])
+            except Exception:
+                msg=QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Warning)
+                msg.setWindowTitle('Error')
+                msg.setText("Failed to launch editor.")
+                msg.exec_()
+                logger=logging.getLogger(__name__)
+                logger.exception('failed to launch editor')
+            else:
+                # start a thread to monitor file saving/closing
+                self.monitor_thread = threading.Thread(target=self.monitorFile,
+                        args=(tmpfile, self.file_close_sig), daemon=True)
+                self.monitor_thread.start()
+
 
     @pyqtSlot()
     def on_file_close(self):
+
         if self._temp_file.isOpen():
-            print('open')
             self._text = self._temp_file.readAll().data().decode()
             self.edit_done_sig.emit()
-        else:
-            print('not open')
+
 
     @property
     def text(self):
         return self._text
+
 
     def __del__(self):
         try:
@@ -124,7 +144,14 @@ class EditorWorker(QObject):
         except:
             pass
 
+
     def monitorFile(self, path, sig):
+        '''Monitor a given file and fire signal on file writing/closing
+
+        Args:
+            path (str): abs file path to monitor
+            sig (pyqtSignal): signal to emit on event happening
+        '''
 
         class PClose(pyinotify.ProcessEvent):
             def my_init(self):
@@ -223,83 +250,56 @@ class MainFrameMetaTabSlots:
 
     @pyqtSlot(QtWidgets.QAction)
     def openEditorTriggered(self, action):
+        '''Open editor externall
+
+        Args:
+            action (QAction): action triggered
+        '''
 
         action_text=action.text()
-        print('# <openEditorTriggered>: action',action,action.text())
+        self.logger.debug('action = %s' %action_text)
 
         if action_text=='Open Editor':
             editor_cmd=self.settings.value('editor',type=str)
             if editor_cmd == '':
                 editor_cmd='vim'
+            self.logger.debug('editor_cmd = %s' %editor_cmd)
+
+            #-------------------Get terminal-------------------
+            term, cmdflag=getTerminal()
+            self.logger.debug('term = %s, cmdflag = %s' %(term, cmdflag))
+
+            #----------------Get exiting texts----------------
+            old_text=self.note_textedit.toPlainText()
+
+            #--------------------Get editor--------------------
+            editor=EditorWorker([term, cmdflag, editor_cmd], old_text, self)
+            editor.edit_done_sig.connect(self.onEditingDone)
 
         elif action_text=='Choose Editor':
-            pass
+            diag=ChooseAppDialog('Choose Editor', 'editor', self.settings,
+                    self)
+            choice=diag.exec_()
 
-        #----------------Get exiting texts----------------
-        old_lines=self.note_textedit.toPlainText()
+            if choice==QtWidgets.QDialog.Accepted:
+                editor_cmd=diag.le.text()
+                self.logger.debug('New editor_cmd = %s' %editor_cmd)
+                self.settings.setValue('editor', editor_cmd)
+            elif choice==QtWidgets.QDialog.Rejected:
+                pass
 
-        fd, filepath=tempfile.mkstemp()
-        print('# <openEditorTriggered>: filepath=',filepath)
-
-        #editor=EditorWorker(['gvim'], self)
-        #editor.edit_done_sig.connect(self.onEditingDone)
+        return
 
 
-        def cb(f, tmppath):
-            print('# <cb>: cb tmppath=',tmppath)
-            if f.exception() is not None:
-                print('# <cb>: failed!')
-            else:
-                with open(tmppath, 'r') as tmp:
-                    lines=tmp.readlines()
-                    for ii in lines:
-                        print('# <openEditorTriggered>: ii',ii)
-
-                    self.note_textedit.setText('\n'.join(lines))
-            return
-
-        try:
-            with os.fdopen(fd, 'w') as tmp:
-                # do stuff with temp file
-                tmp.write(old_lines)
-                print('# <openEditorTriggered>: close')
-                tmp.close()
-
-            with open(filepath, 'r') as tmp:
-
-                cmdflag='--'
-                cmd=[os.environ['TERMCMD'], cmdflag, editor_cmd, filepath]
-                print('# <cb>: cmd',cmd)
-
-                #pool=Pool(max_workers=1)
-                #f=pool.submit(subprocess.call, cmd)
-                #f.add_done_callback(lambda f: cb(f, filepath))
-                #pool.shutdown(wait=False)
-                #Popen_forked(cmd, env=os.environ)
-                '''
-                self.note_editor_master=Master(Popen_forked,
-                        [(0, cmd)],
-                        1,
-                        close_on_finish=True)
-                self.note_editor_master.all_done_signal.connect(lambda:
-                        cb(filepath))
-                self.note_editor_master.run()
-                '''
-                td=popenAndCall(cb, cmd)
-                #print('# <cb>: rec=',rec)
-
-                #proc=subprocess.call([
-                    #editor_cmd, filepath])
-                print('# <openEditorTriggered>: #####################')
-                #if proc==0:
-                    #lines=tmp.readlines()
-                    #for ii in lines:
-                        #print('# <openEditorTriggered>: ii',ii)
-
-                    #self.note_textedit.setText('\n'.join(lines))
-        finally:
-            #os.remove(filepath)
-            pass
+    @pyqtSlot()
+    def onEditingDone(self):
+        worker = self.sender()
+        self.note_textedit.clear()
+        prev_cursor = self.note_textedit.textCursor()
+        self.note_textedit.moveCursor(QtGui.QTextCursor.End)
+        self.note_textedit.insertPlainText(worker.text)
+        self.note_textedit.setTextCursor(prev_cursor)
+        worker.deleteLater()
 
         return
 
@@ -307,12 +307,3 @@ class MainFrameMetaTabSlots:
 
 
 
-
-    @pyqtSlot()
-    def onEditingDone(self):
-        worker = self.sender()
-        prev_cursor = self.note_textedit.textCursor()
-        self.note_textedit.moveCursor(QtGui.QTextCursor.End)
-        self.note_textedit.insertPlainText(worker.text)
-        self.note_textedit.setTextCursor(prev_cursor)
-        worker.deleteLater()
