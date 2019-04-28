@@ -299,6 +299,7 @@ class MainFrameMetaTabSlots:
         self.note_textedit.moveCursor(QtGui.QTextCursor.End)
         self.note_textedit.insertPlainText(worker.text)
         self.note_textedit.setTextCursor(prev_cursor)
+        self.note_textedit.note_edited_signal.emit()
         worker.deleteLater()
 
         return
