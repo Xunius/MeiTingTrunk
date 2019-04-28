@@ -7,4 +7,5 @@ bibtexparser
 crossrefapi
 RISparser
 send2trash
+pyinotify
 python-levenshtein

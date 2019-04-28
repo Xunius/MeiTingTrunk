@@ -37,6 +37,7 @@ setuptools.setup(
             'crossrefapi',
             'RISparser',
             'send2trash',
+            'pyinotify',
             'python-levenshtein'
             ],
         python_requires='>=3',
