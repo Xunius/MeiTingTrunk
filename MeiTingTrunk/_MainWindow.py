@@ -161,6 +161,9 @@ New session started
             settings.setValue('view/sortidx', 4)
             settings.setValue('view/sortorder', 0)
 
+            # default editor
+            settings.setValue('editor', '')
+
             settings.sync()
         else:
             settings=QSettings(settings_path,QSettings.IniFormat)
