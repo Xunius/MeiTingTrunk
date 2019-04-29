@@ -102,7 +102,6 @@ Currently only support Linux and MacOS.
 * crossrefapi
 * RISparser
 * send2trash
-* pyinotify (only used if run in Linux)
 * python-levenshtein (optional)
 
 ### Other dependencies
@@ -151,7 +150,8 @@ This software is still in its very early stage. Please consider helping by tryin
 Major features that are still lacking (I greatly appreciate any help with any of them):
 
 * Format citations into various citation styles, in a format suitable to paste into word editors.
-* Import from Zotero.
+* Import from Zotero and EndNote.
+* Other document types aside articles and books.
 * Packaging into a format suitable for a few mainstream Linux package management tools.
 * Of cource, any stability or performance improvements.
 

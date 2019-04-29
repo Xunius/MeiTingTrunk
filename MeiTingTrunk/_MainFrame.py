@@ -42,7 +42,6 @@ terms of the GPLv3 license.
 
 
 import os
-import platform
 import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTimer, pyqtSlot
@@ -626,23 +625,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         frame=QtWidgets.QFrame()
         v_layout=QtWidgets.QVBoxLayout()
 
-        button=QtWidgets.QToolButton(self)
-        button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        button.setText('Open Editor')
-
-        menu=QtWidgets.QMenu()
-        self.open_editor_action=menu.addAction('Open Editor')
-        self.choose_editor_action=menu.addAction('Choose Editor')
-        button.setDefaultAction(self.open_editor_action)
-
-        button.setIcon(QIcon.fromTheme('insert-text',
-            self.style().standardIcon(QStyle.SP_FileDialogNewFolder)))
-        button.setMenu(menu)
-        button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
-
-        menu.triggered.connect(self.openEditorTriggered)
-        v_layout.addWidget(button, 0, Qt.AlignLeft)
-
         self.note_textedit=NoteTextEdit(self.settings)
         self.note_textedit.note_edited_signal.connect(lambda: self.updateNotes(
             self._current_doc,self.note_textedit.toPlainText()))
@@ -650,10 +632,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         v_layout.addWidget(self.note_textedit)
         frame.setLayout(v_layout)
         scroll.setWidget(frame)
-
-        # This only works in Linux currently
-        if platform.system()!='Linux':
-            button.setEnabled(False)
 
         return scroll
 

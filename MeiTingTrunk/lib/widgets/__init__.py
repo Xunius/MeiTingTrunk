@@ -11,4 +11,3 @@ from .import_dialog import ImportDialog
 from .create_new_dialog import CreateNewLibDialog
 from .about_dialog import AboutDialog
 from .merge_name_dialog import MergeNameDialog
-from .choose_app_dialog import ChooseAppDialog
