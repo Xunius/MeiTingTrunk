@@ -899,5 +899,7 @@ class NoteTextEdit(QtWidgets.QTextEdit):
     def focusOutEvent(self,event):
         if self.document().isModified():
             self.note_edited_signal.emit()
+        if hasattr(self, 'editor'):
+            self.editor.deleteLater()
         super(NoteTextEdit,self).focusOutEvent(event)
 
