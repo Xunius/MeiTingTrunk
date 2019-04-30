@@ -33,7 +33,7 @@ An open source reference management tool developed in PyQt5 and Python3.
 
 ### Note taking
 
-* Jot down your thoughts while reading (currently with limited formating options).
+* Jot down your thoughts while reading, in your referred editor. (currently with limited formating options).
 
 ### Database
 

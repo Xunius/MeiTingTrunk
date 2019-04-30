@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: meitingtrunk
-Version: 0.1a24
+Version: 0.1a25
 Summary: An open source reference management tool developed in PyQt5 and Python3.
 Home-page: https://github.com/Xunius/MeiTingTrunk
 Author: Guangzhi XU
@@ -41,7 +41,7 @@ Description: # MeiTing Trunk
         
         ### Note taking
         
-        * Jot down your thoughts while reading (currently with limited formating options).
+        * Jot down your thoughts while reading, in your referred editor. (currently with limited formating options).
         
         ### Database
         

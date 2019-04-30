@@ -54,6 +54,7 @@ MeiTingTrunk/lib/pylatexenc/latexwalker.py
 MeiTingTrunk/lib/pylatexenc/version.py
 MeiTingTrunk/lib/widgets/__init__.py
 MeiTingTrunk/lib/widgets/about_dialog.py
+MeiTingTrunk/lib/widgets/choose_app_dialog.py
 MeiTingTrunk/lib/widgets/create_new_dialog.py
 MeiTingTrunk/lib/widgets/doc_table.py
 MeiTingTrunk/lib/widgets/duplicate_frame.py
