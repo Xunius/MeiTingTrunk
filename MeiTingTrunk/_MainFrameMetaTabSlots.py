@@ -33,7 +33,7 @@ from .lib.widgets import Master, ChooseAppDialog
     #pass
 
 # list of editors that run in terminal
-TERMINAL_EDITORS=['vim', 'nano']
+TERMINAL_EDITORS=['vi', 'vim', 'nano']
 
 
 
