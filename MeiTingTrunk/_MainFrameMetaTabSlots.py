@@ -21,16 +21,19 @@ import subprocess
 import multiprocessing
 import threading
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QTemporaryFile,\
-        QProcess
+        QProcess, QFileSystemWatcher
 from PyQt5 import QtWidgets, QtGui
 from .lib.widgets import Master, ChooseAppDialog
-import platform
 
-CURRENT_OS=platform.system()
-if CURRENT_OS=='Linux':
-    import pyinotify
-elif CURRENT_OS=='Darwin':
-    pass
+#import platform
+#CURRENT_OS=platform.system()
+#if CURRENT_OS=='Linux':
+    #import pyinotify
+#elif CURRENT_OS=='Darwin':
+    #pass
+
+# list of editors that run in terminal
+TERMINAL_EDITORS=['vim', 'nano']
 
 
 
@@ -74,7 +77,200 @@ def getTerminal():
     return term, cmdflag
 
 
+
 class EditorWorker(QObject):
+
+    file_change_sig = pyqtSignal()
+
+    def __init__(self, command, old_text, parent=None):
+        super(EditorWorker, self).__init__(parent)
+
+        self._temp_file = QTemporaryFile(self)
+        self._process = QProcess(self)
+        self._text = ""
+        self._watcher = QFileSystemWatcher(self)
+        self._watcher.fileChanged.connect(self.onFileChange)
+        self.logger=logging.getLogger(__name__)
+
+        # write existing lines
+        if self._temp_file.open():
+            self._temp_file.write(old_text.encode('utf-8'))
+            self._temp_file.close()
+
+        if self._temp_file.open():
+            self._file_path=self._temp_file.fileName()
+            self._watcher.addPath(self._file_path)
+            self.logger.debug('_file_path = %s' %self._file_path)
+
+            program=command[0]
+            arguments = command[1:]
+            self._process.start(
+                program, arguments + [self._temp_file.fileName()]
+            )
+
+    @pyqtSlot()
+    def onFileChange(self):
+        if self._temp_file.isOpen():
+
+            #self._temp_file.seek(0)
+            #self._text = self._temp_file.readAll().data().decode()
+
+            # has to use with open and read(), the above doesn't work for
+            # some editors, like xed
+            with open(self._temp_file.fileName()) as tmp:
+                self._text=tmp.read()
+
+            # Re-add watch file, again for xed.
+            self._watcher.removePath(self._file_path)
+            self._watcher.addPath(self._file_path)
+
+            self.file_change_sig.emit()
+
+    @property
+    def text(self):
+        return self._text
+
+    def __del__(self):
+        self._process.kill()
+
+
+class MainFrameMetaTabSlots:
+
+    #######################################################################
+    #                            Meta tab slots                           #
+    #######################################################################
+
+    def clearMetaTab(self):
+
+        for kk,vv in self._current_meta_dict.items():
+            if kk=='files_l':
+                self.t_meta.delFileField()
+            else:
+                vv.clear()
+                vv.setReadOnly(True)
+
+        for tii in [self.note_textedit, self.bib_textedit]:
+            tii.clear()
+            tii.setReadOnly(True)
+
+        self.confirm_review_frame.setVisible(False)
+
+        self.logger.debug('Meta tab cleared.')
+
+        return
+
+
+    def enableMetaTab(self):
+
+        for kk,vv in self._current_meta_dict.items():
+            if kk!='files_l':
+                vv.setReadOnly(False)
+
+        for tii in [self.note_textedit, ]:
+            tii.setReadOnly(False)
+
+        return
+
+
+    @pyqtSlot()
+    def confirmReviewButtonClicked(self):
+        """Confirm meta data of a doc is correct
+
+        This involves:
+            * set DocMeta['confirmed']='true'
+            * hide self.confirm_reivew_frame.
+            * update current doc table
+            * remove docid from the Needs Review folder (id='-2')
+        """
+
+        docid=self._current_doc
+
+        self.meta_dict[docid]['confirmed']='true'
+
+        self.logger.debug("doc id = %s. meta_dict[docid]['confirmed'] = %s"\
+                %(docid, self.meta_dict[docid]['confirmed']))
+
+        self.confirm_review_frame.setVisible(False)
+        idx=self.doc_table.currentIndex()
+        self.doc_table.model().dataChanged.emit(idx,idx)
+
+        # del doc from needs review folder
+        if docid in self.folder_data['-2']:
+            self.folder_data['-2'].remove(docid)
+
+        self.loadDocTable(folder=self._current_folder,sortidx=None,
+                sel_row=idx.row())
+
+        return
+
+
+    @pyqtSlot(QtWidgets.QAction)
+    def openEditorTriggered(self, action):
+        '''Open editor externall
+
+        Args:
+            action (QAction): action triggered
+        '''
+
+        action_text=action.text()
+        self.logger.debug('action = %s' %action_text)
+
+        if action_text=='Open Editor':
+            editor_cmd=self.settings.value('editor',type=str)
+            if editor_cmd == '':
+                editor_cmd='vim'
+            self.logger.debug('editor_cmd = %s' %editor_cmd)
+
+            #----------------Get exiting texts----------------
+            old_text=self.note_textedit.toPlainText()
+
+            #-------------------Get terminal-------------------
+            if editor_cmd in TERMINAL_EDITORS:
+                term, cmdflag=getTerminal()
+                self.logger.debug('term = %s, cmdflag = %s' %(term, cmdflag))
+
+                cmd=[term, cmdflag, editor_cmd]
+            else:
+                cmd=[editor_cmd,]
+
+            #--------------------Get editor--------------------
+            self.note_textedit.editor=EditorWorker(cmd, old_text, self)
+            self.note_textedit.editor.file_change_sig.connect(self.onEditingDone)
+
+        elif action_text=='Choose Editor':
+            diag=ChooseAppDialog('Choose Editor', 'editor', self.settings,
+                    self)
+            choice=diag.exec_()
+
+            if choice==QtWidgets.QDialog.Accepted:
+                editor_cmd=diag.le.text()
+                self.logger.debug('New editor_cmd = %s' %editor_cmd)
+                self.settings.setValue('editor', editor_cmd)
+            elif choice==QtWidgets.QDialog.Rejected:
+                pass
+
+        return
+
+
+    @pyqtSlot()
+    def onEditingDone(self):
+        worker = self.sender()
+        self.note_textedit.clear()
+        prev_cursor = self.note_textedit.textCursor()
+        self.note_textedit.moveCursor(QtGui.QTextCursor.End)
+        self.note_textedit.insertPlainText(worker.text)
+        self.note_textedit.setTextCursor(prev_cursor)
+        self.note_textedit.note_edited_signal.emit()
+        #worker.deleteLater()
+
+        return
+
+
+
+
+
+"""
+class EditorWorker_old(QObject):
 
     file_close_sig = pyqtSignal()  # emit on file closing/writing
     edit_done_sig = pyqtSignal()   # emit after text reading in
@@ -176,135 +372,4 @@ class EditorWorker(QObject):
         except KeyboardInterrupt:
             notifier.stop()
             return
-
-
-class MainFrameMetaTabSlots:
-
-    #######################################################################
-    #                            Meta tab slots                           #
-    #######################################################################
-
-    def clearMetaTab(self):
-
-        for kk,vv in self._current_meta_dict.items():
-            if kk=='files_l':
-                self.t_meta.delFileField()
-            else:
-                vv.clear()
-                vv.setReadOnly(True)
-
-        for tii in [self.note_textedit, self.bib_textedit]:
-            tii.clear()
-            tii.setReadOnly(True)
-
-        self.confirm_review_frame.setVisible(False)
-
-        self.logger.debug('Meta tab cleared.')
-
-        return
-
-
-    def enableMetaTab(self):
-
-        for kk,vv in self._current_meta_dict.items():
-            if kk!='files_l':
-                vv.setReadOnly(False)
-
-        for tii in [self.note_textedit, ]:
-            tii.setReadOnly(False)
-
-        return
-
-
-    @pyqtSlot()
-    def confirmReviewButtonClicked(self):
-        """Confirm meta data of a doc is correct
-
-        This involves:
-            * set DocMeta['confirmed']='true'
-            * hide self.confirm_reivew_frame.
-            * update current doc table
-            * remove docid from the Needs Review folder (id='-2')
-        """
-
-        docid=self._current_doc
-
-        self.meta_dict[docid]['confirmed']='true'
-
-        self.logger.debug("doc id = %s. meta_dict[docid]['confirmed'] = %s"\
-                %(docid, self.meta_dict[docid]['confirmed']))
-
-        self.confirm_review_frame.setVisible(False)
-        idx=self.doc_table.currentIndex()
-        self.doc_table.model().dataChanged.emit(idx,idx)
-
-        # del doc from needs review folder
-        if docid in self.folder_data['-2']:
-            self.folder_data['-2'].remove(docid)
-
-        self.loadDocTable(folder=self._current_folder,sortidx=None,
-                sel_row=idx.row())
-
-        return
-
-
-    @pyqtSlot(QtWidgets.QAction)
-    def openEditorTriggered(self, action):
-        '''Open editor externall
-
-        Args:
-            action (QAction): action triggered
-        '''
-
-        action_text=action.text()
-        self.logger.debug('action = %s' %action_text)
-
-        if action_text=='Open Editor':
-            editor_cmd=self.settings.value('editor',type=str)
-            if editor_cmd == '':
-                editor_cmd='vim'
-            self.logger.debug('editor_cmd = %s' %editor_cmd)
-
-            #-------------------Get terminal-------------------
-            term, cmdflag=getTerminal()
-            self.logger.debug('term = %s, cmdflag = %s' %(term, cmdflag))
-
-            #----------------Get exiting texts----------------
-            old_text=self.note_textedit.toPlainText()
-
-            #--------------------Get editor--------------------
-            editor=EditorWorker([term, cmdflag, editor_cmd], old_text, self)
-            editor.edit_done_sig.connect(self.onEditingDone)
-
-        elif action_text=='Choose Editor':
-            diag=ChooseAppDialog('Choose Editor', 'editor', self.settings,
-                    self)
-            choice=diag.exec_()
-
-            if choice==QtWidgets.QDialog.Accepted:
-                editor_cmd=diag.le.text()
-                self.logger.debug('New editor_cmd = %s' %editor_cmd)
-                self.settings.setValue('editor', editor_cmd)
-            elif choice==QtWidgets.QDialog.Rejected:
-                pass
-
-        return
-
-
-    @pyqtSlot()
-    def onEditingDone(self):
-        worker = self.sender()
-        self.note_textedit.clear()
-        prev_cursor = self.note_textedit.textCursor()
-        self.note_textedit.moveCursor(QtGui.QTextCursor.End)
-        self.note_textedit.insertPlainText(worker.text)
-        self.note_textedit.setTextCursor(prev_cursor)
-        self.note_textedit.note_edited_signal.emit()
-        worker.deleteLater()
-
-        return
-
-
-
-
-
+"""
