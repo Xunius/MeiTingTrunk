@@ -42,7 +42,6 @@ terms of the GPLv3 license.
 
 
 import os
-import platform
 import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QTimer, pyqtSlot
