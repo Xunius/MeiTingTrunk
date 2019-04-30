@@ -1,5 +1,5 @@
 '''
-Dialog for choosing a default app.
+Dialog for choosing a default editor.
 
 
 MeiTing Trunk
