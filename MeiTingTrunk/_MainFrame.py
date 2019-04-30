@@ -651,10 +651,6 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         frame.setLayout(v_layout)
         scroll.setWidget(frame)
 
-        # This only works in Linux currently
-        if platform.system()!='Linux':
-            button.setEnabled(False)
-
         return scroll
 
 
