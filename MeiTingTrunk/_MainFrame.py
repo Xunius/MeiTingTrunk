@@ -56,7 +56,7 @@ from .lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy, \
         hasXapian
 from .lib.widgets import MyTreeWidget, TableModel,\
         MyHeaderView, MetaTabScroll, CheckDuplicateFrame, NoteTextEdit,\
-        SearchResFrame
+        SearchResFrame, PDFFrame
 
 
 
@@ -567,6 +567,9 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         tv.setStyleSheet('''alternate-background-color: rgb(230,230,249);
                 background-color: none''')
 
+        # add a short cut for pdf preview
+        QtWidgets.QShortcut(Qt.Key_Space, tv, activated=self.openPDFViewer)
+
         return tv
 
 
@@ -591,6 +594,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         self.t_notes=self.createNoteTab()
         self.t_bib=self.createBiBTab()
         self.t_scratchpad=self.createScratchTab()
+        #self.t_pdf=self.createPDFTab()
         self.t_meta=MetaTabScroll(self.settings,self)
         self.t_meta.meta_edited.connect(lambda field_list: self.updateTableData(\
             self._current_doc,self.t_meta._meta_dict,field_list))
@@ -600,7 +604,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         self.tab_dict={'Toggle Meta Tab': [self.t_meta, 'Meta Data'],
                 'Toggle Notes Tab': [self.t_notes, 'Notes'],
                 'Toggle BibTex Tab': [self.t_bib, 'BibTex'],
-                'Toggle Scratch Pad Tab': [self.t_scratchpad, 'Scratch Pad']
+                'Toggle Scratch Pad Tab': [self.t_scratchpad, 'Scratch Pad'],
+                #'Toggle PDF Tab': [self.t_pdf, 'PDF']
                 }
 
         show_widgets=self.settings.value('view/show_widgets',[],str)
@@ -670,6 +675,21 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         scroll.setWidget(frame)
 
         return scroll
+
+
+    def createPDFTab(self):
+
+        scroll=QtWidgets.QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        frame=QtWidgets.QFrame()
+        v_layout=QtWidgets.QVBoxLayout()
+        self.pdf_viewer=PDFFrame(self)
+        v_layout.addWidget(self.pdf_viewer)
+        frame.setLayout(v_layout)
+        scroll.setWidget(frame)
+
+        return scroll
+
 
 
     def createBiBTab(self):

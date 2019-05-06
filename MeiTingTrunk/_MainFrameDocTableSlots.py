@@ -24,7 +24,7 @@ from PyQt5.QtGui import QFont, QBrush, QColor, QCursor, QIcon
 from .lib import sqlitedb
 from .lib import bibparse, risparse
 from .lib.tools import parseAuthors
-from .lib.widgets import Master, FailDialog
+from .lib.widgets import Master, FailDialog, PDFFrame
 
 
 class MainFrameDocTableSlots:
@@ -103,6 +103,7 @@ class MainFrameDocTableSlots:
             self.loadMetaTab(docid)
             self.loadBibTab(docid)
             self.loadNoteTab(docid)
+            #self.loadPDFTab(docid)
 
             #------------Remove highlights for all folders-------
             self.removeFolderHighlights()
@@ -966,4 +967,49 @@ class MainFrameDocTableSlots:
                 current_folder, docids1, docids)
 
         return
+
+
+    def openPDFViewer(self):
+
+        docid=self._current_doc
+
+        if docid is None:
+            return
+
+        self.logger.debug('docid = %s' %docid)
+
+        files=self.meta_dict[docid]['files_l']
+        if len(files)==0:
+            return
+
+        lib_folder=self.settings.value('saving/current_lib_folder')
+        filepath=files[0]
+
+        try:
+            diag=QtWidgets.QDialog(self)
+            diag.setWindowTitle(os.path.split(filepath)[1])
+            diag.setWindowFlags(
+                    Qt.Window |
+                    Qt.WindowTitleHint |
+                    Qt.WindowSystemMenuHint |
+                    Qt.WindowMinimizeButtonHint |
+                    Qt.WindowMaximizeButtonHint |
+                    Qt.WindowCloseButtonHint |
+                    Qt.WindowStaysOnTopHint
+                    )
+
+            diag.resize(700,600)
+            va=QtWidgets.QVBoxLayout(diag)
+
+            pdfframe=PDFFrame(diag)
+            va.addWidget(pdfframe)
+
+            pdfframe.loadFile(lib_folder, filepath)
+
+            diag.show()
+        except:
+            self.logger.warning('Failed to launch pdf viewer.')
+
+
+
 

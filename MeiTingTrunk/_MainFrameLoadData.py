@@ -431,4 +431,29 @@ class MainFrameLoadData:
         return
 
 
+    def loadPDFTab(self, docid=None):
+        """Load pdf tab of a doc
+
+        Kwargs:
+            docid (int or None): if int, the id of the doc to load.
+        """
+
+        self.logger.info('docid = %s' %docid)
+        if docid is None:
+            return
+
+        lib_folder=self.settings.value('saving/current_lib_folder')
+        files=self.meta_dict[docid]['files_l']
+        if len(files)>0:
+            filepath=files[0]
+
+            print('lib_folder', lib_folder)
+            print('filepath', filepath)
+
+            self.pdf_viewer.loadFile(lib_folder, filepath)
+
+        #self.logger.debug('noteii = %s' %noteii)
+
+        return
+
 

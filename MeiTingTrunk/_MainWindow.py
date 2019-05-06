@@ -155,6 +155,7 @@ New session started
             settings.setValue('view/show_widgets', ['Toggle Filter List',
                 'Toggle Tab Pane', 'Toggle Meta Tab', 'Toggle Notes Tab',
                 'Toggle BibTex Tab', 'Toggle Scratch Pad Tab',
+                #'Toggle PDF Tab',
                 'Toggle Status bar'])
 
             # sortidx in doc table
@@ -249,7 +250,9 @@ New session started
 
         for tii in ['Toggle Filter List', None, 'Toggle Tab Pane',
                 'Toggle Meta Tab', 'Toggle Notes Tab', 'Toggle BibTex Tab',
-                'Toggle Scratch Pad Tab', None, 'Toggle Status bar']:
+                #'Toggle Scratch Pad Tab', 'Toggle PDF Tab', None,
+                'Toggle Scratch Pad Tab', None,
+                'Toggle Status bar']:
             if tii is None:
                 self.view_menu.addSeparator()
             elif tii=='Toggle Status bar':
@@ -793,4 +796,3 @@ New session started
         """
 
         self.view_action_dict[view_name].setChecked(state)
-
