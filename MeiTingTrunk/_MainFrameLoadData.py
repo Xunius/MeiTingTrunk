@@ -473,6 +473,14 @@ class MainFrameLoadData:
                 #cmd=['convert', '-density', dpi, filepath, outfile]
             #else:
                 #return
+            label=QtWidgets.QLabel()
+            poppler='https://poppler.freedesktop.org/'
+            label.setText('''Requires 'poppler' to create previews. See <a href="%s"> %s </a> for installation details
+            ''' %(poppler, poppler))
+            label.setTextFormat(Qt.RichText)
+            label.setWordWrap(True)
+            self.pdf_viewer.clearLayout()
+            self.pdf_viewer.layout.addWidget(label)
             return
 
         #-----------Try finding saved thumbnail-----------
