@@ -206,7 +206,7 @@ class MainFrameMetaTabSlots:
 
     @pyqtSlot(QtWidgets.QAction)
     def openEditorTriggered(self, action):
-        '''Open editor externall
+        '''Open editor externally
 
         Args:
             action (QAction): action triggered

@@ -126,7 +126,8 @@ class MainFrameDataSlots:
 
             # reload doc table
             self.loadDocTable(docids=self._current_docids,
-                    sel_row=self.doc_table.currentIndex().row())
+                    sel_row=self.doc_table.currentIndex().row(),
+                    sortidx=False)
 
         self.changed_doc_ids.append(docid)
 
