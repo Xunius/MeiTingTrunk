@@ -1,0 +1,3 @@
+[gui_scripts]
+meitingtrunk = MeiTingTrunk.main:main
+
