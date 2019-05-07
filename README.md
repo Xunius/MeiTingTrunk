@@ -45,6 +45,11 @@ An open source reference management tool developed in PyQt5 and Python3.
 * Utilises Xapian engine to enable full text search inside attachment files (including PDFs, docs etc.).
 
 
+### PDF preview and reader
+
+* Use `pdf.js` as a build-in PDF reader.
+* Use `poppler` to generate PDF thumbnails.
+
 ### Free and open source
 
 * Open to suggestions, bug reports and new ideas.

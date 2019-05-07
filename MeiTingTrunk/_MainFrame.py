@@ -605,7 +605,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
                 'Toggle Notes Tab': [self.t_notes, 'Notes'],
                 'Toggle BibTex Tab': [self.t_bib, 'BibTex'],
                 'Toggle Scratch Pad Tab': [self.t_scratchpad, 'Scratch Pad'],
-                'Toggle PDF Tab': [self.t_pdf, 'PDF']
+                'Toggle PDF Tab': [self.t_pdf, 'PDF preview']
                 }
 
         show_widgets=self.settings.value('view/show_widgets',[],str)
@@ -619,6 +619,8 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
 
         for tii in list(set(self.tab_dict.keys()).difference(show_widgets)):
             self.tab_dict[tii][0].setVisible(False)
+
+        tabs.currentChanged.connect(self.currentTabChange)
 
         return tabs
 

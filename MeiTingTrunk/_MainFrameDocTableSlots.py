@@ -103,7 +103,10 @@ class MainFrameDocTableSlots:
             self.loadMetaTab(docid)
             self.loadBibTab(docid)
             self.loadNoteTab(docid)
-            self.loadPDFThumbnail(docid)
+
+            # only call thumbnail load if PDF tab is current
+            if self.tabs.currentWidget() == self.t_pdf:
+                self.loadPDFThumbnail(docid)
 
             #------------Remove highlights for all folders-------
             self.removeFolderHighlights()

@@ -266,6 +266,25 @@ class MainFrameMetaTabSlots:
         return
 
 
+    @pyqtSlot(int)
+    def currentTabChange(self, idx):
+        '''Slot to currentChanged signal of QTabWidget
+
+        Args:
+            idx (int): idx of current widget in the QTabWidget
+
+        This is only used to force a call of loadPDFThumbnail()
+        '''
+
+        current_widget=self.tabs.widget(idx)
+
+        if current_widget==self.t_pdf:
+            docid=self._current_doc
+            self.loadPDFThumbnail(docid)
+
+        return
+
+
 
 
 

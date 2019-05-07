@@ -27,7 +27,7 @@ setuptools.setup(
             ],
         install_requires=[
             #'qt>=5',
-            'PyQt5',
+            'PyQt5>=5.12',
             #'sqlite3',
             'pdfminer.six',
             'pypdf2',
@@ -37,7 +37,8 @@ setuptools.setup(
             'crossrefapi',
             'RISparser',
             'send2trash',
-            'python-levenshtein'
+            'python-levenshtein',
+            'PyQtWebEngine'
             ],
         python_requires='>=3',
         #package_data={'sample': ['
