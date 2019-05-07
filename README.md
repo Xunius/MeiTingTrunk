@@ -134,6 +134,14 @@ Then launch it in the terminal with
 $ meitingtrunk
 ```
 
+To upgrade:
+
+
+```
+pip install --upgrade meitingtrunk
+```
+
+
 ## Manual install
 
 You can clone this repo
@@ -142,14 +150,15 @@ You can clone this repo
 git clone https://github.com/Xunius/MeiTingTrunk
 ```
 
-and launch it with
+Check out the dependency list if any module is missing in your python environment.
+
+Then launch it with
 
 ```
 $ cd MeiTingTrunk
 $ python -m MeiTingTrunk.main
 ```
 
-Check out the dependency list if any module is missing in your python environment.
 
 
 ## Contribution
@@ -159,7 +168,7 @@ This software is still in its very early stage. Please consider helping by tryin
 Major features that are still lacking (I greatly appreciate any help with any of them):
 
 * Format citations into various citation styles, in a format suitable to paste into word editors.
-* Import from Zotero and EndNote.
+* Import from Zotero.
 * Other document types aside articles and books.
 * Packaging into a format suitable for a few mainstream Linux package management tools.
 * Of cource, any stability or performance improvements.
