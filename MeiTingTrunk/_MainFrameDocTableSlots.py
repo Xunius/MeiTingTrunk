@@ -103,7 +103,7 @@ class MainFrameDocTableSlots:
             self.loadMetaTab(docid)
             self.loadBibTab(docid)
             self.loadNoteTab(docid)
-            #self.loadPDFTab(docid)
+            self.loadPDFThumbnail(docid)
 
             #------------Remove highlights for all folders-------
             self.removeFolderHighlights()
@@ -314,7 +314,7 @@ class MainFrameDocTableSlots:
 
         self.logger.info('docids = %s' %docids)
         self.logger.info('OS = %s, open command = %s' %(current_os, open_command))
-        lib_folder=self.settings.value('saving/current_lib_folder',str)
+        lib_folder=self.settings.value('saving/current_lib_folder',type=str)
 
         for docii in docids:
             file_pathii=self.meta_dict[docii]['files_l'][0] # take the 1st file
@@ -376,7 +376,7 @@ class MainFrameDocTableSlots:
             self.logger.info('OS = %s, file_man = %s' %(current_os, file_man))
 
         #----------------Open file manager----------------
-        lib_folder=self.settings.value('saving/current_lib_folder',str)
+        lib_folder=self.settings.value('saving/current_lib_folder',type=str)
         for docii in docids:
             file_pathii=self.meta_dict[docii]['files_l'][0] # take the 1st file
             file_pathii=os.path.join(lib_folder,file_pathii)
@@ -691,7 +691,7 @@ class MainFrameDocTableSlots:
             # abs v.s. relative file paths
             path_type=self.settings.value('export/bib/path_type',str)
             if path_type=='absolute':
-                prefix=self.settings.value('saving/current_lib_folder',str)
+                prefix=self.settings.value('saving/current_lib_folder',type=str)
             elif path_type=='relative':
                 prefix=''
 
@@ -773,7 +773,7 @@ class MainFrameDocTableSlots:
         if fname:
             path_type=self.settings.value('export/ris/path_type',str)
             if path_type=='absolute':
-                prefix=self.settings.value('saving/current_lib_folder',str)
+                prefix=self.settings.value('saving/current_lib_folder',type=str)
             elif path_type=='relative':
                 prefix=''
 
@@ -898,7 +898,7 @@ class MainFrameDocTableSlots:
             listwidget=QtWidgets.QListWidget()
             listwidget.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
-            lib_folder=self.settings.value('saving/current_lib_folder',str)
+            lib_folder=self.settings.value('saving/current_lib_folder',type=str)
             for fii in files:
                 fii=os.path.join(lib_folder,fii)
                 listwidget.addItem(fii)
@@ -970,6 +970,11 @@ class MainFrameDocTableSlots:
 
 
     def openPDFViewer(self):
+        '''Open a dialog showing the PDF viewer
+
+        This is used as a slot to the SPACE key shortcut bound to the
+        doc_table. See _MainFrame.createDocTable().
+        '''
 
         docid=self._current_doc
 
@@ -982,7 +987,7 @@ class MainFrameDocTableSlots:
         if len(files)==0:
             return
 
-        lib_folder=self.settings.value('saving/current_lib_folder')
+        lib_folder=self.settings.value('saving/current_lib_folder', type=str)
         filepath=files[0]
 
         try:

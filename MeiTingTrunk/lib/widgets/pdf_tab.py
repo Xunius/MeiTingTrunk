@@ -1,5 +1,5 @@
 '''
-tab widget containing PDF viewer.
+tab widget containing PDF viewer and thumbnail viewer.
 
 MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
@@ -17,12 +17,22 @@ import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QUrl
 from PyQt5 import QtWebEngineWidgets
+from ..tools import clearLayout
 
 LOGGER=logging.getLogger(__name__)
 
 PDFJS = os.path.join(__file__, '../../pdfjs/web/viewer.html')
 
+
 def getPath(relpath):
+    '''Convert a relative file path to file URL
+
+    Args:
+        relpath (str): relative file path, wrt the lib_folder
+
+    Returns:
+        p (str): file url
+    '''
 
     if not os.path.isabs(relpath):
         p=os.path.abspath(relpath)
@@ -30,6 +40,7 @@ def getPath(relpath):
         p=relpath
 
     p=QUrl.fromLocalFile(p).toString()
+
     return p
 
 
@@ -54,3 +65,22 @@ class PDFFrame(QtWebEngineWidgets.QWebEngineView):
         self.load(url)
 
         return
+
+
+class PDFPreviewer(QtWidgets.QWidget):
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        self.layout=QtWidgets.QVBoxLayout(self)
+
+
+    def clearLayout(self):
+
+        clearLayout(self.layout)
+
+        return
+
+
+
+

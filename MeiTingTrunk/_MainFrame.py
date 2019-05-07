@@ -56,7 +56,7 @@ from .lib.tools import getMinSizePolicy, getXMinYExpandSizePolicy, \
         hasXapian
 from .lib.widgets import MyTreeWidget, TableModel,\
         MyHeaderView, MetaTabScroll, CheckDuplicateFrame, NoteTextEdit,\
-        SearchResFrame, PDFFrame
+        SearchResFrame, PDFPreviewer
 
 
 
@@ -594,7 +594,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         self.t_notes=self.createNoteTab()
         self.t_bib=self.createBiBTab()
         self.t_scratchpad=self.createScratchTab()
-        #self.t_pdf=self.createPDFTab()
+        self.t_pdf=self.createPDFTab()
         self.t_meta=MetaTabScroll(self.settings,self)
         self.t_meta.meta_edited.connect(lambda field_list: self.updateTableData(\
             self._current_doc,self.t_meta._meta_dict,field_list))
@@ -605,7 +605,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
                 'Toggle Notes Tab': [self.t_notes, 'Notes'],
                 'Toggle BibTex Tab': [self.t_bib, 'BibTex'],
                 'Toggle Scratch Pad Tab': [self.t_scratchpad, 'Scratch Pad'],
-                #'Toggle PDF Tab': [self.t_pdf, 'PDF']
+                'Toggle PDF Tab': [self.t_pdf, 'PDF']
                 }
 
         show_widgets=self.settings.value('view/show_widgets',[],str)
@@ -683,7 +683,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         scroll.setWidgetResizable(True)
         frame=QtWidgets.QFrame()
         v_layout=QtWidgets.QVBoxLayout()
-        self.pdf_viewer=PDFFrame(self)
+        self.pdf_viewer=PDFPreviewer(self)
         v_layout.addWidget(self.pdf_viewer)
         frame.setLayout(v_layout)
         scroll.setWidget(frame)

@@ -497,10 +497,10 @@ def autoRename(abpath):
     return newname
 
 
-def hasPdftotext():
-    '''Check the existance of pdftotext'''
+def hasBin(bin_name):
+    '''Check the existance of a binary'''
 
-    proc=subprocess.Popen(['which','pdftotext'], stdout=subprocess.PIPE,
+    proc=subprocess.Popen(['which', bin_name], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
     rec=proc.communicate()
     if len(rec[0])==0 and len(rec[1])>0:
@@ -509,20 +509,19 @@ def hasPdftotext():
     return True
 
 
+def hasPdftotext():
+    '''Check the existance of pdftotext'''
+
+    return hasBin('pdftotext')
+
+
 def hasXapian():
     '''Check the existance of xapian core and xapian-python'''
 
-    proc=subprocess.Popen(['which','xapian-delve'], stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-    rec=proc.communicate()
-    if len(rec[0])==0 and len(rec[1])>0:
-        return False
-
-    proc=subprocess.Popen(['which','omindex'], stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-    rec=proc.communicate()
-    if len(rec[0])==0 and len(rec[1])>0:
-        return False
+    has_xapian=hasBin('xapian-delve')
+    has_omindex=hasBin('omindex')
+    if not has_xapian or has_omindex:
+        return
 
     try:
         import xapian
@@ -596,3 +595,29 @@ def createDelButton(font_height=12):
     )
 
     return button
+
+
+def hasImageMagic():
+    '''Check the existance of ImageMagic'''
+
+    return hasBin('convert')
+
+
+def hasPoppler():
+    '''Check the existance of poppler, in particular pdftoppm'''
+
+    return hasBin('pdftoppm')
+
+
+def clearLayout(layout):
+    '''Recursively clear a layout'''
+
+    while layout.count():
+        child = layout.takeAt(0)
+        if child.widget():
+            try:
+                clearLayout(child.widget().layout())
+            except:
+                pass
+            child.widget().deleteLater()
+    return

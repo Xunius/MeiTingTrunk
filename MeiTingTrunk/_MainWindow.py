@@ -33,7 +33,6 @@ from .lib.widgets import PreferenceDialog, ExportDialog, ThreadRunDialog,\
 if tools.isXapianReady():
     from .lib import xapiandb
 
-#from . import __version__
 from .version import __version__
 
 
@@ -155,12 +154,15 @@ New session started
             settings.setValue('view/show_widgets', ['Toggle Filter List',
                 'Toggle Tab Pane', 'Toggle Meta Tab', 'Toggle Notes Tab',
                 'Toggle BibTex Tab', 'Toggle Scratch Pad Tab',
-                #'Toggle PDF Tab',
+                'Toggle PDF Tab',
                 'Toggle Status bar'])
 
             # sortidx in doc table
             settings.setValue('view/sortidx', 4)
             settings.setValue('view/sortorder', 0)
+
+            # pdf thumbnail dpi
+            settings.setValue('view/thumbnail_dpi', 30)
 
             settings.sync()
         else:
@@ -250,8 +252,8 @@ New session started
 
         for tii in ['Toggle Filter List', None, 'Toggle Tab Pane',
                 'Toggle Meta Tab', 'Toggle Notes Tab', 'Toggle BibTex Tab',
-                #'Toggle Scratch Pad Tab', 'Toggle PDF Tab', None,
-                'Toggle Scratch Pad Tab', None,
+                'Toggle Scratch Pad Tab', 'Toggle PDF Tab', None,
+                #'Toggle Scratch Pad Tab', None,
                 'Toggle Status bar']:
             if tii is None:
                 self.view_menu.addSeparator()
@@ -583,7 +585,13 @@ New session started
             if tools.isXapianReady():
                 self.main_frame.enablePDFSearch()
 
+        #---------------Create cache folder---------------
+        lib_cache_folder=os.path.join(self.current_lib_folder,'_cache')
+        if not os.path.exists(lib_cache_folder):
+            os.makedirs(lib_cache_folder)
 
+
+        #---------------------Actions---------------------
         self.main_frame.auto_save_timer.start()
 
         self.logger.info('Start auto save timer.')

@@ -113,6 +113,7 @@ class PreferenceDialog(QtWidgets.QDialog):
         LOGGER.info('Changes: %s' %self.new_values)
 
         for kk,vv in self.new_values.items():
+
             self.settings.setValue(kk,vv)
 
         #------------------Set new timer------------------
@@ -129,6 +130,7 @@ class PreferenceDialog(QtWidgets.QDialog):
             os.makedirs(storage_folder)
 
             LOGGER.info('Create new storage folder %s' %storage_folder)
+
 
         # TODO: apply change to database and meta_dict
         # need to call saveFoldersToDatabase() with new folder, and
@@ -617,8 +619,23 @@ class PreferenceDialog(QtWidgets.QDialog):
         ha=QtWidgets.QHBoxLayout()
         ha.addWidget(label3)
         ha.addWidget(self.spinbox)
-
         va.addLayout(ha)
+
+        #----------------thumbnail dpi section----------------
+        va.addWidget(getHLine(self))
+        label4=QtWidgets.QLabel('PDF thumbnail DPI')
+        label4.setStyleSheet(self.label_color)
+        label4.setFont(self.title_label_font)
+        va.addWidget(label4)
+        va.addWidget(getHLine(self))
+
+        slider3=LabeledSlider(10,30,5,parent=self)
+        slider3.sl.setValue(self.settings.value('view/thumbnail_dpi',30,type=int))
+        slider3.sl.valueChanged.connect(self.changeThumbnailDPI)
+        slider3.setMaximumWidth(400)
+
+        va.addWidget(slider3)
+
         va.addStretch()
 
         return scroll
@@ -642,6 +659,15 @@ class PreferenceDialog(QtWidgets.QDialog):
 
         LOGGER.info('Change recent database number to %s' %value)
         self.new_values['file/recent_open_num']=value
+
+        return
+
+
+    def changeThumbnailDPI(self,value):
+        '''Store the value on the thumbnail dpi slider'''
+
+        LOGGER.debug('Change thumbnail dpi number to %s' %value)
+        self.new_values['view/thumbnail_dpi']=value
 
         return
 

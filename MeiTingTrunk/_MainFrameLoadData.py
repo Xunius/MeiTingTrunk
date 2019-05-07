@@ -82,11 +82,15 @@ You may use, distribute and modify this code under the
 terms of the GPLv3 license.
 '''
 
+import os
+import subprocess
+import glob
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
+from PyQt5 import QtGui
 from .lib import sqlitedb
 from .lib import bibparse
-from .lib.tools import getHLine
+from .lib.tools import getHLine, hasPoppler, hasImageMagic
 
 
 
@@ -399,9 +403,9 @@ class MainFrameLoadData:
         if isinstance(omit_keys,str) and omit_keys=='':
             omit_keys=[]
 
-        path_type=self.settings.value('export/bib/path_type',str)
+        path_type=self.settings.value('export/bib/path_type',type=str)
         if path_type=='absolute':
-            prefix=self.settings.value('saving/current_lib_folder',str)
+            prefix=self.settings.value('saving/current_lib_folder',type=str)
         elif path_type=='relative':
             prefix=''
 
@@ -431,29 +435,76 @@ class MainFrameLoadData:
         return
 
 
-    def loadPDFTab(self, docid=None):
-        """Load pdf tab of a doc
+    def loadPDFThumbnail(self, docid=None):
+        """Load a thumbnail of the 1st page of a pdf
 
         Kwargs:
             docid (int or None): if int, the id of the doc to load.
         """
 
-        self.logger.info('docid = %s' %docid)
         if docid is None:
             return
 
-        lib_folder=self.settings.value('saving/current_lib_folder')
         files=self.meta_dict[docid]['files_l']
-        if len(files)>0:
-            filepath=files[0]
+        if len(files)==0:
+            self.pdf_viewer.clearLayout()
+            return
 
-            print('lib_folder', lib_folder)
-            print('filepath', filepath)
+        dpi=self.settings.value('view/thumbnail_dpi', type=str)
 
-            self.pdf_viewer.loadFile(lib_folder, filepath)
+        lib_folder=self.settings.value('saving/current_lib_folder', type=str)
+        cache_folder=os.path.join(lib_folder, '_cache')
 
-        #self.logger.debug('noteii = %s' %noteii)
+        # get the 1st file
+        filepath=files[0]
+        filepath=os.path.join(lib_folder, filepath)
+        filename=os.path.split(filepath)[1]
+        outfile=os.path.join(cache_folder, '%s-%s' %(filename, dpi))
+
+        self.logger.debug('outfile = %s' %outfile)
+
+        # prefer poppler over imagemagic
+        # NO, imagemagic for some reason doesn't allow pdf conversion, so f it.
+        if hasPoppler():
+            cmd=['pdftoppm', filepath, outfile, '-jpeg',
+                    '-r', dpi]
+        else:
+            #if hasImageMagic():
+                #cmd=['convert', '-density', dpi, filepath, outfile]
+            #else:
+                #return
+            return
+
+        #-----------Try finding saved thumbnail-----------
+        glob_paths=os.path.join(cache_folder, '%s-%s*.jpg' %(filename, dpi))
+        outfiles=glob.glob(glob_paths)
+        if len(outfiles)>0:
+            outfiles.sort()
+            tb_imgs=(QtGui.QPixmap(fii) for fii in outfiles)
+            self.logger.debug('Using cached thumbnail.')
+        else:
+            try:
+                proc=subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+                proc.wait()
+            except:
+                return
+            else:
+                outfiles=glob.glob(glob_paths)
+                outfiles.sort()
+                tb_imgs=(QtGui.QPixmap(fii) for fii in outfiles)
+                self.logger.debug('Generate a new thumbnail.')
+
+        #--------------------Add images--------------------
+        self.pdf_viewer.clearLayout()
+        for pii in tb_imgs:
+            labelii=QtWidgets.QLabel(self)
+            labelii.setPixmap(pii)
+            self.pdf_viewer.layout.addWidget(labelii)
+
+        # NOTE: need to del the old thumbnail somewhere?
 
         return
+
 
 
