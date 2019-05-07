@@ -41,7 +41,11 @@ setuptools.setup(
             'PyQtWebEngine'
             ],
         python_requires='>=3',
-        #package_data={'sample': ['
+        include_package_data=True,
+        #package_dir={'': 'MeiTingTrunk'},
+        #package_data={'': ['MeiTingTrunk/lib/pdfjs/*',
+        #'MeiTingTrunk/samples/*'
+        #],},
         entry_points={
             'gui_scripts': ['meitingtrunk = MeiTingTrunk.main:main']
             }
