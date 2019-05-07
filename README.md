@@ -97,7 +97,8 @@ Currently only support Linux and MacOS.
 ### Python dependencies
 
 * python3+
-* PyQt5
+* PyQt5>=5.12
+* PyQtWebEngine (this is no longer shipped with PyQt5 after 5.11)
 * sqlite3
 * pdfminer.six
 * PyPDF2
@@ -109,9 +110,12 @@ Currently only support Linux and MacOS.
 * send2trash
 * python-levenshtein (optional)
 
+
 ### Other dependencies
 
 * xapian-core, xapian-omega, xapian-bindings (all optional), required for full text searching. See https://xapian.org/docs/install.html for installation instructions. Also checkout the [wiki page](https://github.com/Xunius/MeiTingTrunk/wiki/Enable-snippets-in-full-text-search-results) on how to enable snippets.
+
+* [poppler](https://poppler.freedesktop.org/) (optional), used for generating PDF thumbnails.
 
 
 ## Install
