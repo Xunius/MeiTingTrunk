@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: meitingtrunk
-Version: 0.1a30
+Version: 0.1a31
 Summary: An open source reference management tool developed in PyQt5 and Python3.
 Home-page: https://github.com/Xunius/MeiTingTrunk
 Author: Guangzhi XU
@@ -121,7 +121,7 @@ Description: # MeiTing Trunk
         
         ### Other dependencies
         
-        * xapian-core, xapian-omega, xapian-bindings (all optional), required for full text searching. See https://xapian.org/docs/install.html for installation instructions. Also checkout the [wiki page](https://github.com/Xunius/MeiTingTrunk/wiki/Enable-snippets-in-full-text-search-results) on how to enable snippets.
+        * xapian-core, xapian-omega and the python bindings of xapian (all optional), required for full text searching. See https://xapian.org/docs/install.html for installation instructions. Also checkout the [wiki page](https://github.com/Xunius/MeiTingTrunk/wiki/Enable-snippets-in-full-text-search-results) on how to enable snippets.
         
         * [poppler](https://poppler.freedesktop.org/) (optional), used for generating PDF thumbnails.
         
@@ -142,6 +142,14 @@ Description: # MeiTing Trunk
         $ meitingtrunk
         ```
         
+        To upgrade:
+        
+        
+        ```
+        pip install --upgrade meitingtrunk
+        ```
+        
+        
         ## Manual install
         
         You can clone this repo
@@ -150,14 +158,15 @@ Description: # MeiTing Trunk
         git clone https://github.com/Xunius/MeiTingTrunk
         ```
         
-        and launch it with
+        Check out the dependency list if any module is missing in your python environment.
+        
+        Then launch it with
         
         ```
         $ cd MeiTingTrunk
         $ python -m MeiTingTrunk.main
         ```
         
-        Check out the dependency list if any module is missing in your python environment.
         
         
         ## Contribution
@@ -167,7 +176,7 @@ Description: # MeiTing Trunk
         Major features that are still lacking (I greatly appreciate any help with any of them):
         
         * Format citations into various citation styles, in a format suitable to paste into word editors.
-        * Import from Zotero and EndNote.
+        * Import from Zotero.
         * Other document types aside articles and books.
         * Packaging into a format suitable for a few mainstream Linux package management tools.
         * Of cource, any stability or performance improvements.
