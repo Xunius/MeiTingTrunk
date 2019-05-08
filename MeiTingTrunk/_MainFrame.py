@@ -354,7 +354,7 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
             has_pdf=False
 
         for fieldii in ['Authors', 'Title', 'Abstract', 'Keywords', 'Tags',
-                'Notes', 'Publication', 'PDF']:
+                'Notes', 'Publication', 'PDF', 'Citationkey']:
             cbii=QtWidgets.QCheckBox(fieldii, menu)
             aii=QtWidgets.QWidgetAction(menu)
             if fieldii in search_fields:

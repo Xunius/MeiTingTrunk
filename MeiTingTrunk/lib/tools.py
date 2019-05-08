@@ -520,8 +520,8 @@ def hasXapian():
 
     has_xapian=hasBin('xapian-delve')
     has_omindex=hasBin('omindex')
-    if not has_xapian or has_omindex:
-        return
+    if not has_xapian or not has_omindex:
+        return False
 
     try:
         import xapian

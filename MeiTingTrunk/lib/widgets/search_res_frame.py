@@ -517,6 +517,8 @@ class SearchResFrame(QtWidgets.QScrollArea):
                 textii=meta['abstract']
             elif fii=='note':
                 textii=meta['notes']
+            elif fii=='citationkey':
+                textii=meta['citationkey']
             elif fii=='pdf':
                 # add later
                 continue
