@@ -70,10 +70,11 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         _MainFrameOtherSlots.MainFrameOtherSlots,
         _MainFrameProperties.MainFrameProperties
         ):
-    def __init__(self,settings):
+    def __init__(self,settings, parent):
         super(MainFrame,self).__init__()
 
         self.settings=settings
+        self.parent=parent
         self.logger=logging.getLogger(__name__)
         self.initUI()
         self.auto_save_timer=QTimer(self)

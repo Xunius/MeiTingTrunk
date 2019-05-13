@@ -24,6 +24,27 @@ from PyQt5.QtWidgets import QDialogButtonBox
 LOGGER=logging.getLogger(__name__)
 
 
+class SimpleWorker(QObject):
+
+    def __init__(self, id, func):
+        super().__init__()
+        '''Worker used in separate thread.
+
+        Args:
+            id (int): id for the thread/worker.
+            func (function): function object to call in the thread.
+        '''
+
+        self.id=id
+        self.func=func
+
+    @pyqtSlot()
+    def processJob(self):
+        self.func()
+
+        return
+
+
 
 class Worker(QObject):
 

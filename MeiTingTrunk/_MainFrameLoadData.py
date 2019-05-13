@@ -510,8 +510,6 @@ class MainFrameLoadData:
             labelii.setPixmap(pii)
             self.pdf_viewer.layout.addWidget(labelii)
 
-        # NOTE: need to del the old thumbnail somewhere?
-
         return
 
 

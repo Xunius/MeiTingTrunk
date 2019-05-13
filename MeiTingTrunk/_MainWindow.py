@@ -23,13 +23,13 @@ import sqlite3
 import pathlib
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QStyle
-from PyQt5.QtCore import Qt, QSettings, QTimer, pyqtSlot
+from PyQt5.QtCore import Qt, QSettings, QTimer, pyqtSlot, QThread
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 from . import _MainFrame
 from . import resources
 from .lib import sqlitedb, tools
 from .lib.widgets import PreferenceDialog, ExportDialog, ThreadRunDialog,\
-        ImportDialog, AboutDialog, MergeNameDialog
+        ImportDialog, AboutDialog, MergeNameDialog, SimpleWorker
 if tools.isXapianReady():
     from .lib import xapiandb
 
@@ -64,7 +64,7 @@ New session started
         self.settings=self.initSettings()
         self.is_loaded=False  # is any database opended
 
-        self.main_frame=_MainFrame.MainFrame(self.settings)
+        self.main_frame=_MainFrame.MainFrame(self.settings, self)
         self.main_frame.view_change_sig.connect(self.viewChangeResponse)
         self.setCentralWidget(self.main_frame)
 
@@ -593,6 +593,7 @@ New session started
 
         #---------------------Actions---------------------
         self.main_frame.auto_save_timer.start()
+        self.startThumbnailThread()
 
         self.logger.info('Start auto save timer.')
 
@@ -685,8 +686,11 @@ New session started
                     QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
         if not ask or (ask and choice==QtWidgets.QMessageBox.Yes):
+
             self.main_frame.clearData()
             self.is_loaded=False
+            self.thumbnail_td.quit()
+            self.thumbnail_td.wait()
 
             self.import_action.setEnabled(True)
             self.export_action.setEnabled(False)
@@ -804,3 +808,20 @@ New session started
         """
 
         self.view_action_dict[view_name].setChecked(state)
+
+
+    def startThumbnailThread(self):
+        '''Start the thumbnail generation thread
+
+        Will start a QThread to call function createThumbnails(), which is
+        stopped by setting is_loaded=False and calling the quit() and wait()
+        on the thread. See closeDatabaseTriggered().
+        '''
+
+        self.thumbnail_td=QThread()
+        self.thumbnail_worker=SimpleWorker(0,self.main_frame.createThumbnails)
+        self.thumbnail_worker.moveToThread(self.thumbnail_td)
+        self.thumbnail_td.started.connect(self.thumbnail_worker.processJob)
+        self.thumbnail_td.start()
+
+        return

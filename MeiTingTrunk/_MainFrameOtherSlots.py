@@ -16,7 +16,9 @@ terms of the GPLv3 license.
 
 import os
 import glob
+import subprocess
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread
+from .lib.tools import hasPoppler
 
 
 class SettingsThread(QThread):
@@ -337,5 +339,56 @@ class MainFrameOtherSlots:
         self.logger.info('Data cleared.')
 
         return
+
+
+    def createThumbnails(self):
+        '''Create PDF thumbnails in the background.
+
+        This is supposed to run in a separate thread when a library is opened,
+        and stopped when a library is closed. See
+
+        _MainWindow._openDatabase()
+        _MainWindow.closeDatabaseTriggered()
+        '''
+
+        if not hasPoppler():
+            return
+
+        lib_folder=self.settings.value('saving/current_lib_folder', type=str)
+        cache_folder=os.path.join(lib_folder, '_cache')
+        file_folder=os.path.join(lib_folder, '_collections')
+        dpi=self.settings.value('view/thumbnail_dpi', type=str)
+
+        files=os.listdir(file_folder)
+        for fii in files:
+
+            # stop on lib closing
+            if not self.parent.is_loaded:
+                break
+
+            #-----------Try finding saved thumbnail-----------
+            glob_paths=os.path.join(cache_folder, '%s-%s*.jpg' %(fii, dpi))
+            outfiles=glob.glob(glob_paths)
+            if len(outfiles)>0:
+                continue
+
+            pii=os.path.join(file_folder, fii)
+            outfileii=os.path.join(cache_folder, '%s-%s' %(fii, dpi))
+            cmd=['pdftoppm', pii, outfileii, '-jpeg', '-r', dpi]
+
+            try:
+                proc=subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+                proc.wait()
+            except:
+                continue
+            else:
+                self.logger.debug('Generated a new thumbnail for %s' %fii)
+
+        return
+
+
+
+
 
 
