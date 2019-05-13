@@ -817,17 +817,42 @@ class MergeFrame(QtWidgets.QScrollArea):
             self.group_dict[gid]['members']=values
 
         # del widgets in the row
+        col1=[]  # save widgets in the 1st column (del group button or checkbox)
         for jj in range(grid.columnCount()):
             itemjj=grid.itemAtPosition(rowid, jj)
             if itemjj:
-                wjj=itemjj.widget()
-                wjj.setParent(None)
-                wjj.deleteLater()
+                # col 1 has something
+                if jj==0:
+                    wjj=itemjj.widget()
+                    idx=grid.indexOf(wjj)
+                    wjj=grid.takeAt(idx).widget()
+                    col1.append(wjj)
+                    wjj.setParent(None)
+
+                    # if it's del group button, also need to shift checkbox
+                    if isinstance(wjj, QtWidgets.QToolButton):
+                        checkbox=grid.itemAtPosition(rowid+1, 0)
+                        wjj=checkbox.widget()
+                        idx=grid.indexOf(wjj)
+                        wjj=grid.takeAt(idx).widget()
+                        col1.append(wjj)
+                        wjj.setParent(None)
+                # col 1 has nothing, just del
+                else:
+                    wjj=itemjj.widget()
+                    wjj.setParent(None)
+                    wjj.deleteLater()
 
         #---------Delete the group if only 1 left---------
         # NOTE that the rowcount() method doesn't decrease!!!
         if len(values)<2:
             self.delGroupClicked(gid, widget)
+            return
+
+        if len(col1)>0:
+            for ii, wii in enumerate(col1):
+                # shift col 1 widgets down by 1 row
+                grid.addWidget(wii, rowid+1+ii, 0)
 
         return
 
