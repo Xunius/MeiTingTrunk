@@ -16,8 +16,9 @@ terms of the GPLv3 license.
 
 import os
 import glob
+import resource
 import subprocess
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread, QTimer
 from .lib.tools import hasPoppler
 
 
@@ -360,17 +361,27 @@ class MainFrameOtherSlots:
         dpi=self.settings.value('view/thumbnail_dpi', type=str)
 
         files=os.listdir(file_folder)
-        for fii in files:
 
-            # stop on lib closing
-            if not self.parent.is_loaded:
-                break
+        def setlimits():
+            # Set maximum CPU time to n second in child process,
+            # after fork() but before exec()
+            #print("Setting resource limit in child (pid %d)" % os.getpid())
+            resource.setrlimit(resource.RLIMIT_CPU, (0.2, 0.3))
+
+        def _createTN():
+
+            if len(files)==0:
+                return
+
+            fii=files.pop()
 
             #-----------Try finding saved thumbnail-----------
             glob_paths=os.path.join(cache_folder, '%s-%s*.jpg' %(fii, dpi))
             outfiles=glob.glob(glob_paths)
             if len(outfiles)>0:
-                continue
+                # if exists, call itself after short delay
+                QTimer.singleShot(5, lambda : _createTN())
+                return
 
             pii=os.path.join(file_folder, fii)
             outfileii=os.path.join(cache_folder, '%s-%s' %(fii, dpi))
@@ -378,12 +389,28 @@ class MainFrameOtherSlots:
 
             try:
                 proc=subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE)
+                    stderr=subprocess.PIPE,
+                    preexec_fn=setlimits)
                 proc.wait()
-            except:
-                continue
+            except Exception as e:
+                self.logger.exception('e = %s' %e)
+                # if fail, call itself after short delay
+                QTimer.singleShot(5, lambda : _createTN())
+                return
             else:
                 self.logger.debug('Generated a new thumbnail for %s' %fii)
+                # if success, call itself after longer delay
+                QTimer.singleShot(4000, lambda : _createTN())
+                return
+
+        # stop on lib closing
+        if not self.parent.is_loaded:
+            return
+
+        # the setlimits() doesn't seem to be enough, this is taking
+        # too much resource and then fan goes crazy.
+        # Can't use sleep which will block
+        QTimer.singleShot(5, lambda : _createTN())
 
         return
 
