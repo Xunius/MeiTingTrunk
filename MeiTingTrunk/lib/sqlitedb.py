@@ -25,7 +25,7 @@ import sqlite3
 import logging
 from send2trash import send2trash
 from collections import MutableMapping
-from .tools import autoRename, isXapianReady, parseAuthors
+from .tools import autoRename, isXapianReady, parseAuthors, delThumbnails
 if isXapianReady():
     from . import xapiandb
 
@@ -1483,11 +1483,14 @@ def updateToDatabase(db, docid, meta_dict, lib_folder, rename_files,
             xapian_folder=os.path.join(lib_folder,'_xapian_db')
             LOGGER.info('Deleting old files: %s' %del_files)
             for fii in del_files:
+                # del thumbnail if exists:
+                delThumbnails(lib_folder, os.path.split(fii)[1])
+
                 # del from xapian
                 if isXapianReady() and os.path.exists(xapian_folder):
                     try:
                         urlii='U/%s' %quote(fii)
-                        print('# <updateToDatabase>: urlii=',urlii)
+                        #print('# <updateToDatabase>: urlii=',urlii)
                         rec=xapiandb.delXapianDoc(xapian_folder, urlii)
                         if rec==1:
                             LOGGER.error('Failed to delete from xapian.')
@@ -1618,6 +1621,9 @@ def delDocFromDatabase(db, docid, lib_folder):
             LOGGER.exception('Failed to delete from xapian.')
 
     for ii, fii in enumerate(old_files):
+        # del thumbnail if exists:
+        delThumbnails(lib_folder, os.path.split(fii)[1])
+
         # prepend folder path
         absii=os.path.join(lib_folder,fii)
         if os.path.exists(absii):

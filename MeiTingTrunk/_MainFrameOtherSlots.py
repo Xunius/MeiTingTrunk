@@ -339,35 +339,3 @@ class MainFrameOtherSlots:
         return
 
 
-    @pyqtSlot()
-    def delThumbnails(self, filename=None):
-        '''Delete thumbnail files in cache folder
-
-        Kwargs:
-            filename (str or None): file name of the pdf file whose thumbnail
-                files will be deleted. If None, del all jpg files in cache
-                folder.
-
-        Currently not in use.
-        '''
-
-        lib_folder=self.settings.value('saving/current_lib_folder', type=str)
-        cache_folder=os.path.join(lib_folder, '_cache')
-
-        if filename is None:
-            files=glob.glob(os.path.join(cache_folder, '*.jpg'))
-        else:
-            files=glob.glob(os.path.join(cache_folder, '%s*.jpg' %filename))
-
-        for fii in files:
-            os.remove(fii)
-
-        self.logger.info('filename = %s' %filename)
-        self.logger.info('thumbnails deleted.')
-
-        return
-
-
-
-
-

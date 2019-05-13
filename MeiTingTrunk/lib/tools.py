@@ -17,6 +17,7 @@ import os
 import re
 import time
 import platform
+import glob
 import logging
 import subprocess
 from functools import reduce
@@ -621,3 +622,37 @@ def clearLayout(layout):
                 pass
             child.widget().deleteLater()
     return
+
+
+def delThumbnails(lib_folder, filename=None):
+    '''Delete thumbnail files in cache folder
+
+    Args:
+        lib_folder (str): path to library folder.
+    Kwargs:
+        filename (str or None): file name of the pdf file whose thumbnail
+            files will be deleted. If None, del all jpg files in cache
+            folder.
+    '''
+
+    #lib_folder=self.settings.value('saving/current_lib_folder', type=str)
+    cache_folder=os.path.join(lib_folder, '_cache')
+
+    if filename is None:
+        files=glob.glob(os.path.join(cache_folder, '*.jpg'))
+    else:
+        files=glob.glob(os.path.join(cache_folder, '%s*.jpg' %filename))
+
+    for fii in files:
+        os.remove(fii)
+
+    LOGGER.info('filename = %s' %filename)
+    LOGGER.info('thumbnails deleted.')
+
+    return
+
+
+
+
+
+
