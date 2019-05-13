@@ -12,11 +12,12 @@ You may use, distribute and modify this code under the
 terms of the GPLv3 license.
 '''
 
+import os
 import logging
 from collections import OrderedDict
 from fuzzywuzzy import fuzz
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QModelIndex
 from PyQt5.QtGui import QFont, QBrush, QFontMetrics
 from PyQt5.QtWidgets import QDialogButtonBox
 from ..tools import getHLine, dfsCC, getSqlitePath,\
@@ -25,6 +26,7 @@ from .threadrun_dialog import ThreadRunDialog
 from .doc_table import MyHeaderView, TableModel
 from .. import sqlitedb
 from ..._MainFrameLoadData import prepareDocs
+from .pdf_tab import PDFFrame
 
 LOGGER=logging.getLogger(__name__)
 
@@ -988,6 +990,7 @@ class RelatedDocsDialog(QtWidgets.QDialog):
         tv.setHorizontalHeader(hh)
         tv.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         tv.setShowGrid(True)
+        tv.doubleClicked.connect(self.docDoubleClicked)
         #tv.setSortingEnabled(True)  # dont enable sort!
 
         header=['docid','favourite','read','has_file','author','title',
@@ -1036,3 +1039,115 @@ class RelatedDocsDialog(QtWidgets.QDialog):
         tablemodel.layoutChanged.emit()
 
         return
+
+
+    @pyqtSlot(QModelIndex)
+    def docDoubleClicked(self, idx):
+        """Slot to double clicking in doc table
+
+        Args:
+            idx (QModelIndex): index of doc table item been clicked on.
+
+        If the selected doc has only 1 attachment file, call openPDFViewer()
+        on it. Otherwise, pop-up a dialog listing all attachments, and let
+        user choose which one to open.
+        """
+
+        row_idx=idx.row()
+        LOGGER.info('Clicked row=%s' %row_idx)
+
+        #docid=self._tabledata[row_idx][0]
+        docid=self.doc_table.model().arraydata[row_idx][0]
+        files=self.meta_dict[docid]['files_l']
+        nfiles=len(files)
+
+        if nfiles==0:
+            return
+        elif nfiles==1:
+            self.openPDFViewer(files[0])
+        else:
+
+            LOGGER.info('Multiple files associated with doc. n = %d' %nfiles)
+
+            dialog=QtWidgets.QDialog()
+            dialog.resize(500,500)
+            dialog.setWindowTitle('Choose Open File')
+            dialog.setWindowModality(Qt.ApplicationModal)
+            layout=QtWidgets.QVBoxLayout()
+            dialog.setLayout(layout)
+
+            label=QtWidgets.QLabel('Select file(s) to open')
+            label_font=QFont('Serif',12,QFont.Bold)
+            label.setFont(label_font)
+            layout.addWidget(label)
+
+            listwidget=QtWidgets.QListWidget()
+            listwidget.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+
+            for fii in files:
+                listwidget.addItem(fii)
+
+            listwidget.setCurrentRow(0)
+            layout.addWidget(listwidget)
+
+            buttons=QtWidgets.QDialogButtonBox(
+                QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
+                Qt.Horizontal, dialog)
+
+            buttons.accepted.connect(dialog.accept)
+            buttons.rejected.connect(dialog.reject)
+            layout.addWidget(buttons)
+
+            rec=dialog.exec_()
+            LOGGER.debug('return value from dialog: %s' %rec)
+
+            if rec:
+                sel_files=listwidget.selectionModel().selectedRows()
+                sel_files=[listwidget.item(ii.row()) for ii in sel_files]
+                sel_files=[ii.data(0) for ii in sel_files]
+                LOGGER.info('Selected files=%s' %sel_files)
+
+                if len(sel_files)>0:
+                    for fii in sel_files:
+                        self.openPDFViewer(fii)
+
+        return
+
+
+
+    def openPDFViewer(self, filepath):
+        '''Open a dialog showing the PDF viewer
+
+        Args:
+            filepath (str): rel or abs file path of the attachment to open.
+        '''
+
+        # if a file newly added and has not been saved, it would be an abs
+        if not os.path.isabs(filepath):
+            lib_folder=self.settings.value('saving/current_lib_folder', type=str)
+            filepath=os.path.join(lib_folder, filepath)
+
+        try:
+            diag=QtWidgets.QDialog(self)
+            diag.setWindowTitle(os.path.split(filepath)[1])
+            diag.setWindowFlags(
+                    Qt.Window |
+                    Qt.WindowTitleHint |
+                    Qt.WindowSystemMenuHint |
+                    Qt.WindowMinimizeButtonHint |
+                    Qt.WindowMaximizeButtonHint |
+                    Qt.WindowCloseButtonHint |
+                    Qt.WindowStaysOnTopHint
+                    )
+
+            diag.resize(700,600)
+            va=QtWidgets.QVBoxLayout(diag)
+
+            pdfframe=PDFFrame(diag)
+            va.addWidget(pdfframe)
+
+            pdfframe.loadFile(lib_folder, filepath)
+
+            diag.show()
+        except:
+            LOGGER.warning('Failed to launch pdf viewer.')
