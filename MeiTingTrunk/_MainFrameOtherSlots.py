@@ -389,8 +389,8 @@ class MainFrameOtherSlots:
 
             try:
                 proc=subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    preexec_fn=setlimits)
+                    stderr=subprocess.PIPE)
+                    #preexec_fn=setlimits)
                 proc.wait()
             except Exception as e:
                 self.logger.exception('e = %s' %e)
