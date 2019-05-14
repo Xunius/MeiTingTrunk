@@ -29,7 +29,8 @@ from . import _MainFrame
 from . import resources
 from .lib import sqlitedb, tools
 from .lib.widgets import PreferenceDialog, ExportDialog, ThreadRunDialog,\
-        ImportDialog, AboutDialog, MergeNameDialog, SimpleWorker
+        ImportDialog, AboutDialog, MergeNameDialog, SimpleWorker,\
+        CreateZimDialog
 if tools.isXapianReady():
     from .lib import xapiandb
 
@@ -280,15 +281,18 @@ New session started
         self.import_action=QtWidgets.QAction('&Import', self)
         self.export_action=QtWidgets.QAction('&Export', self)
         self.merge_name_action=QtWidgets.QAction('&Merge Names', self)
+        self.create_zim_action=QtWidgets.QAction('Create &Zim notebook', self)
         self.tool_menu.addAction(self.import_action)
         self.tool_menu.addAction(self.export_action)
         self.tool_menu.addAction(self.merge_name_action)
+        self.tool_menu.addAction(self.create_zim_action)
         if not self.is_loaded:
             self.import_action.setEnabled(True)
             self.export_action.setEnabled(False)
             self.save_database_action.setEnabled(False)
             self.merge_name_action.setEnabled(False)
             self.close_database_action.setEnabled(False)
+            self.create_zim_action.setEnabled(False)
 
         #--------------------Help menu--------------------
         self.help_menu=self.menu_bar.addMenu('&Help')
@@ -303,6 +307,7 @@ New session started
         self.import_action.triggered.connect(self.importTriggered)
         self.export_action.triggered.connect(self.exportTriggered)
         self.merge_name_action.triggered.connect(self.mergeNameTriggered)
+        self.create_zim_action.triggered.connect(self.createZimTriggered)
         self.help_menu.triggered.connect(self.helpMenuTriggered)
         quit_action.triggered.connect(self.close)
         self.view_menu.triggered.connect(self.viewChangeTriggered)
@@ -602,6 +607,7 @@ New session started
         self.merge_name_action.setEnabled(True)
         self.save_database_action.setEnabled(True)
         self.close_database_action.setEnabled(True)
+        self.create_zim_action.setEnabled(True)
 
         # add to recent list
         recent=self.settings.value('file/recent_open',[],str)
@@ -697,6 +703,7 @@ New session started
             self.merge_name_action.setEnabled(False)
             self.save_database_action.setEnabled(False)
             self.close_database_action.setEnabled(False)
+            self.create_zim_action.setEnabled(False)
 
             self.current_lib=None
             self.current_lib_folder=None
@@ -767,6 +774,21 @@ New session started
                     self.main_frame.folder_data,
                     self.main_frame.folder_dict)
             self.logger.info('Reload data to gui.')
+
+        return
+
+
+    @pyqtSlot()
+    def createZimTriggered(self):
+
+        # NOTE that need to make sure this won't get called before main_frame
+        # has read in a lib
+        diag=CreateZimDialog(self.main_frame.meta_dict,
+                self.main_frame.folder_dict,
+                self.main_frame.folder_data,
+                self.settings,
+                parent=self)
+        diag.exec_()
 
         return
 
