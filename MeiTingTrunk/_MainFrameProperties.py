@@ -86,7 +86,7 @@ class MainFrameProperties:
             return [kk for kk in self.meta_dict if self.meta_dict[kk]['deletionPending']=='true']
 
     @property
-    def _zim_fodler(self):
+    def _zim_folder(self):
         lib_folder=self.settings.value('saving/current_lib_folder', type=str)
         zim_folder=os.path.join(lib_folder, '_zim')
         return zim_folder

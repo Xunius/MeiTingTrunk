@@ -30,7 +30,7 @@ from . import resources
 from .lib import sqlitedb, tools
 from .lib.widgets import PreferenceDialog, ExportDialog, ThreadRunDialog,\
         ImportDialog, AboutDialog, MergeNameDialog, SimpleWorker,\
-        CreateZimDialog
+        ZimDialog
 if tools.isXapianReady():
     from .lib import xapiandb
 
@@ -786,7 +786,7 @@ New session started
 
         # NOTE that need to make sure this won't get called before main_frame
         # has read in a lib
-        diag=CreateZimDialog(self.main_frame.meta_dict,
+        diag=ZimDialog(self.main_frame.meta_dict,
                 self.main_frame.folder_dict,
                 self.main_frame.folder_data,
                 self.settings,

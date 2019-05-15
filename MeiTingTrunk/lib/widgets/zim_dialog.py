@@ -312,7 +312,7 @@ def saveToZimNote(zim_folder, docid, text, overwrite=False):
 
 
 
-class CreateZimDialog(QtWidgets.QDialog):
+class ZimDialog(QtWidgets.QDialog):
 
     def __init__(self, meta_dict, folder_dict, folder_data, settings, parent):
         '''
