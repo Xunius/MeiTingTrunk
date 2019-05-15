@@ -877,6 +877,7 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
 class NoteTextEdit(QtWidgets.QTextEdit):
 
     note_edited_signal=pyqtSignal()
+    #save_to_zim_signal=pyqtSignal(str)
 
     def __init__(self,settings,parent=None):
         '''
@@ -901,5 +902,5 @@ class NoteTextEdit(QtWidgets.QTextEdit):
             self.note_edited_signal.emit()
         if hasattr(self, 'editor'):
             self.editor.deleteLater()
-        super(NoteTextEdit,self).focusOutEvent(event)
 
+        super(NoteTextEdit,self).focusOutEvent(event)

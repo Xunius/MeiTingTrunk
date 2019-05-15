@@ -15,12 +15,14 @@ You may use, distribute and modify this code under the
 terms of the GPLv3 license.
 '''
 
+import os
 from datetime import datetime
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QBrush
 from PyQt5 import QtWidgets
 from .lib import sqlitedb
 from .lib import widgets
+from .lib.widgets.zim_dialog import saveToZimNote
 
 
 
@@ -170,6 +172,15 @@ class MainFrameDataSlots:
         self.meta_dict[docid]['notes']=note_text
         self.changed_doc_ids.append(docid)
         self.logger.info('New notes for docid=%s: %s' %(docid,note_text))
+
+        use_zim_default=self.settings.value('saving/use_zim_default', type=bool)
+
+        if use_zim_default:
+            #self.save_to_zim_signal.emit(self.toPlainText())
+            print('# <saveToZim>: save to zim!', self._current_doc)
+            lib_folder=self.settings.value('saving/current_lib_folder', type=str)
+            zim_folder=os.path.join(lib_folder, '_zim')
+            saveToZimNote(zim_folder, self._current_doc, note_text, True)
 
         return
 

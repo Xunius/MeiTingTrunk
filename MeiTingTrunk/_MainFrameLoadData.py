@@ -90,7 +90,8 @@ from PyQt5.QtCore import Qt
 from PyQt5 import QtGui
 from .lib import sqlitedb
 from .lib import bibparse
-from .lib.tools import getHLine, hasPoppler, hasImageMagic
+from .lib.tools import getHLine, hasPoppler, hasImageMagic,\
+        ZimNoteNotFoundError
 
 
 
@@ -163,6 +164,9 @@ def prepareDocs(meta_dict, docids):
         data.append(aii)
 
     return data
+
+# NOTE: need to put this after prepareDocs to break a cyclic import
+from .lib.widgets.zim_dialog import readZimNote
 
 
 class MainFrameLoadData:
@@ -426,7 +430,22 @@ class MainFrameLoadData:
         if docid is None:
             return
 
-        noteii=self.meta_dict[docid]['notes']
+        use_zim_default=self.settings.value('saving/use_zim_default', type=bool)
+        print('# <loadNoteTab>: use_zim_default', use_zim_default)
+        if use_zim_default:
+            lib_folder=self.settings.value('saving/current_lib_folder', type=str)
+            zim_folder=os.path.join(lib_folder, '_zim')
+            try:
+                noteii=readZimNote(zim_folder, docid)
+            except ZimNoteNotFoundError as e:
+                print('# <loadNoteTab>: e=', e)
+                noteii=self.meta_dict[docid]['notes']
+            except Exception as e:
+                print('# <loadNoteTab>: e=', e)
+                noteii=self.meta_dict[docid]['notes']
+
+        else:
+            noteii=self.meta_dict[docid]['notes']
 
         self.logger.debug('noteii = %s' %noteii)
         self.note_textedit.clear()

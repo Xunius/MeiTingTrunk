@@ -165,6 +165,9 @@ New session started
             # pdf thumbnail dpi
             settings.setValue('view/thumbnail_dpi', 30)
 
+            # use zim as default note source
+            settings.setValue('saving/use_zim_default', False)
+
             settings.sync()
         else:
             settings=QSettings(settings_path,QSettings.IniFormat)

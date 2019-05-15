@@ -652,7 +652,10 @@ def delThumbnails(lib_folder, filename=None):
     return
 
 
+class ZimNoteNotFoundError(Exception):
 
-
-
-
+    def __init__(self, text=None):
+        if text is not None:
+            self.message=text
+    def __str__(self):
+        return self.message
