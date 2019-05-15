@@ -16,10 +16,9 @@ terms of the GPLv3 license.
 import os
 import tempfile
 import logging
-from subprocess import Popen
 import subprocess
-import multiprocessing
-import threading
+#import multiprocessing
+#import threading
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QTemporaryFile,\
         QProcess, QFileSystemWatcher
 from PyQt5 import QtWidgets, QtGui

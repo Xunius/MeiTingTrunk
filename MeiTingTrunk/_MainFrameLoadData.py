@@ -433,10 +433,8 @@ class MainFrameLoadData:
         use_zim_default=self.settings.value('saving/use_zim_default', type=bool)
         print('# <loadNoteTab>: use_zim_default', use_zim_default)
         if use_zim_default:
-            lib_folder=self.settings.value('saving/current_lib_folder', type=str)
-            zim_folder=os.path.join(lib_folder, '_zim')
             try:
-                noteii=readZimNote(zim_folder, docid)
+                noteii=readZimNote(self._zim_folder, docid)
             except ZimNoteNotFoundError as e:
                 print('# <loadNoteTab>: e=', e)
                 noteii=self.meta_dict[docid]['notes']

@@ -13,6 +13,7 @@ You may use, distribute and modify this code under the
 terms of the GPLv3 license.
 '''
 
+import os
 from .lib import sqlitedb
 
 
@@ -83,3 +84,9 @@ class MainFrameProperties:
     def _orphan_doc_ids(self):
         if hasattr(self,'meta_dict'):
             return [kk for kk in self.meta_dict if self.meta_dict[kk]['deletionPending']=='true']
+
+    @property
+    def _zim_fodler(self):
+        lib_folder=self.settings.value('saving/current_lib_folder', type=str)
+        zim_folder=os.path.join(lib_folder, '_zim')
+        return zim_folder

@@ -178,9 +178,7 @@ class MainFrameDataSlots:
         if use_zim_default:
             #self.save_to_zim_signal.emit(self.toPlainText())
             print('# <saveToZim>: save to zim!', self._current_doc)
-            lib_folder=self.settings.value('saving/current_lib_folder', type=str)
-            zim_folder=os.path.join(lib_folder, '_zim')
-            saveToZimNote(zim_folder, self._current_doc, note_text, True)
+            saveToZimNote(self._zim_folder, self._current_doc, note_text, True)
 
         return
 
