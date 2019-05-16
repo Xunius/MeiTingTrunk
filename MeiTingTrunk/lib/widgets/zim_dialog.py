@@ -115,6 +115,38 @@ def createNote(folder, title, filename=None, contents=None, overwrite=False):
     return note_path
 
 
+def getFolderTree(folder_dict, folderid):
+    """Get a str representation of a given folder in the folder tree
+
+    Args:
+        folder_dict (dict): folder structure info. keys: folder id in str,
+            values: (foldername, parentid) tuple.
+        folderid (str): id of given folder.
+
+    Returns:
+        folderid (str): input folder id.
+        folder (str): path of the given folder in the tree.
+    """
+
+    getFolderName=lambda folder_dict,id: removeInvalidChar(folder_dict[id][0])
+    getParentId=lambda folder_dict,id: folder_dict[id][1]
+
+    folder=getFolderName(folder_dict,folderid)
+
+    #------------Back track tree structure------------
+    cid=folderid
+    while True:
+        pid=str(getParentId(folder_dict,cid))
+        if pid=='-1':
+            break
+        else:
+            pfolder=getFolderName(folder_dict,pid)
+            folder=os.path.join(pfolder,folder)
+        cid=pid
+
+    return folderid,folder
+
+
 def getSubFolderStr(sub_ids, folder_dict, level):
 
     if level=='base':
@@ -157,9 +189,10 @@ def createFolderNote(parent_folder, folderid, folder_dict, overwrite):
 
     print('# <createFolderNote>: folderid=', folderid, 'foldername=',foldername)
 
-    texts='Sub-topics:\n\n'
+    texts='===== Sub-topics =====\n\n'
+    texts2='\n\n===== Doc notes =====\n\n'
     createNote(parent_folder, foldername, filename=filename,
-            contents=texts+sub_strs, overwrite=overwrite)
+            contents=texts+sub_strs+texts2, overwrite=overwrite)
 
     if len(sub_ids)>0:
         for sii in sub_ids:
@@ -174,7 +207,7 @@ def createNoteTitle(meta):
     #citationkey=meta['citationkey']
     title=meta['title']
     if len(title)>TITLE_LEN:
-        title=title[:TITLE_LEN]+'...'
+        title=title[:TITLE_LEN]
     author=meta['lastName_l']
     if len(author)==0:
         author=''
@@ -195,56 +228,13 @@ def createDocNote(zim_folder, meta_dict, docid, overwrite=False):
     notetitle=createNoteTitle(meta_dict[docid])
     notes=meta_dict[docid]['notes']
     filenameii=str(docid)
-    createNote(notes_folder, notetitle, filename=filenameii,
+    rec=createNote(notes_folder, notetitle, filename=filenameii,
             contents=notes, overwrite=overwrite)
+    if rec is None:
+        return 0
+    else:
+        return 1
 
-    return
-
-
-
-
-def linkDocNotes(zim_folder, meta_dict, folder_dict, folder_data):
-
-    # find docs with notes
-    doc_ids=[kk for kk,vv in meta_dict.items() if vv['notes']]
-    print('# <linkDocNotes>: docs=', doc_ids)
-    #trash_folders=sqlitedb.getTrashedFolders(folder_dict)
-
-    #notes_folder=os.path.join(zim_folder, 'all_notes')
-
-    '''
-    for fii in folder_dict.keys():
-        if fii in trash_folders:
-            continue
-        relpathii=sqlitedb.getFolderTree(folder_dict, fii)[1]
-        docsii=folder_data[fii]
-        docsii=list(set(docsii).intersection(doc_ids))
-        if len(docsii)>0:
-            print('# <linkDocNotes>: docsii=', docsii)
-            print('# <linkDocNotes>: fii=', repr(fii), relpathii)
-            target_folder=os.path.join(zim_folder, relpathii)
-            print('# <linkDocNotes>: target_folder=', target_folder)
-
-            # look for parent note file
-            pnote_file='%s.txt' %target_folder
-            print('# <linkDocNotes>: pntoe_file', pnote_file)
-            if os.path.exists(pnote_file):
-                print('# <linkDocNotes>: found parent note!')
-                with open(pnote_file, 'a') as fout:
-                    fout.write('\n$$$$$$$$$$$$$$$$\n')
-            else:
-                continue
-
-            for djj in docsii:
-                notepath=os.path.join(notes_folder, '%s.txt' %str(djj))
-                target_fname=createNoteTitle(meta_dict[djj])
-                if os.path.exists(notepath):
-
-                    with open(pnote_file, 'a') as fout:
-                        fout.write('[[:all_notes:%s|%s]]\n'\
-                                %(str(djj), target_fname))
-
-    '''
 
 def linkDocNote(zim_folder, meta_dict, folder_dict, folder_data, docid):
 
@@ -267,16 +257,21 @@ def linkDocNote(zim_folder, meta_dict, folder_dict, folder_data, docid):
         if fidii in trashed_folders:
             continue
 
-        relpathii=sqlitedb.getFolderTree(folder_dict, fidii)[1]
+        relpathii=getFolderTree(folder_dict, fidii)[1]
         target_folder=os.path.join(zim_folder, relpathii)
 
         pnote_file='%s.txt' %target_folder
         print('# <linkDocNotes>: pntoe_file', pnote_file)
 
+        target_path=os.path.join(target_folder, '%s.txt' %note_title)
+        if not os.path.exists(target_path):
+            os.symlink(notepath, target_path)
+
         if os.path.exists(pnote_file):
             print('# <linkDocNotes>: found parent note!')
             with open(pnote_file, 'a') as fout:
-                fout.write('\n[[:all_notes:%s|%s]]\n' %(str(docid), note_title))
+                #fout.write('\n[[:all_notes:%s|%s]]\n' %(str(docid), note_title))
+                fout.write('\n[[+%s]]\n' %(note_title))
 
     return
 
@@ -313,6 +308,8 @@ def saveToZimNote(zim_folder, docid, text, overwrite=False):
 
 
 class ZimDialog(QtWidgets.QDialog):
+
+    #update_note_sig=pyqtSignal(int, str) # docid, note text
 
     def __init__(self, meta_dict, folder_dict, folder_data, settings, parent):
         '''
@@ -377,10 +374,10 @@ class ZimDialog(QtWidgets.QDialog):
 
         self.buttons=QDialogButtonBox(QDialogButtonBox.Close,
             Qt.Horizontal, self)
-        self.apply_button=self.buttons.addButton('Apply',
-                QDialogButtonBox.ApplyRole)
+        #self.apply_button=self.buttons.addButton('Apply',
+                #QDialogButtonBox.ApplyRole)
 
-        self.apply_button.clicked.connect(self.doApply)
+        #self.apply_button.clicked.connect(self.doApply)
         self.buttons.rejected.connect(self.reject)
 
         self.content_vlayout.addWidget(self.buttons)
@@ -441,21 +438,37 @@ class ZimDialog(QtWidgets.QDialog):
 
     def loadCreateZimOptions(self):
 
-        scroll,va=self.createFrame('Note Title')
+        scroll,va=self.createFrame('Note Title Format')
 
+        #---------------title format section---------------
         label=QtWidgets.QLabel('Use "Author_year_title" as note title.')
         va.addWidget(label,0,Qt.AlignLeft)
 
+        #---------------create doc notes section---------------
         va.addWidget(getHLine())
+        label1=QtWidgets.QLabel("Create a zim file for each document's note")
+        label1.setStyleSheet(self.label_color)
+        label1.setFont(self.title_label_font)
         self.overwrite_note_cb=QtWidgets.QCheckBox('Overwrite Existing Doc Notes?')
+        self.create_notes_button=QtWidgets.QPushButton('Do')
+        self.create_notes_button.clicked.connect(self.doCreateDocNotes)
+        va.addWidget(label1)
         va.addWidget(self.overwrite_note_cb)
+        va.addWidget(self.create_notes_button, 0, Qt.AlignRight)
 
+        #---------------create folder notes section---------------
         va.addWidget(getHLine())
+        label2=QtWidgets.QLabel('Create a zim file for each folder')
+        label2.setStyleSheet(self.label_color)
+        label2.setFont(self.title_label_font)
         self.overwrite_folder_cb=QtWidgets.QCheckBox('Overwrite Existing Folder Notes?')
+        self.create_folders_button=QtWidgets.QPushButton('Do')
+        self.create_folders_button.clicked.connect(self.doCreateFolderNotes)
+        va.addWidget(label2)
         va.addWidget(self.overwrite_folder_cb)
+        va.addWidget(self.create_folders_button, 0, Qt.AlignRight)
 
         va.addStretch()
-
         self.current_task='create'
 
         return scroll
@@ -463,17 +476,28 @@ class ZimDialog(QtWidgets.QDialog):
 
     def loadUpdateFromZimOptions(self):
 
-        scroll,va=self.createFrame('Update notes from Zim')
-
-        label=QtWidgets.QLabel('Update document notes from zim notes')
-        va.addWidget(label,0,Qt.AlignLeft)
+        scroll,va=self.createFrame('Update document notes from Zim')
 
         va.addWidget(getHLine())
         self.use_zim_default_cb=QtWidgets.QCheckBox('Use zim notes as default note source?')
+        if self.settings.value('saving/use_zim_default', type=bool):
+            self.use_zim_default_cb.setChecked(True)
+
         va.addWidget(self.use_zim_default_cb)
+        label=QtWidgets.QLabel('''Zim notes saved in %s will be first examined
+                when loading the "Notes" tab. If a zim file is not found, it
+                will then load data saved in the sqlite database. Changes
+                made to the zim files are reflected inside MTT, and also
+                get saved into sqlite database.''')
+        label.setTextFormat(Qt.RichText)
+        label.setWordWrap(True)
+        va.addWidget(label)
+
+        self.update_from_zim_button=QtWidgets.QPushButton('Save')
+        self.update_from_zim_button.clicked.connect(self.doUpdate)
+        va.addWidget(self.update_from_zim_button, 0, Qt.AlignRight)
 
         va.addStretch()
-
         self.current_task='update'
 
         return scroll
@@ -488,8 +512,88 @@ class ZimDialog(QtWidgets.QDialog):
         if self.current_task=='update':
             self.doUpdate()
 
+        return
+
+
+    def doCreateDocNotes(self):
+        print('# <doCreateDocNotes>: ')
+
+        zim_folder=self.createZimBase()
+
+        #-----------------Create doc notes-----------------
+        # find docs with notes
+        doc_ids=[kk for kk,vv in self.meta_dict.items() if vv['notes']]
+        overwrite_notes=self.overwrite_note_cb.isChecked()
+        if overwrite_notes:
+            choice=QtWidgets.QMessageBox.question(self, 'Confirm Overwrite',
+                    'Overwrite contents in the zim files with document notes in MeiTingTrunk? This may result in overwriting your notes made in zim.',
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+            if choice==QtWidgets.QMessageBox.No:
+                overwrite_notes=False
+        LOGGER.info('Choose overwrite notes.')
+
+        rec_sum=0
+        for dii in doc_ids:
+            recii=createDocNote(zim_folder, self.meta_dict, dii, overwrite_notes)
+            rec_sum+=recii
+
+        QtWidgets.QMessageBox.information(self, 'Done',
+                '%d new Zim notes created.' %rec_sum,
+                QtWidgets.QMessageBox.Yes)
 
         return
+
+
+    def doCreateFolderNotes(self):
+        print('# <doCreateFolderNotes>: ')
+
+        zim_folder=self.createZimBase()
+
+        #--------------Build folder structure--------------
+        overwrite_folder=self.overwrite_folder_cb.isChecked()
+        if overwrite_folder:
+            choice=QtWidgets.QMessageBox.question(self, 'Confirm Overwrite',
+                    'Overwrite contents in existing zim files for folders? This will re-create zim notes that correspond to folders in MeiTingTrunk. You may want to do this after folder structure change or document movements.',
+                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+            if choice==QtWidgets.QMessageBox.No:
+                overwrite_folder=False
+        LOGGER.info('Choose overwrite folders.')
+
+        createFolderNote(zim_folder, '-1', self.folder_dict, overwrite_folder)
+
+        #-------------Link doc nots to folder notes-------------
+        if overwrite_folder:
+            doc_ids=[kk for kk,vv in self.meta_dict.items() if vv['notes']]
+            for dii in doc_ids:
+                linkDocNote(zim_folder, self.meta_dict, self.folder_dict,
+                        self.folder_data, dii)
+
+        QtWidgets.QMessageBox.information(self, 'Done',
+                'Zim notes created.',
+                QtWidgets.QMessageBox.Yes)
+
+        return
+
+    def createZimBase(self):
+
+        lib_folder=self.settings.value('saving/current_lib_folder', type=str)
+        lib_name=os.path.split(lib_folder)[1]
+        zim_folder=os.path.join(lib_folder, '_zim')
+
+        #----------------Create zim folder----------------
+        if not os.path.exists(zim_folder):
+            os.makedirs(zim_folder)
+            LOGGER.info('Created zim folder at %s' %zim_folder)
+
+        #-----------------Create notebook file-----------------
+        notebook_file=os.path.join(zim_folder, 'notebook.zim')
+        if not os.path.exists(notebook_file):
+            with open(notebook_file, 'w') as fout:
+                text=ZIM_HOME_BASE %lib_name
+                fout.write(text)
+            LOGGER.info('Created notebook.zim.')
+
+        return zim_folder
 
 
     def doCreate(self):
@@ -507,45 +611,48 @@ class ZimDialog(QtWidgets.QDialog):
         notebook_file=os.path.join(zim_folder, 'notebook.zim')
         if not os.path.exists(notebook_file):
             with open(notebook_file, 'w') as fout:
-
                 text=ZIM_HOME_BASE %lib_name
                 fout.write(text)
+            LOGGER.info('Created notebook.zim.')
 
         #-----------------Create doc notes-----------------
         # find docs with notes
         doc_ids=[kk for kk,vv in self.meta_dict.items() if vv['notes']]
-        print('# <createFolderNote>: docs after =', doc_ids)
         overwrite_notes=self.overwrite_note_cb.isChecked()
         if overwrite_notes:
             choice=QtWidgets.QMessageBox.question(self, 'Confirm Overwrite',
-                    'Overwrite contents in existing zim files of document notes?',
+                    'Overwrite contents in the zim files with document notes in MeiTingTrunk? This may result in overwriting your notes made in zim.',
                     QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
             if choice==QtWidgets.QMessageBox.No:
                 overwrite_notes=False
+        LOGGER.info('Choose overwrite notes.')
 
-        print('# <doCreate>:@@@@@@@@@@@@@@@@@@@ overwrite=', overwrite_notes)
         for dii in doc_ids:
             createDocNote(zim_folder, self.meta_dict, dii, overwrite_notes)
 
         #--------------Build folder structure--------------
-        #homenote_file=os.path.join(zim_folder, 'Home.txt')
         overwrite_folder=self.overwrite_folder_cb.isChecked()
         if overwrite_folder:
             choice=QtWidgets.QMessageBox.question(self, 'Confirm Overwrite',
-                    'Overwrite contents in existing zim files of folders?',
+                    'Overwrite contents in existing zim files for folders? This will re-create zim notes that correspond to folders in MeiTingTrunk. You may want to do this after folder structure change or document movements.',
                     QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
             if choice==QtWidgets.QMessageBox.No:
                 overwrite_folder=False
+        LOGGER.info('Choose overwrite folders.')
 
-        createFolderNote(zim_folder, '-1', self.folder_dict,
-                overwrite_folder)
+        createFolderNote(zim_folder, '-1', self.folder_dict, overwrite_folder)
 
-        #-------------Add doc nots to folders-------------
+        #-------------Link doc nots to folder notes-------------
         if overwrite_folder:
-            doc_ids=[kk for kk,vv in self.meta_dict.items() if vv['notes']]
             for dii in doc_ids:
                 linkDocNote(zim_folder, self.meta_dict, self.folder_dict,
                         self.folder_data, dii)
+
+        QtWidgets.QMessageBox.information(self, 'Done',
+                'Zim notebook created.',
+                QtWidgets.QMessageBox.Yes)
+
+        return
 
 
     def doUpdate(self):
@@ -568,5 +675,24 @@ class ZimDialog(QtWidgets.QDialog):
             msg.exec_()
 
             return
+
+        '''
+        doc_ids=[kk for kk,vv in self.meta_dict.items() if vv['notes']]
+
+        for dii in doc_ids:
+            print('# <doUpdate>: dii=', dii)
+            try:
+                nii=readZimNote(zim_folder, dii)
+            except ZimNoteNotFoundError:
+                LOGGER.warning('zim file not found for docid = %s' %dii)
+            except Exception as e:
+                LOGGER.exception('e = %s' %e)
+            else:
+                if nii!=self.meta_dict[dii]['notes']:
+                    self.update_note_sig.emit(dii, nii)
+        '''
+
+        return
+
 
 
