@@ -48,6 +48,9 @@ disable_trash=False
 profile=
 '''
 
+ZIM_HEADER_PATTERN=re.compile(r'^====== (.*?) ======(?:\n|\r\n?)^Created ',
+        re.DOTALL | re.MULTILINE)
+
 
 
 def getZimHeader(title):
@@ -102,14 +105,22 @@ def createNote(folder, title, filename=None, contents=None, overwrite=False):
         return
 
     # fill in content
-    header=getZimHeader(title)
+    if contents is not None:
+        match=ZIM_HEADER_PATTERN.match(contents)
+        if match:
+            header=''
+        else:
+            header=getZimHeader(title)
+    else:
+        header=getZimHeader(title)
     print('# <createNote>: folder=', folder)
     print('# <createNote>: note_folder=', note_folder)
     print('# <createNote>: note_path=', note_path)
     with open(note_path, 'w') as fout:
-        fout.write(header)
-        if contents is not None:
+        if len(header)>0:
+            fout.write(header)
             fout.write('\n')
+        if contents is not None:
             fout.write(contents)
 
     return note_path
