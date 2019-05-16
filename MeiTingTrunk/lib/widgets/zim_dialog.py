@@ -287,13 +287,21 @@ def linkDocNote(zim_folder, meta_dict, folder_dict, folder_data, docid):
     return
 
 
-def readZimNote(zim_folder, docid):
+
+def locateZimNote(zim_folder, docid):
 
     notes_folder=os.path.join(zim_folder, 'all_notes')
     notepath=os.path.join(notes_folder, '%s.txt' %str(docid))
 
     if not os.path.exists(notepath):
         raise ZimNoteNotFoundError("Note for doc %s not found." %str(docid))
+
+    return notepath
+
+
+def readZimNote(zim_folder, docid):
+
+    notepath=locateZimNote(zim_folder, docid)
 
     with open(notepath, 'r') as fin:
         lines=fin.read()

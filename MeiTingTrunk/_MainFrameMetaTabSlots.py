@@ -14,15 +14,18 @@ terms of the GPLv3 license.
 '''
 
 import os
-import tempfile
+#import tempfile
 import logging
 import subprocess
+import contextlib
 #import multiprocessing
 #import threading
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QTemporaryFile,\
-        QProcess, QFileSystemWatcher
+        QProcess, QFileSystemWatcher, QFile, QIODevice
 from PyQt5 import QtWidgets, QtGui
-from .lib.widgets import Master, ChooseAppDialog
+from .lib.widgets import ChooseAppDialog
+from .lib.widgets.zim_dialog import locateZimNote
+#from .lib.tools import ZimNoteNotFoundError
 
 #import platform
 #CURRENT_OS=platform.system()
@@ -33,6 +36,22 @@ from .lib.widgets import Master, ChooseAppDialog
 
 # list of editors that run in terminal
 TERMINAL_EDITORS=['vi', 'vim', 'nano']
+
+
+
+@contextlib.contextmanager
+def setUseZimDefault(settings, flag):
+    use_zim_old=settings.value('saving/use_zim_default', type=bool)
+
+    print('# <setUseZimDefault>: old=', use_zim_old)
+    settings.setValue('saving/use_zim_default', flag)
+    print('# <setUseZimDefault>: temp set=', settings.value('saving/use_zim_default', type=bool))
+    try:
+        yield
+    finally:
+        settings.setValue('saving/use_zim_default', use_zim_old)
+
+
 
 
 
@@ -81,10 +100,26 @@ class EditorWorker(QObject):
 
     file_change_sig = pyqtSignal()
 
-    def __init__(self, command, old_text, parent=None):
+    def __init__(self, command, old_text, is_zim, zim_folder=None,
+            docid=None, parent=None):
         super(EditorWorker, self).__init__(parent)
 
-        self._temp_file = QTemporaryFile(self)
+        self.is_zim=is_zim
+        self.zim_folder=zim_folder
+        self.docid=docid
+
+        if not self.is_zim:
+            self._temp_file = QTemporaryFile(self)
+        else:
+            try:
+                self._temp_file=QFile(locateZimNote(self.zim_folder,
+                    self.docid))
+                print('# <__init__>: ', self._temp_file)
+            except Exception as e:
+                print('# <__init__>: e=', e)
+                self._temp_file = QTemporaryFile(self)
+                self.is_zim=False
+
         self._process = QProcess(self)
         self._text = ""
         self._watcher = QFileSystemWatcher(self)
@@ -92,11 +127,11 @@ class EditorWorker(QObject):
         self.logger=logging.getLogger(__name__)
 
         # write existing lines
-        if self._temp_file.open():
+        if not self.is_zim and self._temp_file.open():
             self._temp_file.write(old_text.encode('utf-8'))
             self._temp_file.close()
 
-        if self._temp_file.open():
+        if self._temp_file.open(QIODevice.ReadWrite):
             self._file_path=self._temp_file.fileName()
             self._watcher.addPath(self._file_path)
             self.logger.debug('_file_path = %s' %self._file_path)
@@ -211,6 +246,9 @@ class MainFrameMetaTabSlots:
             action (QAction): action triggered
         '''
 
+        if not self.parent.is_loaded:
+            return
+
         action_text=action.text()
         self.logger.debug('action = %s' %action_text)
 
@@ -232,8 +270,13 @@ class MainFrameMetaTabSlots:
             else:
                 cmd=[editor_cmd,]
 
+            use_zim_default=self.settings.value('saving/use_zim_default', type=bool)
+            print('# <openEditorTriggered>: ', use_zim_default)
+
             #--------------------Get editor--------------------
-            self.note_textedit.editor=EditorWorker(cmd, old_text, self)
+            self.note_textedit.editor=EditorWorker(cmd, old_text,
+                    use_zim_default, zim_folder=self._zim_folder,
+                    docid=self._current_doc, parent=self)
             self.note_textedit.editor.file_change_sig.connect(self.onEditingDone)
 
         elif action_text=='Choose Editor':
@@ -259,8 +302,9 @@ class MainFrameMetaTabSlots:
         self.note_textedit.moveCursor(QtGui.QTextCursor.End)
         self.note_textedit.insertPlainText(worker.text)
         self.note_textedit.setTextCursor(prev_cursor)
-        self.note_textedit.note_edited_signal.emit()
-        #worker.deleteLater()
+
+        with setUseZimDefault(self.settings, False):
+            self.note_textedit.note_edited_signal.emit()
 
         return
 

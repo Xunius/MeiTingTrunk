@@ -477,6 +477,9 @@ class MainFrameToolBarSlots:
         called.
         """
 
+        if not self.parent.is_loaded:
+            return
+
         text=self.search_bar.text()
         self.logger.info('Searched term = %s' %text)
 
