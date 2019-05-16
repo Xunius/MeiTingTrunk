@@ -833,6 +833,10 @@ class ZimDialog(QtWidgets.QDialog):
 
             return
 
+        QtWidgets.QMessageBox.information(self, 'Done',
+                'Setting saved.',
+                QtWidgets.QMessageBox.Yes)
+
         return
 
 

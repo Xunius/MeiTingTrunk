@@ -44,7 +44,7 @@ terms of the GPLv3 license.
 import os
 import logging
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QTimer, pyqtSlot
+from PyQt5.QtCore import Qt, QTimer, pyqtSlot, QSize
 from PyQt5.QtGui import QIcon, QFont, QBrush, QColor
 from PyQt5.QtWidgets import QStyle
 
@@ -647,8 +647,23 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         button.setMenu(menu)
         button.setPopupMode(QtWidgets.QToolButton.MenuButtonPopup)
 
+        self.zim_tip_label=QtWidgets.QLabel()
+        tip_icon=QIcon.fromTheme('help-about',
+            self.style().standardIcon(QStyle.SP_MessageBoxInformation)).pixmap(
+                    QSize(16,16))
+        self.zim_tip_label.setPixmap(tip_icon)
+        self.zim_tip_label.setToolTip('''Currently use zim as default note source. Change this in "Tools->Create Zim Notebook->Update from Zim Notes".''')
+
+        if self.settings.value('saving/use_zim_default', type=bool):
+            self.zim_tip_label.setVisible(True)
+        else:
+            self.zim_tip_label.setVisible(False)
+
         menu.triggered.connect(self.openEditorTriggered)
-        v_layout.addWidget(button, 0, Qt.AlignLeft)
+        ha=QtWidgets.QHBoxLayout()
+        ha.addWidget(button, 1, Qt.AlignLeft)
+        ha.addWidget(self.zim_tip_label)
+        v_layout.addLayout(ha)
 
         self.note_textedit=NoteTextEdit(self.settings)
         self.note_textedit.note_edited_signal.connect(lambda x:\

@@ -789,6 +789,8 @@ New session started
         diag=ZimDialog(self.main_frame.meta_dict, self.main_frame.folder_dict,
                 self.main_frame.folder_data, self.settings, parent=self)
         diag.exec_()
+        self.main_frame.zim_tip_lable.setVisible(self.settings.value(
+            'saving/use_zim_default', type=bool))
 
         return
 
