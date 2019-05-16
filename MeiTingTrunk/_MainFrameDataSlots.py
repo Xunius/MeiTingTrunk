@@ -157,13 +157,15 @@ class MainFrameDataSlots:
         return
 
 
-    @pyqtSlot()
-    def updateNotes(self, docid, note_text):
+    @pyqtSlot(bool)
+    def updateNotes(self, docid, note_text, save_to_zim):
         """update notes in the in-memory dictionary
 
-        args:
+        Args:
             docid (int): id of doc to update.
             note_text (str): new note texts.
+            save_to_zim (bool): if True and use_zim_default==True, save note
+                                to associated zim file.
         """
 
         if docid is None:
@@ -175,9 +177,8 @@ class MainFrameDataSlots:
 
         use_zim_default=self.settings.value('saving/use_zim_default', type=bool)
 
-        if use_zim_default:
-            #self.save_to_zim_signal.emit(self.toPlainText())
-            print('# <saveToZim>: save to zim!', self._current_doc)
+        if use_zim_default and save_to_zim:
+            self.logger.debug('Call saveToZimNote on update of doc %s' %docid)
             saveToZimNote(self._zim_folder, self._current_doc, note_text, True)
 
         return

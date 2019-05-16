@@ -786,11 +786,8 @@ New session started
 
         # NOTE that need to make sure this won't get called before main_frame
         # has read in a lib
-        diag=ZimDialog(self.main_frame.meta_dict,
-                self.main_frame.folder_dict,
-                self.main_frame.folder_data,
-                self.settings,
-                parent=self)
+        diag=ZimDialog(self.main_frame.meta_dict, self.main_frame.folder_dict,
+                self.main_frame.folder_data, self.settings, parent=self)
         diag.exec_()
 
         return

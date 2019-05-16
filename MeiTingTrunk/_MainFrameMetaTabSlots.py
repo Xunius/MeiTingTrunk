@@ -14,18 +14,13 @@ terms of the GPLv3 license.
 '''
 
 import os
-#import tempfile
 import logging
 import subprocess
-import contextlib
-#import multiprocessing
-#import threading
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QTemporaryFile,\
         QProcess, QFileSystemWatcher, QFile, QIODevice
 from PyQt5 import QtWidgets, QtGui
 from .lib.widgets import ChooseAppDialog
 from .lib.widgets.zim_dialog import locateZimNote
-#from .lib.tools import ZimNoteNotFoundError
 
 #import platform
 #CURRENT_OS=platform.system()
@@ -36,22 +31,6 @@ from .lib.widgets.zim_dialog import locateZimNote
 
 # list of editors that run in terminal
 TERMINAL_EDITORS=['vi', 'vim', 'nano']
-
-
-
-@contextlib.contextmanager
-def setUseZimDefault(settings, flag):
-    use_zim_old=settings.value('saving/use_zim_default', type=bool)
-
-    print('# <setUseZimDefault>: old=', use_zim_old)
-    settings.setValue('saving/use_zim_default', flag)
-    print('# <setUseZimDefault>: temp set=', settings.value('saving/use_zim_default', type=bool))
-    try:
-        yield
-    finally:
-        settings.setValue('saving/use_zim_default', use_zim_old)
-
-
 
 
 
@@ -98,25 +77,39 @@ def getTerminal():
 
 class EditorWorker(QObject):
 
-    file_change_sig = pyqtSignal()
+    file_change_sig = pyqtSignal(bool)  # is_zim
 
     def __init__(self, command, old_text, is_zim, zim_folder=None,
             docid=None, parent=None):
+        '''Observe the write/save states of a txt file to edit notes
+
+        Args:
+            command (list): command string list to pass into Popen.
+            old_text (str): existing note text to paste into editor.
+            is_zim (bool): if True, try open the associated zim note file.
+                           if False, open a temp file to edit.
+        Kwargs:
+            zim_folder (str or None): if not None, the path to the zim note
+                                      folder, used to search for zim notes.
+            docid (int or None): if not None, id of current doc.
+            parent (QWidget or None): parent widget.
+        '''
         super(EditorWorker, self).__init__(parent)
 
         self.is_zim=is_zim
         self.zim_folder=zim_folder
         self.docid=docid
+        self.logger=logging.getLogger(__name__)
 
         if not self.is_zim:
             self._temp_file = QTemporaryFile(self)
         else:
             try:
-                self._temp_file=QFile(locateZimNote(self.zim_folder,
-                    self.docid))
-                print('# <__init__>: ', self._temp_file)
-            except Exception as e:
-                print('# <__init__>: e=', e)
+                zimfile=locateZimNote(self.zim_folder, self.docid)
+                self._temp_file=QFile(zimfile, self)
+                self.logger.debug('Got zim file %s' %zimfile)
+            except:
+                self.logger.exception('Failed to find zim file.')
                 self._temp_file = QTemporaryFile(self)
                 self.is_zim=False
 
@@ -124,13 +117,13 @@ class EditorWorker(QObject):
         self._text = ""
         self._watcher = QFileSystemWatcher(self)
         self._watcher.fileChanged.connect(self.onFileChange)
-        self.logger=logging.getLogger(__name__)
 
-        # write existing lines
+        # write existing lines if temp file
         if not self.is_zim and self._temp_file.open():
             self._temp_file.write(old_text.encode('utf-8'))
             self._temp_file.close()
 
+        # open() on temp file assumes QIODevice.ReadWrite as well.
         if self._temp_file.open(QIODevice.ReadWrite):
             self._file_path=self._temp_file.fileName()
             self._watcher.addPath(self._file_path)
@@ -151,6 +144,13 @@ class EditorWorker(QObject):
 
             # has to use with open and read(), the above doesn't work for
             # some editors, like xed
+
+            # For some reason, if watching the zim file, and open in gvim
+            # it reports file not found unless I wait for a while.
+            wtf=os.path.exists(self._temp_file.fileName())
+            while not wtf:
+                wtf=os.path.exists(self._temp_file.fileName())
+
             with open(self._temp_file.fileName()) as tmp:
                 self._text=tmp.read()
 
@@ -158,7 +158,7 @@ class EditorWorker(QObject):
             self._watcher.removePath(self._file_path)
             self._watcher.addPath(self._file_path)
 
-            self.file_change_sig.emit()
+            self.file_change_sig.emit(self.is_zim)
 
     @property
     def text(self):
@@ -246,6 +246,7 @@ class MainFrameMetaTabSlots:
             action (QAction): action triggered
         '''
 
+        # quit if not loaded
         if not self.parent.is_loaded:
             return
 
@@ -270,14 +271,15 @@ class MainFrameMetaTabSlots:
             else:
                 cmd=[editor_cmd,]
 
-            use_zim_default=self.settings.value('saving/use_zim_default', type=bool)
-            print('# <openEditorTriggered>: ', use_zim_default)
+            use_zim_default=self.settings.value('saving/use_zim_default',
+                    type=bool)
 
             #--------------------Get editor--------------------
             self.note_textedit.editor=EditorWorker(cmd, old_text,
                     use_zim_default, zim_folder=self._zim_folder,
                     docid=self._current_doc, parent=self)
-            self.note_textedit.editor.file_change_sig.connect(self.onEditingDone)
+            self.note_textedit.editor.file_change_sig.connect(
+                    self.onEditingDone)
 
         elif action_text=='Choose Editor':
             diag=ChooseAppDialog('Choose Editor', 'editor', self.settings,
@@ -294,8 +296,14 @@ class MainFrameMetaTabSlots:
         return
 
 
-    @pyqtSlot()
-    def onEditingDone(self):
+    @pyqtSlot(bool)
+    def onEditingDone(self, is_zim):
+        '''Slot to file_change_sig to response to monitored file change
+
+        Args:
+            is_zim (bool): watched file is a zim note file or not. If not,
+                           watched file is a tmp file.
+        '''
         worker = self.sender()
         self.note_textedit.clear()
         prev_cursor = self.note_textedit.textCursor()
@@ -303,8 +311,11 @@ class MainFrameMetaTabSlots:
         self.note_textedit.insertPlainText(worker.text)
         self.note_textedit.setTextCursor(prev_cursor)
 
-        with setUseZimDefault(self.settings, False):
-            self.note_textedit.note_edited_signal.emit()
+        if is_zim:
+            # if zim file, send False to avoid endless loop.
+            self.note_textedit.note_edited_signal.emit(False)
+        else:
+            self.note_textedit.note_edited_signal.emit(True)
 
         return
 

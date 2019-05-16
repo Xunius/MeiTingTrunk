@@ -90,8 +90,7 @@ from PyQt5.QtCore import Qt
 from PyQt5 import QtGui
 from .lib import sqlitedb
 from .lib import bibparse
-from .lib.tools import getHLine, hasPoppler, hasImageMagic,\
-        ZimNoteNotFoundError
+from .lib.tools import getHLine, hasPoppler, ZimNoteNotFoundError
 
 
 
@@ -431,17 +430,16 @@ class MainFrameLoadData:
             return
 
         use_zim_default=self.settings.value('saving/use_zim_default', type=bool)
-        print('# <loadNoteTab>: use_zim_default', use_zim_default)
         if use_zim_default:
+            self.logger.debug('use_zim_default = %s' %use_zim_default)
             try:
                 noteii=readZimNote(self._zim_folder, docid)
             except ZimNoteNotFoundError as e:
-                print('# <loadNoteTab>: e=', e)
+                self.logger.exception('zim note not found. Revert to meta_dict. e = %s' %e)
                 noteii=self.meta_dict[docid]['notes']
             except Exception as e:
-                print('# <loadNoteTab>: e=', e)
+                self.logger.exception('Failed to read zim note. e = %s' %e)
                 noteii=self.meta_dict[docid]['notes']
-
         else:
             noteii=self.meta_dict[docid]['notes']
 

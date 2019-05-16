@@ -651,8 +651,9 @@ class MainFrame(QtWidgets.QWidget,_MainFrameLoadData.MainFrameLoadData,
         v_layout.addWidget(button, 0, Qt.AlignLeft)
 
         self.note_textedit=NoteTextEdit(self.settings)
-        self.note_textedit.note_edited_signal.connect(lambda: self.updateNotes(
-            self._current_doc,self.note_textedit.toPlainText()))
+        self.note_textedit.note_edited_signal.connect(lambda x:\
+                self.updateNotes(self._current_doc,
+                    self.note_textedit.toPlainText(), x))
 
         v_layout.addWidget(self.note_textedit)
         frame.setLayout(v_layout)
