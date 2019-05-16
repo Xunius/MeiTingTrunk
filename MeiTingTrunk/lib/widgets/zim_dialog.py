@@ -427,26 +427,38 @@ def readZimNote(zim_folder, docid):
     return lines
 
 
-def saveToZimNote(zim_folder, docid, text, overwrite=False):
+def saveToZimNote(zim_folder, meta_dict, docid, overwrite=False):
     '''Save notes to the zim note file corresponding to a doc
 
     Args:
         zim_folder (str): path to the zim folder of an MTT lib.
+        meta_dict (dict): dict of all doc meta data.
         docid (int): id of doc.
-        text (str): note text to save.
     Kwargs:
         overwrite (bool): if True, overwrite existing file. Otherwise return
                           if file exists.
     '''
 
-    notes_folder=os.path.join(zim_folder, 'all_notes')
-    notepath=os.path.join(notes_folder, '%s.txt' %str(docid))
+    if not os.path.exists(zim_folder):
+        msg=QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Warning)
+        msg.setWindowTitle('Zim folder not found')
+        msg.setText("Zim folder not found.")
+        msg.setInformativeText('''It seems that there isn't a zim note folder. You need to create one before updating from it. Go to "Tools->Create Zim notebook->Create Zim Notebook" to create.''')
+        msg.exec_()
 
-    if os.path.exists(notepath) and not overwrite:
         return
 
-    with open(notepath, 'w') as fout:
-        fout.write(text)
+    createDocNote(zim_folder, meta_dict, docid, overwrite=overwrite)
+    #notes_folder=os.path.join(zim_folder, 'all_notes')
+    #notepath=os.path.join(notes_folder, '%s.txt' %str(docid))
+
+    #if os.path.exists(notepath) and not overwrite:
+        #return
+
+    #createNote(notes_folder, title, filename=None, contents=None, overwrite=False):
+    #with open(notepath, 'w') as fout:
+        #fout.write(text)
 
     return
 

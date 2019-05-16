@@ -876,7 +876,7 @@ class MetaDataEntryDialog(QtWidgets.QDialog):
 
 class NoteTextEdit(QtWidgets.QTextEdit):
 
-    note_edited_signal=pyqtSignal(bool)
+    note_edited_signal=pyqtSignal(bool) # save_to_zim, True here
 
     def __init__(self,settings,parent=None):
         '''

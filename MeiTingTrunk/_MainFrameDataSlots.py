@@ -179,7 +179,8 @@ class MainFrameDataSlots:
 
         if use_zim_default and save_to_zim:
             self.logger.debug('Call saveToZimNote on update of doc %s' %docid)
-            saveToZimNote(self._zim_folder, self._current_doc, note_text, True)
+            saveToZimNote(self._zim_folder, self.meta_dict, self._current_doc,
+                    overwrite=True)
 
         return
 
