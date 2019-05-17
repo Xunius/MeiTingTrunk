@@ -20,7 +20,8 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QTemporaryFile,\
         QProcess, QFileSystemWatcher, QFile, QIODevice
 from PyQt5 import QtWidgets, QtGui
 from .lib.widgets import ChooseAppDialog
-from .lib.widgets.zim_dialog import locateZimNote
+from .lib.widgets.zim_dialog import locateZimNote, saveToZimNote
+from .lib.tools import ZimNoteNotFoundError
 
 #import platform
 #CURRENT_OS=platform.system()
@@ -273,6 +274,14 @@ class MainFrameMetaTabSlots:
 
             use_zim_default=self.settings.value('saving/use_zim_default',
                     type=bool)
+            if use_zim_default:
+                # try finding zim note, if not exist, create one
+                try:
+                    locateZimNote(self._zim_folder, self._current_doc)
+                except ZimNoteNotFoundError:
+                    self.logger.exception('Zim file not found. Creating one.')
+                    saveToZimNote(self._zim_folder, self.meta_dict,
+                            self._current_doc, overwrite=True)
 
             #--------------------Get editor--------------------
             self.note_textedit.editor=EditorWorker(cmd, old_text,
