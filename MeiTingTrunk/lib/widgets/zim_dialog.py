@@ -48,9 +48,10 @@ disable_trash=False
 profile=
 '''
 
-ZIM_HEADER_PATTERN=re.compile(r'^====== (.*?) ======(?:\n|\r\n?)^Created ',
+ZIM_HEADING_PATTERN=re.compile(r'^====== (.*?) ======(?:\n|\r\n?)^Created ',
         re.DOTALL | re.MULTILINE)
 
+ZIM_HEADER_PATTERN=re.compile(r'^Content-Type: text/x-zim-wiki(?:\n|\r\n?)^Wiki-Format: zim ', re.DOTALL | re.MULTILINE)
 
 
 def getZimHeader(title):
@@ -78,6 +79,24 @@ Created %s
 ''' %(title, tstr)
 
     return text
+
+
+def hasZimHeader(text):
+    '''Check if text has zim header
+
+    Args:
+        text (str): text block.
+    Returns:
+        True if text has a zim header, False otherwise.
+    '''
+
+    match=ZIM_HEADER_PATTERN.match(text)
+    if match:
+        return True
+    match=ZIM_HEADING_PATTERN.search(text)
+    if match:
+        return True
+    return False
 
 
 def removeInvalidChar(text):
@@ -129,8 +148,7 @@ def createNote(folder, title, filename=None, contents=None, overwrite=False):
     # fill in content
     if contents is not None:
         # don't add header if already there
-        match=ZIM_HEADER_PATTERN.match(contents)
-        if match:
+        if hasZimHeader(contents):
             header=''
         else:
             header=getZimHeader(title)
