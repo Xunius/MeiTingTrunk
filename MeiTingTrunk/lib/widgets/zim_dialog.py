@@ -67,16 +67,15 @@ def getZimHeader(title):
     tnow=datetime.today()
     tstr=datetime.strftime(tnow, '%A %d %B %Y')
 
-    #text=\
-            #'''Content-Type: text/x-zim-wiki
-#Wiki-Format: zim 0.4
-#
-#====== %s ======
-#Created %s
-#''' %(title, tstr)
-    text='''====== %s ======
+    text='''Content-Type: text/x-zim-wiki
+Wiki-Format: zim 0.4
+
+====== %s ======
 Created %s
 ''' %(title, tstr)
+    #text='''====== %s ======
+#Created %s
+#''' %(title, tstr)
 
     return text
 
