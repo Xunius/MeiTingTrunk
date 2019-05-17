@@ -900,6 +900,8 @@ class NoteTextEdit(QtWidgets.QTextEdit):
         if self.document().isModified():
             self.note_edited_signal.emit(True)
         if hasattr(self, 'editor'):
-            self.editor.deleteLater()
+            if not self.editor._temp_file.isOpen():
+                # if external editor is opened on file, don't delete
+                self.editor.deleteLater()
 
         super(NoteTextEdit,self).focusOutEvent(event)
