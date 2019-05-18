@@ -16,12 +16,13 @@ import os
 import re
 from datetime import datetime
 import logging
+import subprocess
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QDialogButtonBox
-from ..tools import getHLine, ZimNoteNotFoundError
-from .threadrun_dialog import ThreadRunDialog
+from ..tools import getHLine, ZimNoteNotFoundError, ZimNoteLinkNotFoundError
+#from .threadrun_dialog import ThreadRunDialog
 from .. import sqlitedb
 
 LOGGER=logging.getLogger(__name__)
@@ -322,7 +323,7 @@ def createDocNote(zim_folder, meta_dict, docid, overwrite=False):
         overwrite (bool): if True, overwrite existing file. Otherwise return
                           if file exists.
     Returns:
-        rec (int): 1 if note create, 0 otherwise, due to non-overwrite.
+        rec (str or None): path to the file if created, or None otherwise.
     '''
 
 
@@ -332,13 +333,11 @@ def createDocNote(zim_folder, meta_dict, docid, overwrite=False):
     filenameii=str(docid)
     rec=createNote(notes_folder, notetitle, filename=filenameii,
             contents=notes, overwrite=overwrite)
-    if rec is None:
-        return 0
-    else:
-        return 1
+
+    return rec
 
 
-def linkDocNote(zim_folder, meta_dict, folder_dict, folder_data, docid):
+def linkDocNote(zim_folder, meta_dict, folder_dict, docid, folderid=None):
     '''Link doc notes to the folder notes
 
     Args:
@@ -346,9 +345,13 @@ def linkDocNote(zim_folder, meta_dict, folder_dict, folder_data, docid):
         meta_dict (dict): dict of all doc meta data.
         folder_dict (dict): folder structure info. keys: folder id in str,
             values: (foldername, parentid) tuple.
-        folder_data (dict): documents in each folder. keys: folder id in str,
-            values: list of doc ids.
         docid (int): id of doc.
+    Kwargs:
+        folderid (str or None): id of MTT folder to link the doc into. If None,
+                                link to all MTT folders containing the doc.
+    Returns:
+        target_paths (list): list of paths to symlink files the doc note file
+                             is supposed to link to.
 
     Function will make a sym link from the zim note for the document notes
     (saved in _zim/all_notes folder), to the folder containing the note
@@ -358,8 +361,8 @@ def linkDocNote(zim_folder, meta_dict, folder_dict, folder_data, docid):
     If the zim doc note is not found, create one.
     '''
 
-    if len(meta_dict[docid]['notes'])==0:
-        return
+    #if len(meta_dict[docid]['notes'])==0:
+        #return
 
     trashed_folders=sqlitedb.getTrashedFolders(folder_dict)
     notes_folder=os.path.join(zim_folder, 'all_notes')
@@ -370,9 +373,16 @@ def linkDocNote(zim_folder, meta_dict, folder_dict, folder_data, docid):
         LOGGER.warning('Note file not found: %s' %notepath)
         createDocNote(zim_folder, meta_dict, docid, overwrite=True)
 
+    # get note title
     note_title=createNoteTitle(meta_dict[docid])
-    folders=meta_dict[docid]['folders_l']
 
+    # filter MTT folders
+    folders=meta_dict[docid]['folders_l']
+    if folderid is not None:
+        folders=[(idii,nameii) for (idii,nameii) in folders if\
+                str(idii)==str(folderid)]
+
+    target_paths=[]  # store created note paths
     for fidii, _ in folders:
         fidii=str(fidii)
         # skip if folder in trash.
@@ -388,6 +398,7 @@ def linkDocNote(zim_folder, meta_dict, folder_dict, folder_data, docid):
         # this is target zim file path to symlink to
         target_path=os.path.join(target_folder, '%s.txt' %note_title)
         LOGGER.info('Linking target_path %s -> %s' %(notepath, target_path))
+        target_paths.append(target_path)
 
         if not os.path.exists(target_path):
             os.symlink(notepath, target_path)
@@ -397,12 +408,13 @@ def linkDocNote(zim_folder, meta_dict, folder_dict, folder_data, docid):
                 fout.write('\n[[+%s]]\n' %(note_title))
             LOGGER.info('Link inserted to zim note file %s' %pnote_file)
 
-    return
+    return target_paths
 
 
 
 def locateZimNote(zim_folder, docid):
-    '''Get the path to the zim file containing notes of a doc
+    '''Get the path to the zim file containing notes of a doc from the
+    all_notes folder
 
     Args:
         zim_folder (str): path to the zim folder of an MTT lib.
@@ -414,13 +426,81 @@ def locateZimNote(zim_folder, docid):
         ZimNoteNotFoundError: if zim note file not found.
     '''
 
+    #------------Find the id named zim file------------
     notes_folder=os.path.join(zim_folder, 'all_notes')
     notepath=os.path.join(notes_folder, '%s.txt' %str(docid))
+    notepath=os.path.realpath(notepath)
 
     if not os.path.exists(notepath):
         raise ZimNoteNotFoundError("Note for doc %s not found." %str(docid))
 
     return notepath
+
+
+
+def locateZimNoteLinks(zim_folder, docid, folder_dict, folderid=None):
+    '''Get the paths to the symlink files pointing to the note file of a doc
+
+    Args:
+        zim_folder (str): path to the zim folder of an MTT lib.
+        docid (int): id of doc.
+        folder_dict (dict): folder structure info. keys: folder id in str,
+            values: (foldername, parentid) tuple.
+    Kwargs:
+        folderid (str or None): id of MTT folder to link the doc into. If None,
+                                link to all MTT folders containing the doc.
+    Returns:
+        targetpath (list): list of paths to symlink files pointing to the
+                           zim note file of given doc.
+
+    Raises:
+        ZimNoteLinkNotFoundError: if symlink zim note file not found.
+    '''
+
+    #------------Find the id-named zim file------------
+    note_path=locateZimNote(zim_folder, docid)
+
+    trashed_folders=sqlitedb.getTrashedFolders(folder_dict)
+
+    if folderid is not None:
+        folderid=str(folderid)
+        # skip if folder in trash.
+        if folderid in trashed_folders:
+            raise ZimNoteLinkNotFoundError("Folder %s is in trash." %folderid)
+
+        # construct the relative folder path
+        relpathii=getFolderTree(folder_dict, folderid)[1]
+        target_folder=os.path.join(zim_folder, relpathii)
+        print('# <locateZimNoteLinks>: target_folder=' ,target_folder)
+
+        if not os.path.exists(target_folder):
+            raise ZimNoteLinkNotFoundError("Folder not exist: %s" %target_folder)
+
+    else:
+        target_folder=zim_folder
+
+    # find the symlink file linking to note_path
+    cmd=['find', '-L', target_folder, '-samefile', note_path]
+    proc=subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    rec=proc.communicate()
+
+    if len(rec[0])>0:
+        target_path=rec[0].decode('utf-8')
+        target_path=target_path.strip('\n').split('\n')
+        # remove the note file itself
+        target_path2=[]
+        for pii in target_path:
+            if not os.path.abspath(pii)==note_path:
+                target_path2.append(pii)
+        target_path=target_path2
+        print('# <locateZimNoteLinks>: target_path=', target_path)
+        if len(target_path)==0:
+            raise ZimNoteLinkNotFoundError("Note for doc %s not found." %str(docid))
+    else:
+        raise ZimNoteLinkNotFoundError("Note for doc %s not found." %str(docid))
+
+    return target_path
+
 
 
 def readZimNote(zim_folder, docid):
@@ -454,6 +534,8 @@ def saveToZimNote(zim_folder, meta_dict, docid, overwrite=False):
     Kwargs:
         overwrite (bool): if True, overwrite existing file. Otherwise return
                           if file exists.
+    Returns:
+        notepath (str or None): path to the file if created, or None otherwise.
     '''
 
     if not os.path.exists(zim_folder):
@@ -466,18 +548,84 @@ def saveToZimNote(zim_folder, meta_dict, docid, overwrite=False):
 
         return
 
-    createDocNote(zim_folder, meta_dict, docid, overwrite=overwrite)
-    #notes_folder=os.path.join(zim_folder, 'all_notes')
-    #notepath=os.path.join(notes_folder, '%s.txt' %str(docid))
+    notepath=createDocNote(zim_folder, meta_dict, docid, overwrite=overwrite)
 
-    #if os.path.exists(notepath) and not overwrite:
-        #return
+    return notepath
 
-    #createNote(notes_folder, title, filename=None, contents=None, overwrite=False):
-    #with open(notepath, 'w') as fout:
-        #fout.write(text)
 
-    return
+
+
+def getTheZimFile(zim_folder, meta_dict, folder_dict, docid, folderid=None):
+    '''Get the zim note file in a smart way
+
+    Args:
+        zim_folder (str): path to the zim folder of an MTT lib.
+        meta_dict (dict): dict of all doc meta data.
+        folder_dict (dict): folder structure info. keys: folder id in str,
+            values: (foldername, parentid) tuple.
+        docid (int): id of doc.
+    Kwargs:
+        folderid (str): id of MTT folder to link the doc into. If None,
+                        link to all MTT folders containing the doc.
+    Returns:
+        zim_file (str or None): path to the zim note file for open in editor.
+                                if None, didn't manage to find anything,
+                                the None will trigger a tmp file to be opened
+                                in EditorWorker in _MainFrameMetaTabSlots.py
+
+    Function will try to get the path to the zim note file so that when
+    opened in zim, you get to edit the note file that you are mostly likely
+    to edit on:
+
+        1. the doc is specified by <docid>. Given this, there is a normal txt
+           file named <docid>.txt that stores the notes.
+        2. if folderid is given, try to get the symlink file that links to
+           <docid>.txt. The symlink file has a more readable file name, e.g.
+           author_year_title.txt, and is saved in a sub-folder following the
+           folder structure in MTT.
+        3. if folderid is None, and <docid>.txt has only 1 symlink file that
+           links to it, return the link file.
+        4. if folderid is None, and <docid>.txt has > 1 symlink files that
+           link to it, return <docid>.txt itself.
+    '''
+
+    print('# <getTheZimFile>: folderid=', repr(folderid))
+    if folderid=='-1':
+        folderid=None
+
+    #------------Make sure note file exists------------
+    try:
+        note_file=locateZimNote(zim_folder, docid)
+        LOGGER.info('Found note file: %s' %note_file)
+    except ZimNoteNotFoundError:
+        LOGGER.debug('Zim note file not found. Create one')
+        note_file=saveToZimNote(zim_folder, meta_dict, docid, overwrite=True)
+        LOGGER.info('Newly created zim note file: %s' %note_file)
+        link_files=linkDocNote(zim_folder, meta_dict, folder_dict, docid,
+                folderid=None)
+
+    #---------------try find link files---------------
+    try:
+        link_files=locateZimNoteLinks(zim_folder, docid, folder_dict, folderid)
+        LOGGER.info('Found link files to doc=%s, folderid=%s: %s'\
+                %(docid, folderid, link_files))
+    except ZimNoteLinkNotFoundError:
+        LOGGER.debug('Found link files to doc=%s, folderid=%s not found. Create.')
+        link_files=linkDocNote(zim_folder, meta_dict, folder_dict, docid,
+                folderid=None)
+        print('# <getTheZimFile>: ex link_files=', link_files)
+        LOGGER.info('Newly created link files to doc=%s, folderid=%s: %s'\
+                %(docid, folderid, link_files))
+
+    #------------Choose which file to open------------
+    if len(link_files)==1:
+        zim_file=link_files[0]
+    elif len(link_files)>1:
+        zim_file=note_file
+    else:
+        zim_file=None
+
+    return zim_file
 
 
 
@@ -720,7 +868,8 @@ class ZimDialog(QtWidgets.QDialog):
         for dii in doc_ids:
             LOGGER.debug('Creating zim note for doc %s' %dii)
             recii=createDocNote(zim_folder, self.meta_dict, dii, overwrite_notes)
-            rec_sum+=recii
+            if recii is not None:
+                rec_sum+=1
 
         QtWidgets.QMessageBox.information(self, 'Done',
                 '%d new Zim notes created.' %rec_sum,
@@ -750,12 +899,14 @@ class ZimDialog(QtWidgets.QDialog):
         #-------------Link doc nots to folder notes-------------
         if overwrite_folder:
             doc_ids=[kk for kk,vv in self.meta_dict.items() if vv['notes']]
+            linked=[]
             for dii in doc_ids:
-                linkDocNote(zim_folder, self.meta_dict, self.folder_dict,
+                pii=linkDocNote(zim_folder, self.meta_dict, self.folder_dict,
                         self.folder_data, dii)
+                linked.append(pii)
 
         QtWidgets.QMessageBox.information(self, 'Done',
-                'Zim notes created.',
+                '%d symlinks created.' %len(linked),
                 QtWidgets.QMessageBox.Yes)
 
         return
