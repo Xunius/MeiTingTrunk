@@ -676,3 +676,11 @@ class ZimNoteLinkNotFoundError(ZimError):
             self.message=text
     def __str__(self):
         return self.message
+
+class ZimNoteInTrashError(ZimError):
+
+    def __init__(self, text=None):
+        if text is not None:
+            self.message=text
+    def __str__(self):
+        return self.message

@@ -73,6 +73,8 @@ Changes are saved in a two-way manner:
 2. edits in zim is read into MTT (then into the sqlite database, so if you
 choose to switch off the zim integration, the work is not lost).
 
+(NOTE: some hack into the zim source is needed)
+
 ### Free and open source
 
 * Open to suggestions, bug reports and new ideas.

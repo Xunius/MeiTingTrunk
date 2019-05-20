@@ -165,7 +165,6 @@ class EditorWorker(QObject):
             # For some reason, if watching the zim file, and open in gvim
             # it reports file not found unless I wait for a while.
             wtf=os.path.exists(self._temp_file.fileName())
-            print('# <onFileChange>: wtf=',wtf)
             while not wtf:
                 wtf=os.path.exists(self._temp_file.fileName())
 
@@ -293,6 +292,7 @@ class MainFrameMetaTabSlots:
                     type=bool)
             docid=self._current_doc
             zim_file=None
+            # if using zim as default, get the zim file in a 'smart' way
             if use_zim_default:
                 current_folder=self._current_folder[1]
                 zim_file=getTheZimFile(self._zim_folder, self.meta_dict,
@@ -334,7 +334,6 @@ class MainFrameMetaTabSlots:
         self.note_textedit.moveCursor(QtGui.QTextCursor.End)
         self.note_textedit.insertPlainText(worker.text)
         self.note_textedit.setTextCursor(prev_cursor)
-        print('# <onEditingDone>: is_zim=',is_zim)
 
         if is_zim:
             # if zim file, send False to avoid endless loop.

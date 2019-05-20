@@ -21,7 +21,8 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QDialogButtonBox
-from ..tools import getHLine, ZimNoteNotFoundError, ZimNoteLinkNotFoundError
+from ..tools import getHLine, ZimNoteNotFoundError, ZimNoteLinkNotFoundError,\
+        ZimNoteInTrashError
 #from .threadrun_dialog import ThreadRunDialog
 from .. import sqlitedb
 
@@ -326,7 +327,6 @@ def createDocNote(zim_folder, meta_dict, docid, overwrite=False):
         rec (str or None): path to the file if created, or None otherwise.
     '''
 
-
     notes_folder=os.path.join(zim_folder, 'all_notes')
     notetitle=createNoteTitle(meta_dict[docid])
     notes=meta_dict[docid]['notes']
@@ -458,7 +458,10 @@ def locateZimNoteLinks(zim_folder, docid, folder_dict, folderid=None):
     '''
 
     #------------Find the id-named zim file------------
-    note_path=locateZimNote(zim_folder, docid)
+    try:
+        note_path=locateZimNote(zim_folder, docid)
+    except ZimNoteNotFoundError:
+        raise ZimNoteLinkNotFoundError('Zim note not found, ZimNoteNotFoundError raised.')
 
     trashed_folders=sqlitedb.getTrashedFolders(folder_dict)
 
@@ -466,12 +469,11 @@ def locateZimNoteLinks(zim_folder, docid, folder_dict, folderid=None):
         folderid=str(folderid)
         # skip if folder in trash.
         if folderid in trashed_folders:
-            raise ZimNoteLinkNotFoundError("Folder %s is in trash." %folderid)
+            raise ZimNoteInTrashError("Folder of note is in trash")
 
         # construct the relative folder path
         relpathii=getFolderTree(folder_dict, folderid)[1]
         target_folder=os.path.join(zim_folder, relpathii)
-        print('# <locateZimNoteLinks>: target_folder=' ,target_folder)
 
         if not os.path.exists(target_folder):
             raise ZimNoteLinkNotFoundError("Folder not exist: %s" %target_folder)
@@ -493,7 +495,6 @@ def locateZimNoteLinks(zim_folder, docid, folder_dict, folderid=None):
             if not os.path.abspath(pii)==note_path:
                 target_path2.append(pii)
         target_path=target_path2
-        print('# <locateZimNoteLinks>: target_path=', target_path)
         if len(target_path)==0:
             raise ZimNoteLinkNotFoundError("Note for doc %s not found." %str(docid))
     else:
@@ -589,7 +590,7 @@ def getTheZimFile(zim_folder, meta_dict, folder_dict, docid, folderid=None):
            link to it, return <docid>.txt itself.
     '''
 
-    print('# <getTheZimFile>: folderid=', repr(folderid))
+    LOGGER.debug('folderid = %s' %folderid)
     if folderid=='-1':
         folderid=None
 
@@ -609,11 +610,13 @@ def getTheZimFile(zim_folder, meta_dict, folder_dict, docid, folderid=None):
         link_files=locateZimNoteLinks(zim_folder, docid, folder_dict, folderid)
         LOGGER.info('Found link files to doc=%s, folderid=%s: %s'\
                 %(docid, folderid, link_files))
+    except ZimNoteInTrashError:
+        LOGGER.info('Note folder is in trash. set link_files=[]')
+        link_files=[]
     except ZimNoteLinkNotFoundError:
         LOGGER.debug('Found link files to doc=%s, folderid=%s not found. Create.')
         link_files=linkDocNote(zim_folder, meta_dict, folder_dict, docid,
                 folderid=None)
-        print('# <getTheZimFile>: ex link_files=', link_files)
         LOGGER.info('Newly created link files to doc=%s, folderid=%s: %s'\
                 %(docid, folderid, link_files))
 
