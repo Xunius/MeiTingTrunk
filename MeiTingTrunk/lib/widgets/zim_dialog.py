@@ -905,12 +905,12 @@ class ZimDialog(QtWidgets.QDialog):
             linked=[]
             for dii in doc_ids:
                 pii=linkDocNote(zim_folder, self.meta_dict, self.folder_dict,
-                        self.folder_data, dii)
+                        dii)
                 linked.append(pii)
 
-        QtWidgets.QMessageBox.information(self, 'Done',
-                '%d symlinks created.' %len(linked),
-                QtWidgets.QMessageBox.Yes)
+            QtWidgets.QMessageBox.information(self, 'Done',
+                    '%d symlinks created.' %len(linked),
+                    QtWidgets.QMessageBox.Yes)
 
         return
 
