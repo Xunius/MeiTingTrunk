@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: meitingtrunk
-Version: 0.1a34
+Version: 0.1a35
 Summary: An open source reference management tool developed in PyQt5 and Python3.
 Home-page: https://github.com/Xunius/MeiTingTrunk
 Author: Guangzhi XU
@@ -57,6 +57,29 @@ Description: # MeiTing Trunk
         
         * Use `pdf.js` as a build-in PDF reader.
         * Use `poppler` to generate PDF thumbnails.
+        
+        ### Work with Zim
+        
+        _[Zim](https://zim-wiki.org/) is a graphical text editor used to maintain a collection of wiki pages..._
+        
+        Its markup syntax (zim syntax) allows on the fly inter-note links in a fashion
+        very similar to what you would read in journal articles, e.g.
+        
+        ```
+        People have found more evidences on this, see [[my_note_title|author 1984]],
+        [[my_another_note_title|author_someone_else 1989]].
+        ```
+        
+        and is what I like zim the most.
+        
+        You can replicate the folder structure in an MTT library into a Zim notebook,
+        and edit your document notes directly in zim.
+        
+        Changes are saved in a two-way manner:
+        
+        1. create zim notes from your existing MTT notes.
+        2. edits in zim is read into MTT (then into the sqlite database, so if you
+        choose to switch off the zim integration, the work is not lost).
         
         ### Free and open source
         

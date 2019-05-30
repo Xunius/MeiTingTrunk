@@ -454,6 +454,7 @@ MeiTingTrunk/lib/widgets/preference_dialog.py
 MeiTingTrunk/lib/widgets/search_res_frame.py
 MeiTingTrunk/lib/widgets/threadrun_dialog.py
 MeiTingTrunk/lib/widgets/threadrun_dialog_bk.py
+MeiTingTrunk/lib/widgets/zim_dialog.py
 meitingtrunk.egg-info/PKG-INFO
 meitingtrunk.egg-info/SOURCES.txt
 meitingtrunk.egg-info/dependency_links.txt
