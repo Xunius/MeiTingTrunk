@@ -20,8 +20,7 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QTemporaryFile,\
         QProcess, QFileSystemWatcher, QFile, QIODevice
 from PyQt5 import QtWidgets, QtGui
 from .lib.widgets import ChooseAppDialog
-from .lib.widgets.zim_dialog import locateZimNote, saveToZimNote
-from .lib.tools import ZimNoteNotFoundError
+from .lib.widgets.zim_dialog import locateZimNote, getTheZimFile
 
 #import platform
 #CURRENT_OS=platform.system()
@@ -81,7 +80,7 @@ class EditorWorker(QObject):
     file_change_sig = pyqtSignal(bool)  # is_zim
 
     def __init__(self, command, old_text, is_zim, zim_folder=None,
-            docid=None, parent=None):
+            docid=None, zim_file=None, parent=None):
         '''Observe the write/save states of a txt file to edit notes
 
         Args:
@@ -105,14 +104,31 @@ class EditorWorker(QObject):
         if not self.is_zim:
             self._temp_file = QTemporaryFile(self)
         else:
-            try:
-                zimfile=locateZimNote(self.zim_folder, self.docid)
-                self._temp_file=QFile(zimfile, self)
-                self.logger.debug('Got zim file %s' %zimfile)
-            except:
-                self.logger.exception('Failed to find zim file.')
-                self._temp_file = QTemporaryFile(self)
-                self.is_zim=False
+            if zim_file is not None:
+                # use given zim file
+                if os.path.exists(zim_file) and os.path.islink(zim_file):
+                    self._temp_file=QFile(zim_file, self)
+                    self.logger.debug('Got given zim file %s' %zim_file)
+                else:
+                    try:
+                        zim_file=locateZimNote(self.zim_folder, self.docid)
+                        self._temp_file=QFile(zim_file, self)
+                        self.logger.exception(
+                            'Failed to open given zim file. Get the id one.')
+                    except:
+                        self.logger.exception('Failed to find zim file.')
+                        self._temp_file = QTemporaryFile(self)
+                        self.is_zim=False
+            else:
+                # no given zim file, get the one in all_notes
+                try:
+                    zim_file=locateZimNote(self.zim_folder, self.docid)
+                    self._temp_file=QFile(zim_file, self)
+                    self.logger.debug('Got zim file %s' %zim_file)
+                except:
+                    self.logger.exception('Failed to find zim file.')
+                    self._temp_file = QTemporaryFile(self)
+                    self.is_zim=False
 
         self._process = QProcess(self)
         self._text = ""
@@ -274,19 +290,18 @@ class MainFrameMetaTabSlots:
 
             use_zim_default=self.settings.value('saving/use_zim_default',
                     type=bool)
+            docid=self._current_doc
+            zim_file=None
+            # if using zim as default, get the zim file in a 'smart' way
             if use_zim_default:
-                # try finding zim note, if not exist, create one
-                try:
-                    locateZimNote(self._zim_folder, self._current_doc)
-                except ZimNoteNotFoundError:
-                    self.logger.exception('Zim file not found. Creating one.')
-                    saveToZimNote(self._zim_folder, self.meta_dict,
-                            self._current_doc, overwrite=True)
+                current_folder=self._current_folder[1]
+                zim_file=getTheZimFile(self._zim_folder, self.meta_dict,
+                        self.folder_dict, docid, current_folder)
 
             #--------------------Get editor--------------------
             self.note_textedit.editor=EditorWorker(cmd, old_text,
                     use_zim_default, zim_folder=self._zim_folder,
-                    docid=self._current_doc, parent=self)
+                    docid=docid, zim_file=zim_file, parent=self)
             self.note_textedit.editor.file_change_sig.connect(
                     self.onEditingDone)
 
