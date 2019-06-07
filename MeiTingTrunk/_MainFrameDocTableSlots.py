@@ -342,8 +342,11 @@ class MainFrameDocTableSlots:
                 self.changed_doc_ids.append(docii)
 
         # refresh to show read change
-        self.loadDocTable(folder=self._current_folder,sortidx=None,
-                sel_row=None)
+        #self.loadDocTable(folder=self._current_folder,sortidx=False,
+                #sel_row=None)
+        self.loadDocTable(docids=self._current_docids,
+                sortidx=False,
+                sel_row=self.doc_table.currentIndex().row())
 
         return
 

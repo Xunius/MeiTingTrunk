@@ -374,8 +374,8 @@ class PreferenceDialog(QtWidgets.QDialog):
         va.addWidget(label3)
         va.addWidget(getHLine(self))
 
-        slider=LabeledSlider(1,10,1,parent=self)
-        slider.sl.setValue(self.settings.value('saving/auto_save_min',2,int))
+        slider=LabeledSlider(5,30,5,parent=self)
+        slider.sl.setValue(self.settings.value('saving/auto_save_min',5,int))
         slider.sl.valueChanged.connect(self.changeSavingInterval)
         slider.setMaximumWidth(400)
 

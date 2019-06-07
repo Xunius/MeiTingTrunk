@@ -152,6 +152,7 @@ class MainFrameDataSlots:
             self.meta_dict[docid]=meta_dict
             self.changed_doc_ids.append(docid)
             self.loadDocTable(docids=self._current_docids,
+                    sortidx=False,
                     sel_row=self.doc_table.currentIndex().row())
 
         return
