@@ -292,6 +292,12 @@ class MainFrameMetaTabSlots:
                     type=bool)
             docid=self._current_doc
             zim_file=None
+
+            #######################################################################
+            #                       Disable use_zim_default                       #
+            use_zim_default=False
+            #######################################################################
+
             # if using zim as default, get the zim file in a 'smart' way
             if use_zim_default:
                 current_folder=self._current_folder[1]

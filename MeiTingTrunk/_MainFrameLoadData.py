@@ -430,6 +430,12 @@ class MainFrameLoadData:
             return
 
         use_zim_default=self.settings.value('saving/use_zim_default', type=bool)
+
+        #######################################################################
+        #                       Disable use_zim_default                       #
+        use_zim_default=False
+        #######################################################################
+
         if use_zim_default:
             self.logger.debug('use_zim_default = %s' %use_zim_default)
             try:

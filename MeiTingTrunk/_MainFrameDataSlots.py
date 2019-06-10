@@ -178,6 +178,11 @@ class MainFrameDataSlots:
 
         use_zim_default=self.settings.value('saving/use_zim_default', type=bool)
 
+        #######################################################################
+        #                       Disable use_zim_default                       #
+        use_zim_default=False
+        #######################################################################
+
         if use_zim_default and save_to_zim:
             self.logger.debug('Call saveToZimNote on update of doc %s' %docid)
             saveToZimNote(self._zim_folder, self.meta_dict, self._current_doc,
