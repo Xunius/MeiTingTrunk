@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: meitingtrunk
-Version: 0.1a35
+Version: 0.1a36
 Summary: An open source reference management tool developed in PyQt5 and Python3.
 Home-page: https://github.com/Xunius/MeiTingTrunk
 Author: Guangzhi XU
@@ -80,6 +80,8 @@ Description: # MeiTing Trunk
         1. create zim notes from your existing MTT notes.
         2. edits in zim is read into MTT (then into the sqlite database, so if you
         choose to switch off the zim integration, the work is not lost).
+        
+        (NOTE: some hack into the zim source is needed)
         
         ### Free and open source
         
