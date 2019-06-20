@@ -314,7 +314,7 @@ class MainFrameDataSlots:
         if any_reload_doc and current_doc_ids:
             current_row=self.doc_table.currentIndex().row()
             self.logger.debug('Reloading doc table after save. current_row = %s' %(current_row))
-            self.loadDocTable(docids=current_doc_ids, sortidx=None,
+            self.loadDocTable(docids=current_doc_ids, sortidx=False,
                     sel_row=current_row)
 
 

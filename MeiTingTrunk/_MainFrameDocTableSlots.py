@@ -533,7 +533,7 @@ class MainFrameDocTableSlots:
 
         row=self.doc_table.currentIndex().row()
         # didn't find a better way to refresh the table view
-        self.loadDocTable(folder=self._current_folder,sortidx=None,
+        self.loadDocTable(docids=self._current_docids,sortidx=False,
                 sel_row=row)
 
         return
