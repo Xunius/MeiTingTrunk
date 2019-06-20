@@ -204,7 +204,7 @@ New session started
         self.save_database_action=self.file_menu.addAction('Save Library')
         self.close_database_action=self.file_menu.addAction('Close Library')
         self.file_menu.addSeparator()
-        create_backup_action=self.file_menu.addAction('Create Backup')
+        #create_backup_action=self.file_menu.addAction('Create Backup')
         quit_action=self.file_menu.addAction('Quit')
 
         create_database_action.setIcon(QIcon.fromTheme('document-new',
@@ -218,7 +218,7 @@ New session started
         self.close_database_action.setIcon(QIcon.fromTheme('call-stop',
             self.style().standardIcon(QStyle.SP_BrowserStop)))
 
-        create_backup_action.setIcon(QIcon.fromTheme('document-send'))
+        #create_backup_action.setIcon(QIcon.fromTheme('document-send'))
         quit_action.setIcon(QIcon.fromTheme('window-close',
             self.style().standardIcon(QStyle.SP_DialogCloseButton)))
 
