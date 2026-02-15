@@ -4,7 +4,7 @@ Full text search using xapian, xapian-omega and the python binding of xapian.
 MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
-Copyright 2018-2019 Guang-zhi XU
+Copyright 2018-2026 Guang-zhi XU
 
 This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
@@ -22,27 +22,28 @@ import xapian
 import sqlite3
 import multiprocessing
 
-LOGGER=logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 # field name to xapian prefix mapping
-FIELDS={
-        #'authors_l'   : 'A',
-        #'abstract'    : 'B',
-        #'keywords_l'  : 'K',
-        #'tags_l'      : 'XTAG',
-        #'notes'        : 'XNOTE',
-        #'title'       : 'S',
-        #'publication' : 'XPUB',
-        #'folders_l'   : 'XFD',
-        #'confirmed'   : 'XCF',
-        'pdf'         : 'XPDF',
-        'id'          : 'XID'
-        }
+FIELDS = {
+    # 'authors_l'   : 'A',
+    # 'abstract'    : 'B',
+    # 'keywords_l'  : 'K',
+    # 'tags_l'      : 'XTAG',
+    # 'notes'        : 'XNOTE',
+    # 'title'       : 'S',
+    # 'publication' : 'XPUB',
+    # 'folders_l'   : 'XFD',
+    # 'confirmed'   : 'XCF',
+    'pdf': 'XPDF',
+    'id': 'XID'
+}
 
 #######################################################################
 #                          General functions                          #
 #######################################################################
+
 
 def converturl2abspath(url):
     '''Convert a url string to an absolute path
@@ -55,7 +56,7 @@ def converturl2abspath(url):
 def createDatabase(dbpath):
 
     try:
-        db=xapian.WritableDatabase(dbpath, xapian.DB_CREATE_OR_OPEN)
+        db = xapian.WritableDatabase(dbpath, xapian.DB_CREATE_OR_OPEN)
         return db
     except:
         return None
@@ -73,12 +74,11 @@ def delXapianDoc(dbpath, qid):
     '''
 
     try:
-        db=xapian.WritableDatabase(dbpath, xapian.DB_OPEN)
+        db = xapian.WritableDatabase(dbpath, xapian.DB_OPEN)
         db.delete_document(qid)
         return 0
     except:
         return 1
-
 
 
 #######################################################################
@@ -111,56 +111,56 @@ def indexFile(dbpath, abspath, relpath, meta_dict, db=None):
         return 1
 
     if db is None:
-        db=xapian.WritableDatabase(dbpath, xapian.DB_CREATE_OR_OPEN)
+        db = xapian.WritableDatabase(dbpath, xapian.DB_CREATE_OR_OPEN)
 
-    #--------------Create xapian document--------------
-    doc=xapian.Document()
-    term_generator=xapian.TermGenerator()
+    # --------------Create xapian document--------------
+    doc = xapian.Document()
+    term_generator = xapian.TermGenerator()
     term_generator.set_stemmer(xapian.Stem('en'))
     term_generator.set_document(doc)
 
-    #with open(os.devnull, 'w') as devnull:
-    #discard stderr
-    #proc=subprocess.Popen(['pdftotext', abspath, '-'],
-    proc=subprocess.Popen("pdftotext '%s' -" %abspath,
-            bufsize=0,
-            shell=True,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # with open(os.devnull, 'w') as devnull:
+    # discard stderr
+    # proc=subprocess.Popen(['pdftotext', abspath, '-'],
+    proc = subprocess.Popen("pdftotext '%s' -" % abspath,
+                            bufsize=0,
+                            shell=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     # NOTE: don't use proc.communicate(), which is slow af. Writing and
     # reading from a tmp file is no better
 
-    lines=[]
+    lines = []
     while True:
-        line=proc.stdout.readline()
+        line = proc.stdout.readline()
         if not line:
             break
-        if len(line)>0:
-            line=line.decode('utf-8')
+        if len(line) > 0:
+            line = line.decode('utf-8')
             term_generator.index_text(line)
             lines.append(line)
 
-    #--------------------Add fields--------------------
-    fields={}
+    # --------------------Add fields--------------------
+    fields = {}
 
     def addBooleanTerm(key):
-        value=meta_dict.get(key)
-        if value is not None and len(str(value))>0:
-            doc.add_boolean_term('%s%s' %(FIELDS[key], str(value)))
-            fields[key]=value
+        value = meta_dict.get(key)
+        if value is not None and len(str(value)) > 0:
+            doc.add_boolean_term('%s%s' % (FIELDS[key], str(value)))
+            fields[key] = value
         return
 
     # add doc id
     addBooleanTerm('id')
 
     # add unique id
-    idterm='Q%s-%s' %(meta_dict['id'],relpath)
+    idterm = 'Q%s-%s' % (meta_dict['id'], relpath)
     doc.add_boolean_term(idterm)
     # save data for later use
-    fields['qid']=idterm
-    fields['rel_path']=relpath
-    pdf='\n'.join(lines)
-    fields['pdf']=pdf
+    fields['qid'] = idterm
+    fields['rel_path'] = relpath
+    pdf = '\n'.join(lines)
+    fields['pdf'] = pdf
 
     doc.set_data(json.dumps(fields))
     db.replace_document(idterm, doc)
@@ -180,24 +180,24 @@ def getByDocid(dbpath, docid):
     '''
 
     try:
-        db=xapian.Database(dbpath)
+        db = xapian.Database(dbpath)
     except:
         raise Exception("Failed to connect to xapian database.")
 
-    #---------------Create query parser---------------
-    query=xapian.Query('XID%s' %docid)
+    # ---------------Create query parser---------------
+    query = xapian.Query('XID%s' % docid)
 
-    #------------------Create Enquire------------------
-    enquire=xapian.Enquire(db)
+    # ------------------Create Enquire------------------
+    enquire = xapian.Enquire(db)
     enquire.set_query(query)
 
-    doc_count=db.get_doccount()
-    mset=enquire.get_mset(0, doc_count)
-    docs=[]
+    doc_count = db.get_doccount()
+    mset = enquire.get_mset(0, doc_count)
+    docs = []
 
     for mm in mset:
-        match_fields=json.loads(mm.document.get_data())
-        qid=match_fields['qid']
+        match_fields = json.loads(mm.document.get_data())
+        qid = match_fields['qid']
         docs.append(qid)
 
     return docs
@@ -214,7 +214,7 @@ def delByDocid(dbpath, docid):
         rec (int): 0 if successful, 1 otherwise.
     '''
 
-    qids=getByDocid(dbpath, docid)
+    qids = getByDocid(dbpath, docid)
     for idii in qids:
         delXapianDoc(dbpath, idii)
 
@@ -248,97 +248,96 @@ def search(dbpath, querystring, fields, docids=None):
     '''
 
     try:
-        db=xapian.Database(dbpath)
+        db = xapian.Database(dbpath)
     except:
         raise Exception("Failed to connect to xapian database.")
 
-    #---------------Create query parser---------------
-    query_parser=xapian.QueryParser()
+    # ---------------Create query parser---------------
+    query_parser = xapian.QueryParser()
     query_parser.set_stemmer(xapian.Stem('en'))
     query_parser.set_stemming_strategy(query_parser.STEM_SOME)
 
-    #----------------------Prefix----------------------
+    # ----------------------Prefix----------------------
     for fii in fields:
-        if fii=='publication':
+        if fii == 'publication':
             query_parser.add_boolean_prefix(fii, FIELDS[fii])
         else:
             query_parser.add_prefix(fii, FIELDS[fii])
 
-    query=query_parser.parse_query(querystring)
+    query = query_parser.parse_query(querystring)
 
-    #----------------Add docid filter----------------
-    LOGGER.debug('docids = %s' %docids)
+    # ----------------Add docid filter----------------
+    LOGGER.debug('docids = %s' % docids)
     if docids is not None:
-        docid_queries=[xapian.Query('XID%s' %str(ii)) for ii in docids]
-        docid_query=xapian.Query(xapian.Query.OP_OR, docid_queries)
-        query=xapian.Query(xapian.Query.OP_FILTER, query, docid_query)
+        docid_queries = [xapian.Query('XID%s' % str(ii)) for ii in docids]
+        docid_query = xapian.Query(xapian.Query.OP_OR, docid_queries)
+        query = xapian.Query(xapian.Query.OP_FILTER, query, docid_query)
 
-    #------------------Create Enquire------------------
-    enquire=xapian.Enquire(db)
+    # ------------------Create Enquire------------------
+    enquire = xapian.Enquire(db)
     enquire.set_query(query)
 
-    offset=0
-    snip_size=400
+    offset = 0
+    snip_size = 400
 
-    #-------------------Get matches-------------------
-    doc_count=db.get_doccount()
-    matches={}
-    mset=enquire.get_mset(offset, doc_count)
+    # -------------------Get matches-------------------
+    doc_count = db.get_doccount()
+    matches = {}
+    mset = enquire.get_mset(offset, doc_count)
 
     for mm in mset:
-        match_fields=json.loads(mm.document.get_data())
-        docid=match_fields['id']
-        dictmm={}
+        match_fields = json.loads(mm.document.get_data())
+        docid = match_fields['id']
+        dictmm = {}
 
         for kk in fields:
-            vv=match_fields[kk]
+            vv = match_fields[kk]
             # get a snippet for each match
-            snipkk=mset.snippet(vv, snip_size, xapian.Stem('en'),
-                    xapian.MSet.SNIPPET_BACKGROUND_MODEL |
-                    xapian.MSet.SNIPPET_EMPTY_WITHOUT_MATCH |
-                    xapian.MSet.SNIPPET_EXHAUSTIVE,
-                    '', '')
-                    # do highlighting in qt
-                    #'<span style=background-color:yellow><b>',
-                    #'</b></span>')
-            snipkk=snipkk.decode('utf-8','replace')
+            snipkk = mset.snippet(vv, snip_size, xapian.Stem('en'),
+                                  xapian.MSet.SNIPPET_BACKGROUND_MODEL |
+                                  xapian.MSet.SNIPPET_EMPTY_WITHOUT_MATCH |
+                                  xapian.MSet.SNIPPET_EXHAUSTIVE,
+                                  '', '')
+            # do highlighting in qt
+            # '<span style=background-color:yellow><b>',
+            # '</b></span>')
+            snipkk = snipkk.decode('utf-8', 'replace')
 
-            if len(snipkk)>0:
-                if kk=='pdf':
-                    dictmm[kk]={match_fields['rel_path']: snipkk}
+            if len(snipkk) > 0:
+                if kk == 'pdf':
+                    dictmm[kk] = {match_fields['rel_path']: snipkk}
                 else:
-                    dictmm[kk]=snipkk
+                    dictmm[kk] = snipkk
 
-        #--------------combine results of the same doc--------------
+        # --------------combine results of the same doc--------------
         if docid not in matches:
-            matches[docid]=dictmm
+            matches[docid] = dictmm
         else:
             if 'pdf' in fields:
-                pdf1=matches[docid].get('pdf',{})
-                pdf2=dictmm.get('pdf',{})
+                pdf1 = matches[docid].get('pdf', {})
+                pdf2 = dictmm.get('pdf', {})
                 pdf1.update(pdf2)
-                matches[docid]['pdf']=pdf1
-
+                matches[docid]['pdf'] = pdf1
 
     return matches
 
 
 class Worker(multiprocessing.Process):
     def __init__(self, id, func, jobq, outq):
-        super(Worker,self).__init__()
-        self.id=id
-        self.func=func
-        self.jobq=jobq
-        self.outq=outq
+        super(Worker, self).__init__()
+        self.id = id
+        self.func = func
+        self.jobq = jobq
+        self.outq = outq
 
     def run(self):
         while True:
-            args=self.jobq.get()
+            args = self.jobq.get()
             self.jobq.task_done()
             if args is None:
                 self.outq.put(None)
                 break
-            res=self.func(*args)
+            res = self.func(*args)
             self.outq.put(res)
 
         return
@@ -361,21 +360,21 @@ def convertPDF(abspath, relpath, meta_dict):
     if not os.path.exists(abspath):
         return 1
 
-    #with open(os.devnull, 'w') as devnull:
-    #discard stderr
-    #proc=subprocess.Popen(['pdftotext', abspath, '-'],
-    proc=subprocess.Popen("pdftotext '%s' -" %abspath,
-            bufsize=0,
-            shell=True,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # with open(os.devnull, 'w') as devnull:
+    # discard stderr
+    # proc=subprocess.Popen(['pdftotext', abspath, '-'],
+    proc = subprocess.Popen("pdftotext '%s' -" % abspath,
+                            bufsize=0,
+                            shell=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    lines=[]
+    lines = []
     while True:
-        line=proc.stdout.readline()
+        line = proc.stdout.readline()
         if not line:
             break
-        if len(line)>0:
-            line=line.decode('utf-8')
+        if len(line) > 0:
+            line = line.decode('utf-8')
             lines.append(line)
 
     return relpath, meta_dict, lines
@@ -396,46 +395,46 @@ def writeToXapian(dbpath, jobq):
     Omega is still more appealing in that regard.
     '''
 
-    db=xapian.WritableDatabase(dbpath, xapian.DB_CREATE_OR_OPEN)
+    db = xapian.WritableDatabase(dbpath, xapian.DB_CREATE_OR_OPEN)
 
-    results=[]
+    results = []
     while True:
-        args=jobq.get()
+        args = jobq.get()
         if args is None:
             break
 
-        relpath, meta_dict, lines=args
+        relpath, meta_dict, lines = args
 
-        #--------------Create xapian document--------------
-        doc=xapian.Document()
-        term_generator=xapian.TermGenerator()
+        # --------------Create xapian document--------------
+        doc = xapian.Document()
+        term_generator = xapian.TermGenerator()
         term_generator.set_stemmer(xapian.Stem('en'))
         term_generator.set_document(doc)
 
-        lines='\n'.join(lines)
+        lines = '\n'.join(lines)
         term_generator.index_text(lines)
 
-        #--------------------Add fields--------------------
-        fields={}
+        # --------------------Add fields--------------------
+        fields = {}
 
         def addBooleanTerm(key):
-            value=meta_dict.get(key)
-            if value is not None and len(str(value))>0:
-                doc.add_boolean_term('%s%s' %(FIELDS[key], str(value)))
-                fields[key]=value
+            value = meta_dict.get(key)
+            if value is not None and len(str(value)) > 0:
+                doc.add_boolean_term('%s%s' % (FIELDS[key], str(value)))
+                fields[key] = value
             return
 
         # add doc id
         addBooleanTerm('id')
 
         # add unique id
-        idterm='Q%s-%s' %(meta_dict['id'],relpath)
+        idterm = 'Q%s-%s' % (meta_dict['id'], relpath)
         doc.add_boolean_term(idterm)
         # save data for later use
-        fields['qid']=idterm
-        fields['rel_path']=relpath
-        pdf=lines
-        fields['pdf']=pdf
+        fields['qid'] = idterm
+        fields['rel_path'] = relpath
+        pdf = lines
+        fields['pdf'] = pdf
 
         doc.set_data(json.dumps(fields))
         db.replace_document(idterm, doc)
@@ -451,19 +450,19 @@ def writeToXapian(dbpath, jobq):
 
 class OmindexWorker(multiprocessing.Process):
     def __init__(self, dbpath, lib_folder):
-        super(Worker,self).__init__()
-        self.func=indexFolder
-        self.dbpath=dbpath
-        self.lib_folder=lib_folder
+        super(Worker, self).__init__()
+        self.func = indexFolder
+        self.dbpath = dbpath
+        self.lib_folder = lib_folder
 
     def run(self):
         while True:
-            args=self.jobq.get()
+            args = self.jobq.get()
             self.jobq.task_done()
             if args is None:
                 self.outq.put(None)
                 break
-            res=self.func(*args)
+            res = self.func(*args)
             self.outq.put(res)
 
         return
@@ -481,17 +480,17 @@ def indexFolder(dbpath, lib_folder):
     '''
 
     try:
-        proc=subprocess.Popen(['omindex', '-d', 'replace', # replace duplicate
-            '-e', 'skip', # documents without extracted text
-            '-f',         # follow links
-            '--db', dbpath,
-            '--url', '/', lib_folder, '_collections'], stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-        rec=proc.communicate()
-        if len(rec[0])>0:
-            LOGGER.debug('stdout = %s' %rec[0])
-        if len(rec[1])>0:
-            LOGGER.debug('stderr = %s' %rec[1])
+        proc = subprocess.Popen(['omindex', '-d', 'replace',  # replace duplicate
+                                 '-e', 'skip',  # documents without extracted text
+                                '-f',         # follow links
+                                 '--db', dbpath,
+                                 '--url', '/', lib_folder, '_collections'], stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        rec = proc.communicate()
+        if len(rec[0]) > 0:
+            LOGGER.debug('stdout = %s' % rec[0])
+        if len(rec[1]) > 0:
+            LOGGER.debug('stderr = %s' % rec[1])
         return 0
     except:
         LOGGER.exception('Failed to call omindex')
@@ -523,52 +522,53 @@ def search2(xapianpath, sqlitepath, querystring, docids=None):
     '''
 
     try:
-        db=xapian.Database(xapianpath)
+        db = xapian.Database(xapianpath)
     except:
         raise Exception("Failed to connect to xapian database.")
 
     try:
-        sqlitedb=sqlite3.connect(sqlitepath, check_same_thread=False)
+        sqlitedb = sqlite3.connect(sqlitepath, check_same_thread=False)
     except:
         raise Exception("Failed to connect to sqlite database.")
 
-    #--------------Get path-docid mapping--------------
-    query='''SELECT relpath, did FROM DocumentFiles'''
-    ret=sqlitedb.execute(query)
-    idmap=dict(ret.fetchall())
+    # --------------Get path-docid mapping--------------
+    query = '''SELECT relpath, did FROM DocumentFiles'''
+    ret = sqlitedb.execute(query)
+    idmap = dict(ret.fetchall())
 
-    #---------------Create query parser---------------
-    query_parser=xapian.QueryParser()
+    # ---------------Create query parser---------------
+    query_parser = xapian.QueryParser()
     query_parser.set_stemmer(xapian.Stem('en'))
     query_parser.set_stemming_strategy(query_parser.STEM_SOME)
-    query=query_parser.parse_query(querystring)
+    query = query_parser.parse_query(querystring)
 
-    #----------------Add docid filter----------------
+    # ----------------Add docid filter----------------
     if docids is not None:
         # get relpath(s) from docid
-        filter_paths=[quote('/%s' %kk) for kk,vv in idmap.items() if vv in docids]
-        docid_queries=[xapian.Query('U%s' %str(ii)) for ii in filter_paths]
-        docid_query=xapian.Query(xapian.Query.OP_OR, docid_queries)
-        query=xapian.Query(xapian.Query.OP_FILTER, query, docid_query)
+        filter_paths = [quote('/%s' % kk)
+                        for kk, vv in idmap.items() if vv in docids]
+        docid_queries = [xapian.Query('U%s' % str(ii)) for ii in filter_paths]
+        docid_query = xapian.Query(xapian.Query.OP_OR, docid_queries)
+        query = xapian.Query(xapian.Query.OP_FILTER, query, docid_query)
 
-    #------------------Create Enquire------------------
-    enquire=xapian.Enquire(db)
+    # ------------------Create Enquire------------------
+    enquire = xapian.Enquire(db)
     enquire.set_query(query)
 
-    #-------------------Get matches-------------------
-    offset=0
-    doc_count=db.get_doccount()
-    mset=enquire.get_mset(offset, doc_count)
-    matches={}
+    # -------------------Get matches-------------------
+    offset = 0
+    doc_count = db.get_doccount()
+    mset = enquire.get_mset(offset, doc_count)
+    matches = {}
 
     for mm in mset:
-        dd=mm.document.get_data().decode('utf-8')
-        dlist=dd.split('\n')
-        url=dlist[0]
-        url=converturl2abspath(url)[5:]
-        docid=idmap[url]
+        dd = mm.document.get_data().decode('utf-8')
+        dlist = dd.split('\n')
+        url = dlist[0]
+        url = converturl2abspath(url)[5:]
+        docid = idmap[url]
 
-        #-------------------Get snippet-------------------
+        # -------------------Get snippet-------------------
         # NOTE this only works if the omindex source has been modified to save
         # the 'dump' as document data. To make the change, one needs to add
         # these lines to the index_file.cc:
@@ -591,37 +591,36 @@ def search2(xapianpath, sqlitepath, querystring, docids=None):
         # doing snippet in that case.
 
         # find dump field
-        ii=1
+        ii = 1
         while True:
-            if ii>=len(dlist):
+            if ii >= len(dlist):
                 break
-            lii=dlist[ii]
-            if lii[:5]=='dump=':
+            lii = dlist[ii]
+            if lii[:5] == 'dump=':
                 break
             else:
-                ii+=1
+                ii += 1
 
-        #---------------------Has dump---------------------
-        if ii<len(dlist):
-            dump=' '.join(dlist[ii:])
-            snip_size=400
-            if len(dump)>0:
-                snips=getSnippets(mset, dump[5:], snip_size)
+        # ---------------------Has dump---------------------
+        if ii < len(dlist):
+            dump = ' '.join(dlist[ii:])
+            snip_size = 400
+            if len(dump) > 0:
+                snips = getSnippets(mset, dump[5:], snip_size)
             else:
-                snips=[]
-            dictmm={'pdf': {url: snips}}
-        #---------------------No dump---------------------
+                snips = []
+            dictmm = {'pdf': {url: snips}}
+        # ---------------------No dump---------------------
         else:
-            dictmm={'pdf': {url: os.path.split(url)[1]}}
+            dictmm = {'pdf': {url: os.path.split(url)[1]}}
 
         if docid not in matches:
-            matches[docid]=dictmm
+            matches[docid] = dictmm
         else:
-            pdf1=matches[docid].get('pdf',{})
-            pdf2=dictmm.get('pdf',{})
+            pdf1 = matches[docid].get('pdf', {})
+            pdf2 = dictmm.get('pdf', {})
             pdf1.update(pdf2)
-            matches[docid]['pdf']=pdf1
-
+            matches[docid]['pdf'] = pdf1
 
     return matches
 
@@ -639,33 +638,33 @@ def getByDocid2(dbpath, sqlitepath, docid):
     '''
 
     try:
-        db=xapian.Database(dbpath)
+        db = xapian.Database(dbpath)
     except:
         raise Exception("Failed to connect to xapian database.")
 
     try:
-        sqlitedb=sqlite3.connect(sqlitepath, check_same_thread=False)
+        sqlitedb = sqlite3.connect(sqlitepath, check_same_thread=False)
     except:
         raise Exception("Failed to connect to sqlite database.")
 
-    #--------------Get relpaths of docid--------------
-    query='''SELECT relpath FROM DocumentFiles
+    # --------------Get relpaths of docid--------------
+    query = '''SELECT relpath FROM DocumentFiles
     WHERE (DocumentFiles.did=?)'''
-    ret=sqlitedb.execute(query,(docid,))
-    filter_paths=[]
+    ret = sqlitedb.execute(query, (docid,))
+    filter_paths = []
     for uii in ret.fetchall():
         # add / at the begining, and quote
-        filter_paths.append('/%s' %quote(uii[0]))
+        filter_paths.append('/%s' % quote(uii[0]))
 
-    #------------------Create Enquire------------------
-    docid_queries=[xapian.Query('U%s' %ii) for ii in filter_paths]
-    query=xapian.Query(xapian.Query.OP_OR, docid_queries)
-    enquire=xapian.Enquire(db)
+    # ------------------Create Enquire------------------
+    docid_queries = [xapian.Query('U%s' % ii) for ii in filter_paths]
+    query = xapian.Query(xapian.Query.OP_OR, docid_queries)
+    enquire = xapian.Enquire(db)
     enquire.set_query(query)
 
-    doc_count=db.get_doccount()
-    mset=enquire.get_mset(0, doc_count)
-    docs=[]
+    doc_count = db.get_doccount()
+    mset = enquire.get_mset(0, doc_count)
+    docs = []
 
     for mm in mset:
         docs.append(mm.docid)
@@ -685,7 +684,7 @@ def delByDocid2(dbpath, sqlitepath, docid):
         rec (int): 0 if successful, 1 otherwise.
     '''
 
-    qids=getByDocid2(dbpath, sqlitepath, docid)
+    qids = getByDocid2(dbpath, sqlitepath, docid)
     for idii in qids:
         delXapianDoc(dbpath, idii)
 
@@ -694,43 +693,43 @@ def delByDocid2(dbpath, sqlitepath, docid):
 
 def getSnippets(mset, text, snip_size):
 
-    block_size=snip_size+200  # this seems to require a number > snip_size
-    snippets=[]
-    idx1=0
+    block_size = snip_size+200  # this seems to require a number > snip_size
+    snippets = []
+    idx1 = 0
     while True:
-        if idx1>=len(text):
+        if idx1 >= len(text):
             break
 
-        idx2=idx1+block_size
-        snip=mset.snippet(text[idx1:idx2], snip_size, xapian.Stem('en'),
-                xapian.MSet.SNIPPET_BACKGROUND_MODEL |
-                xapian.MSet.SNIPPET_EMPTY_WITHOUT_MATCH |
-                xapian.MSet.SNIPPET_EXHAUSTIVE,
-                '', '', '...')
-                # do highlighting in qt
-        if len(snip)>0:
-            snip=snip.decode('utf-8','replace')
+        idx2 = idx1+block_size
+        snip = mset.snippet(text[idx1:idx2], snip_size, xapian.Stem('en'),
+                            xapian.MSet.SNIPPET_BACKGROUND_MODEL |
+                            xapian.MSet.SNIPPET_EMPTY_WITHOUT_MATCH |
+                            xapian.MSet.SNIPPET_EXHAUSTIVE,
+                            '', '', '...')
+        # do highlighting in qt
+        if len(snip) > 0:
+            snip = snip.decode('utf-8', 'replace')
             snippets.append(snip)
 
-        idx1+=block_size
+        idx1 += block_size
 
     return snippets
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
 
-    #dbpath='/home/guangzhi/testdb/tt/'
-    dbpath='/home/guangzhi/codes/pyrefman_deleted/men/_xapian_db'
+    # dbpath='/home/guangzhi/testdb/tt/'
+    dbpath = '/home/guangzhi/codes/pyrefman_deleted/men/_xapian_db'
 
-    #lib_folder='/home/guangzhi/testxap/'
-    lib_folder='/home/guangzhi/codes/pyrefman_deleted/men/'
-    sqlitepath='/home/guangzhi/codes/pyrefman_deleted/men.sqlite'
+    # lib_folder='/home/guangzhi/testxap/'
+    lib_folder = '/home/guangzhi/codes/pyrefman_deleted/men/'
+    sqlitepath = '/home/guangzhi/codes/pyrefman_deleted/men.sqlite'
 
-    #aa=indexFolder(dbpath, lib_folder)
-    #aa=search2(dbpath, sqlitepath, 'atmosphere', list(range(0,200)))
+    # aa=indexFolder(dbpath, lib_folder)
+    # aa=search2(dbpath, sqlitepath, 'atmosphere', list(range(0,200)))
 
-    #bb=getByDocid2(dbpath, sqlitepath, 1008)
-    pp=multiprocessing.Process(target=indexFolder, args=(dbpath,lib_folder))
+    # bb=getByDocid2(dbpath, sqlitepath, 1008)
+    pp = multiprocessing.Process(target=indexFolder, args=(dbpath, lib_folder))
     pp.start()
 
     '''
@@ -761,8 +760,6 @@ if __name__=='__main__':
             jobq.put(None)
 
     '''
-
-
 
     """
     dbpath='./xapian_db'
@@ -807,5 +804,3 @@ if __name__=='__main__':
     #pp.start()
     aa=writeToXapian(dbpath, outq)
     """
-
-

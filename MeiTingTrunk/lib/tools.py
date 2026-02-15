@@ -5,7 +5,7 @@ General purpose functions.
 MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
-Copyright 2018-2019 Guang-zhi XU
+Copyright 2018-2026 Guang-zhi XU
 
 This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
@@ -24,47 +24,43 @@ from functools import reduce
 from fuzzywuzzy import fuzz
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QThread, QObject, QMutex, pyqtSignal, pyqtSlot, Qt
-try:
-    from . import sqlitedb
-except:
-    import sqlitedb
 
-LOGGER=logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def getMinSizePolicy():
     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Minimum)
+                                       QtWidgets.QSizePolicy.Minimum)
     return sizePolicy
 
 
 def getXMinYExpandSizePolicy():
     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Expanding)
+                                       QtWidgets.QSizePolicy.Expanding)
     return sizePolicy
 
 
 def getXExpandYMinSizePolicy():
     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-            QtWidgets.QSizePolicy.Minimum)
+                                       QtWidgets.QSizePolicy.Minimum)
     return sizePolicy
 
 
 def getXExpandYExpandSizePolicy():
     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-            QtWidgets.QSizePolicy.Expanding)
+                                       QtWidgets.QSizePolicy.Expanding)
     return sizePolicy
 
 
 def getHSpacer():
-    h_spacer = QtWidgets.QSpacerItem(0,0,QtWidgets.QSizePolicy.Expanding,
-            QtWidgets.QSizePolicy.Minimum)
+    h_spacer = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding,
+                                     QtWidgets.QSizePolicy.Minimum)
     return h_spacer
 
 
 def getVSpacer():
-    v_spacer = QtWidgets.QSpacerItem(0,0,QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Expanding)
+    v_spacer = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Minimum,
+                                     QtWidgets.QSizePolicy.Expanding)
     return v_spacer
 
 
@@ -85,23 +81,24 @@ def getVLine(parent=None):
 class WorkerThread(QThread):
     '''NOT IN USE'''
 
-    jobdone_signal=pyqtSignal()
-    def __init__(self,func,jobqueue,outqueue,parent=None):
-        QThread.__init__(self,parent)
+    jobdone_signal = pyqtSignal()
 
-        self.func=func
-        self.jobqueue=jobqueue
-        self.outqueue=outqueue
+    def __init__(self, func, jobqueue, outqueue, parent=None):
+        QThread.__init__(self, parent)
+
+        self.func = func
+        self.jobqueue = jobqueue
+        self.outqueue = outqueue
 
     def __del__(self):
         self.wait()
 
     def run(self):
         while True:
-            print('\n# <WorkThread>: Thread start processing ... Remaining queue size: %d.'\
-                %(self.jobqueue.qsize()))
-            args=self.jobqueue.get()
-            rec=self.func(*args)
+            print('\n# <WorkThread>: Thread start processing ... Remaining queue size: %d.'
+                  % (self.jobqueue.qsize()))
+            args = self.jobqueue.get()
+            rec = self.func(*args)
             self.jobqueue.task_done()
             self.outqueue.put(rec)
             self.jobdone_signal.emit()
@@ -116,9 +113,9 @@ class Worker(QObject):
         QObject.__init__(self, parent)
         self._mutex = QMutex()
         self._running = True
-        self.jobq=jobq
-        self.outq=outq
-        self.func=func
+        self.jobq = jobq
+        self.outq = outq
+        self.func = func
 
     @pyqtSlot()
     def stop(self):
@@ -137,11 +134,11 @@ class Worker(QObject):
     @pyqtSlot()
     def work(self):
         while self.running():
-            args=self.jobq.get()
-            rec=self.func(*args)
+            args = self.jobq.get()
+            rec = self.func(*args)
             self.jobq.task_done()
             self.outq.put(rec)
-            #time.sleep(0.1)
+            # time.sleep(0.1)
             print('doing work...')
 
         self.sgnFinished.emit()
@@ -153,13 +150,13 @@ class Client(QObject):
 
     def __init__(self, parent, func, jobq, outq, callback):
         QObject.__init__(self, parent)
-        self.jobq=jobq
-        self.outq=outq
-        self.func=func
-        self.callback=callback
+        self.jobq = jobq
+        self.outq = outq
+        self.func = func
+        self.callback = callback
         self.clientDone.connect(callback)
         self._thread = QThread()
-        self._worker = Worker(None,self.func,self.jobq,self.outq)
+        self._worker = Worker(None, self.func, self.jobq, self.outq)
         self._worker.sgnFinished.connect(self.on_worker_done)
 
     def start(self):
@@ -190,15 +187,15 @@ def parseAuthors(authorlist):
         authorlist (list): list of author names.
 
     """
-    firstnames=[]
-    lastnames=[]
+    firstnames = []
+    lastnames = []
     for nii in authorlist:
-        nii=nii.split(',',1)
-        lastnames.append(nii[0].strip() if len(nii)>1 else nii[0])
-        firstnames.append(nii[1].strip() if len(nii)>1 else '')
-    #authors=sqlitedb.zipAuthors(firstnames,lastnames)
+        nii = nii.split(',', 1)
+        lastnames.append(nii[0].strip() if len(nii) > 1 else nii[0])
+        firstnames.append(nii[1].strip() if len(nii) > 1 else '')
+    # authors=sqlitedb.zipAuthors(firstnames,lastnames)
 
-    return firstnames,lastnames,authorlist
+    return firstnames, lastnames, authorlist
 
 
 def removeInvalidPathChar(path):
@@ -206,15 +203,15 @@ def removeInvalidPathChar(path):
 
     ':' is illegal in Mac and windows. Strategy: remove, although legal in Linux.
     '''
-    path=os.path.abspath(path)
+    path = os.path.abspath(path)
 
-    if platform.system().lower()=='windows':
-        drive,remain=os.path.splitdrive(path)
-        remain=re.sub(r'[<>:"|?*]','_',remain)
-        remain=remain.strip()
-        path=os.path.join(drive,remain)
+    if platform.system().lower() == 'windows':
+        drive, remain = os.path.splitdrive(path)
+        remain = re.sub(r'[<>:"|?*]', '_', remain)
+        remain = remain.strip()
+        path = os.path.join(drive, remain)
     else:
-        path=re.sub(r'[<>:"|?*]','_',path)
+        path = re.sub(r'[<>:"|?*]', '_', path)
 
     return path
 
@@ -233,15 +230,15 @@ def fuzzyMatchPrepare(docid, meta_dict):
         jy1 (str): journal+year string.
     """
 
-    authors1=meta_dict['authors_l'] or ''
-    authors1=', '.join(authors1)
+    authors1 = meta_dict['authors_l'] or ''
+    authors1 = ', '.join(authors1)
 
-    title1=meta_dict['title'] or ''
+    title1 = meta_dict['title'] or ''
 
-    journal1=meta_dict['publication'] or ''
-    year1=meta_dict['year'] or ''
+    journal1 = meta_dict['publication'] or ''
+    year1 = meta_dict['year'] or ''
 
-    jy1='%s %s' %(journal1, year1)
+    jy1 = '%s %s' % (journal1, year1)
 
     return docid, authors1, title1, jy1
 
@@ -266,31 +263,33 @@ def fuzzyMatch(jobid, doc1_list, doc2_list, min_score):
     id1, authors1, title1, jy1 = doc1_list
     id2, authors2, title2, jy2 = doc2_list
 
-    len_authors=(len(authors1)+len(authors2))//2
-    len_title=(len(title1)+len(title2))//2
-    len_other=(len(jy1)+len(jy2))//2
-    A=min_score*(len_authors+len_title+len_other)
+    len_authors = (len(authors1)+len(authors2))//2
+    len_title = (len(title1)+len(title2))//2
+    len_other = (len(jy1)+len(jy2))//2
+    A = min_score*(len_authors+len_title+len_other)
 
-    ratio_authors=fuzz.ratio(authors1, authors2)
-
-    # a short cut for authors score
-    if len_authors>0:
-        min_ratio_authors=A/len_authors - 100*(len_title+len_other)/len_authors
-        if ratio_authors<min_ratio_authors:
-            return 0,jobid, ((id1,id2), 0)
-
-    ratio_title=fuzz.ratio(title1, title2)
+    ratio_authors = fuzz.ratio(authors1, authors2)
 
     # a short cut for authors score
-    if len_title>0:
-        min_ratio_title=A/len_title - (ratio_authors*len_authors+100*len_other)/len_title
-        if ratio_title<min_ratio_title:
-            return 0,jobid, ((id1,id2), 0)
+    if len_authors > 0:
+        min_ratio_authors = A/len_authors - \
+            100*(len_title+len_other)/len_authors
+        if ratio_authors < min_ratio_authors:
+            return 0, jobid, ((id1, id2), 0)
 
-    ratio_other=fuzz.ratio(jy1, jy2)
+    ratio_title = fuzz.ratio(title1, title2)
 
-    score=(len_authors*ratio_authors + len_title*ratio_title + len_other*ratio_other)//\
-            (len_authors+len_title+len_other)
+    # a short cut for authors score
+    if len_title > 0:
+        min_ratio_title = A/len_title - \
+            (ratio_authors*len_authors+100*len_other)/len_title
+        if ratio_title < min_ratio_title:
+            return 0, jobid, ((id1, id2), 0)
+
+    ratio_other = fuzz.ratio(jy1, jy2)
+
+    score = (len_authors*ratio_authors + len_title*ratio_title + len_other*ratio_other) //\
+        (len_authors+len_title+len_other)
 
     '''
     LOGGER.debug('authors1 = %s, authors2 = %s, score = %d'\
@@ -301,7 +300,7 @@ def fuzzyMatch(jobid, doc1_list, doc2_list, min_score):
             %(jy1, jy2, ratio_other))
     '''
 
-    return 0,jobid, ((id1,id2), round(score))
+    return 0, jobid, ((id1, id2), round(score))
 
 
 def dfsCC(edges):
@@ -316,38 +315,38 @@ def dfsCC(edges):
             each tuple is a connected component.
     '''
 
-    def explore(v,cc):
+    def explore(v, cc):
         visited.append(v)
         if cc not in ccs:
-            ccs[cc]=[v,]
+            ccs[cc] = [v,]
         else:
             ccs[cc].append(v)
 
         for wii in adj_list[v]:
             if wii not in visited:
-                explore(wii,cc)
+                explore(wii, cc)
 
-    vertices=list(set(reduce(tuple.__add__,edges)))
-    rev_edges=[(v2,v1) for v1,v2 in edges]
+    vertices = list(set(reduce(tuple.__add__, edges)))
+    rev_edges = [(v2, v1) for v1, v2 in edges]
 
     # get adjacency list
-    adj_list={}
+    adj_list = {}
     for vii in vertices:
-        adj_list[vii]=[eii[1] for eii in edges+rev_edges if eii[0]==vii]
+        adj_list[vii] = [eii[1] for eii in edges+rev_edges if eii[0] == vii]
 
-    visited=[]
-    ccs={}
-    cc=0
+    visited = []
+    ccs = {}
+    cc = 0
 
     for v in vertices:
         if v not in visited:
-            explore(v,cc)
-            cc+=1
+            explore(v, cc)
+            cc += 1
 
     return list(ccs.values())
 
 
-def createFolderTree(folder_dict,parent):
+def createFolderTree(folder_dict, parent):
     """Create a folder tree using QTreeWidget
 
     Args:
@@ -358,60 +357,65 @@ def createFolderTree(folder_dict,parent):
     Returns:
         folder_tree (QTreeWidget): QTreeWidget with the folder structure.
     """
+    try:
+        from . import sqlitedb
+    except:
+        import sqlitedb
 
-    def addFolder(parent,folderid,folder_dict):
+    def addFolder(parent, folderid, folder_dict):
 
-        foldername,parentid=folder_dict[folderid]
-        fitem=QtWidgets.QTreeWidgetItem([foldername,str(folderid)])
-        style=QtWidgets.QApplication.style()
-        diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
-        fitem.setIcon(0,diropen_icon)
-        sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
-        if parentid=='-1':
-            fitem.setFlags(fitem.flags() | Qt.ItemIsTristate |\
-                    Qt.ItemIsUserCheckable)
+        foldername, parentid = folder_dict[folderid]
+        fitem = QtWidgets.QTreeWidgetItem([foldername, str(folderid)])
+        style = QtWidgets.QApplication.style()
+        diropen_icon = style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+        fitem.setIcon(0, diropen_icon)
+        sub_ids = sqlitedb.getChildFolders(folder_dict, folderid)
+        if parentid == '-1':
+            fitem.setFlags(fitem.flags() | Qt.ItemIsTristate |
+                           Qt.ItemIsUserCheckable)
             fitem.setCheckState(0, Qt.Unchecked)
-            #parent.addTopLevelItem(fitem)
+            # parent.addTopLevelItem(fitem)
             parent.addChild(fitem)
         else:
             fitem.setFlags(fitem.flags() | Qt.ItemIsUserCheckable)
             fitem.setCheckState(0, Qt.Unchecked)
             parent.addChild(fitem)
-        if len(sub_ids)>0:
+        if len(sub_ids) > 0:
             for sii in sub_ids:
-                addFolder(fitem,sii,folder_dict)
+                addFolder(fitem, sii, folder_dict)
 
         return
 
-    folder_tree=QtWidgets.QTreeWidget(parent)
+    folder_tree = QtWidgets.QTreeWidget(parent)
     folder_tree.setColumnCount(2)
     folder_tree.setHeaderHidden(True)
-    folder_tree.setColumnHidden(1,True)
+    folder_tree.setColumnHidden(1, True)
     folder_tree.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-    folder_tree.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+    folder_tree.setHorizontalScrollMode(
+        QtWidgets.QAbstractItemView.ScrollPerPixel)
     folder_tree.header().setStretchLastSection(False)
     folder_tree.header().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeToContents)
+        QtWidgets.QHeaderView.ResizeToContents)
     folder_tree.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
 
-    #---------------------Add All---------------------
-    allitem=QtWidgets.QTreeWidgetItem(['All', '-1'])
-    style=QtWidgets.QApplication.style()
-    diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
-    allitem.setIcon(0,diropen_icon)
-    allitem.setFlags(allitem.flags() | Qt.ItemIsTristate |\
-            Qt.ItemIsUserCheckable)
+    # ---------------------Add All---------------------
+    allitem = QtWidgets.QTreeWidgetItem(['All', '-1'])
+    style = QtWidgets.QApplication.style()
+    diropen_icon = style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+    allitem.setIcon(0, diropen_icon)
+    allitem.setFlags(allitem.flags() | Qt.ItemIsTristate |
+                     Qt.ItemIsUserCheckable)
     allitem.setCheckState(0, Qt.Unchecked)
     folder_tree.addTopLevelItem(allitem)
 
-    #-------------Get all level 1 folders-------------
-    folders1=[(vv[0],kk) for kk,vv in folder_dict.items() if\
-            vv[1] in ['-1',]]
+    # -------------Get all level 1 folders-------------
+    folders1 = [(vv[0], kk) for kk, vv in folder_dict.items() if
+                vv[1] in ['-1',]]
     folders1.sort()
 
-    #------------Add folders to tree------------
-    for fnameii,idii in folders1:
-        addFolder(allitem,idii,folder_dict)
+    # ------------Add folders to tree------------
+    for fnameii, idii in folders1:
+        addFolder(allitem, idii, folder_dict)
 
     allitem.setExpanded(True)
 
@@ -429,7 +433,7 @@ def iterTreeWidgetItems(treewidget, root=None):
     """
 
     if root is None:
-        root=treewidget.invisibleRootItem()
+        root = treewidget.invisibleRootItem()
 
     stack = [root]
     while stack:
@@ -437,7 +441,7 @@ def iterTreeWidgetItems(treewidget, root=None):
         for row in range(parent.childCount()):
             child = parent.child(row)
             yield child
-            if child.childCount()>0:
+            if child.childCount() > 0:
                 stack.append(child)
 
 
@@ -462,49 +466,49 @@ def autoRename(abpath):
     '''
 
     def rename_sub(match):
-        base=match.group(1)
-        delim=match.group(2)
-        num=int(match.group(3))
-        return '%s%s(%d)' %(base,delim,num+1)
+        base = match.group(1)
+        delim = match.group(2)
+        num = int(match.group(3))
+        return '%s%s(%d)' % (base, delim, num+1)
 
     if not os.path.exists(abpath):
         return abpath
 
-    folder,filename=os.path.split(abpath)
-    basename,ext=os.path.splitext(filename)
+    folder, filename = os.path.split(abpath)
+    basename, ext = os.path.splitext(filename)
     # match filename
-    rename_re=re.compile('''
+    rename_re = re.compile('''
             ^(.+?)       # File name
             ([- _])      # delimiter between file name and number
             \\((\\d+)\\) # number in ()
             (.*)         # ext
-            $''',\
-            re.X)
+            $''',
+                           re.X)
 
-    newname='%s_(1)%s' %(basename,ext)
+    newname = '%s_(1)%s' % (basename, ext)
     while True:
-        newpath=os.path.join(folder,newname)
+        newpath = os.path.join(folder, newname)
 
         if not os.path.exists(newpath):
             break
         else:
             if rename_re.match(newname):
-                newname=rename_re.sub(rename_sub,newname)
-                newname='%s%s' %(newname,ext)
+                newname = rename_re.sub(rename_sub, newname)
+                newname = '%s%s' % (newname, ext)
             else:
                 raise Exception("Exception")
 
-    newname=os.path.join(folder,newname)
+    newname = os.path.join(folder, newname)
     return newname
 
 
 def hasBin(bin_name):
     '''Check the existance of a binary'''
 
-    proc=subprocess.Popen(['which', bin_name], stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-    rec=proc.communicate()
-    if len(rec[0])==0 and len(rec[1])>0:
+    proc = subprocess.Popen(['which', bin_name], stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    rec = proc.communicate()
+    if len(rec[0]) == 0 and len(rec[1]) > 0:
         return False
 
     return True
@@ -519,14 +523,14 @@ def hasPdftotext():
 def hasXapian():
     '''Check the existance of xapian core and xapian-python'''
 
-    has_xapian=hasBin('xapian-delve')
-    has_omindex=hasBin('omindex')
+    has_xapian = hasBin('xapian-delve')
+    has_omindex = hasBin('omindex')
     if not has_xapian or not has_omindex:
         return False
 
     try:
         import xapian
-    except:
+    except Exception:
         return False
 
     return True
@@ -539,8 +543,8 @@ def isXapianReady():
 
 class Cache(object):
     def __init__(self, func):
-        self.func=func
-        self.store_dict={}
+        self.func = func
+        self.store_dict = {}
 
     def get(self, key, args=(), update=False):
         '''
@@ -551,12 +555,12 @@ class Cache(object):
             return self.store_dict[key]
         '''
         if not update and key in self.store_dict:
-            print('# <get>: get existing for key=',key)
+            print('# <get>: get existing for key=', key)
             return self.store_dict[key]
 
-        print('# <get>: compute new for key=',key)
-        value=self.func(*args)
-        self.store_dict[key]=value
+        print('# <get>: compute new for key=', key)
+        value = self.func(*args)
+        self.store_dict[key] = value
 
         return value
 
@@ -575,7 +579,7 @@ def createDelButton(font_height=12):
         font_height (int): font height. Determines button size.
     '''
 
-    button=QtWidgets.QPushButton()
+    button = QtWidgets.QPushButton()
     button.setFixedWidth(int(font_height))
     button.setFixedHeight(int(font_height))
     button.setText('\u2715')
@@ -592,7 +596,7 @@ def createDelButton(font_height=12):
     QPushButton:pressed {
         border-style: inset;
         }
-    ''' %(int(font_height/2), max(1,font_height-2))
+    ''' % (int(font_height/2), max(1, font_height-2))
     )
 
     return button
@@ -618,7 +622,7 @@ def clearLayout(layout):
         if child.widget():
             try:
                 clearLayout(child.widget().layout())
-            except:
+            except Exception:
                 pass
             child.widget().deleteLater()
     return
@@ -635,18 +639,18 @@ def delThumbnails(lib_folder, filename=None):
             folder.
     '''
 
-    #lib_folder=self.settings.value('saving/current_lib_folder', type=str)
-    cache_folder=os.path.join(lib_folder, '_cache')
+    # lib_folder=self.settings.value('saving/current_lib_folder', type=str)
+    cache_folder = os.path.join(lib_folder, '_cache')
 
     if filename is None:
-        files=glob.glob(os.path.join(cache_folder, '*.jpg'))
+        files = glob.glob(os.path.join(cache_folder, '*.jpg'))
     else:
-        files=glob.glob(os.path.join(cache_folder, '%s*.jpg' %filename))
+        files = glob.glob(os.path.join(cache_folder, '%s*.jpg' % filename))
 
     for fii in files:
         os.remove(fii)
 
-    LOGGER.info('filename = %s' %filename)
+    LOGGER.info('filename = %s' % filename)
     LOGGER.info('thumbnails deleted.')
 
     return
@@ -656,7 +660,8 @@ class ZimError(Exception):
 
     def __init__(self, text=None):
         if text is not None:
-            self.message=text
+            self.message = text
+
     def __str__(self):
         return self.message
 
@@ -665,22 +670,27 @@ class ZimNoteNotFoundError(ZimError):
 
     def __init__(self, text=None):
         if text is not None:
-            self.message=text
+            self.message = text
+
     def __str__(self):
         return self.message
+
 
 class ZimNoteLinkNotFoundError(ZimError):
 
     def __init__(self, text=None):
         if text is not None:
-            self.message=text
+            self.message = text
+
     def __str__(self):
         return self.message
+
 
 class ZimNoteInTrashError(ZimError):
 
     def __init__(self, text=None):
         if text is not None:
-            self.message=text
+            self.message = text
+
     def __str__(self):
         return self.message

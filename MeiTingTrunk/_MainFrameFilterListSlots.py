@@ -5,7 +5,7 @@ This part contains actions filterings in the filtering widget.
 MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
-Copyright 2018-2019 Guang-zhi XU
+Copyright 2018-2026 Guang-zhi XU
 
 This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
@@ -34,45 +34,44 @@ class MainFrameFilterListSlots:
         This is a slot to the filter_item_list.itemClicked signal.
         """
 
-        self.logger.info('Clicked filter item.text() = %s' %item.text())
+        self.logger.info('Clicked filter item.text() = %s' % item.text())
 
-        filter_type=self.filter_type_combbox.currentText()
-        filter_text=item.text()
-        current_folder=self._current_folder
+        filter_type = self.filter_type_combbox.currentText()
+        filter_text = item.text()
+        current_folder = self._current_folder
 
         if current_folder:
-            folderid=current_folder[1]
+            folderid = current_folder[1]
 
-            if folderid=='-1':
-                docids=self.meta_dict.keys()
+            if folderid == '-1':
+                docids = self.meta_dict.keys()
             else:
-                docids=self.folder_data[folderid]
+                docids = self.folder_data[folderid]
 
-            filter_docids=sqlitedb.filterDocs(self.meta_dict, docids,
-                    filter_type, filter_text)
+            filter_docids = sqlitedb.filterDocs(self.meta_dict, docids,
+                                                filter_type, filter_text)
 
-            if len(filter_docids)>0:
-                self.loadDocTable(None,filter_docids,sortidx=None,sel_row=0)
+            if len(filter_docids) > 0:
+                self.loadDocTable(None, filter_docids, sortidx=None, sel_row=0)
 
-            sel=self.filter_type_combbox.currentText()
+            sel = self.filter_type_combbox.currentText()
 
-            if sel=='Filter by keywords':
+            if sel == 'Filter by keywords':
                 self.clear_filter_label.setText(
-                        'Showing documents with keyword "%s"' %filter_text)
-            elif sel=='Filter by authors':
+                    'Showing documents with keyword "%s"' % filter_text)
+            elif sel == 'Filter by authors':
                 self.clear_filter_label.setText(
-                        'Showing documents authored by "%s"' %filter_text)
-            elif sel=='Filter by publications':
+                    'Showing documents authored by "%s"' % filter_text)
+            elif sel == 'Filter by publications':
                 self.clear_filter_label.setText(
-                        'Showing documents published in "%s"' %filter_text)
-            elif sel=='Filter by tags':
+                    'Showing documents published in "%s"' % filter_text)
+            elif sel == 'Filter by tags':
                 self.clear_filter_label.setText(
-                        'Showing documents tagged "%s"' %filter_text)
+                    'Showing documents tagged "%s"' % filter_text)
 
             self.clear_filter_frame.setVisible(True)
 
         return
-
 
     @pyqtSlot()
     def filterTypeCombboxChange(self):
@@ -95,44 +94,43 @@ class MainFrameFilterListSlots:
         # remove search result frame
         self.clearSearchResButtonClicked()
 
-        sel=self.filter_type_combbox.currentText()
-        current_folder=self._current_folder
+        sel = self.filter_type_combbox.currentText()
+        current_folder = self._current_folder
 
-        self.logger.info('Filter type combobox select = %s' %sel)
+        self.logger.info('Filter type combobox select = %s' % sel)
 
         if current_folder:
 
-            self.logger.info('current_folder = %s, folderid_d = %s'\
-                    %(current_folder[0], current_folder[1]))
+            self.logger.info('current_folder = %s, folderid_d = %s'
+                             % (current_folder[0], current_folder[1]))
 
-            #---------------Get items in folder---------------
-            foldername,folderid=current_folder
-            if folderid=='-1':
-                docids=list(self.meta_dict.keys())
+            # ---------------Get items in folder---------------
+            foldername, folderid = current_folder
+            if folderid == '-1':
+                docids = list(self.meta_dict.keys())
             else:
-                docids=self.folder_data[folderid]
+                docids = self.folder_data[folderid]
 
-            if sel=='Filter by keywords':
-                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'keywords_l',docids,
-                        unique=True,sort=True)
-            elif sel=='Filter by authors':
-                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'authors_l',docids,
-                        unique=False,sort=False)
+            if sel == 'Filter by keywords':
+                folderdata = sqlitedb.fetchMetaData(self.meta_dict, 'keywords_l', docids,
+                                                    unique=True, sort=True)
+            elif sel == 'Filter by authors':
+                folderdata = sqlitedb.fetchMetaData(self.meta_dict, 'authors_l', docids,
+                                                    unique=False, sort=False)
                 # why not unique and sort?
-            elif sel=='Filter by publications':
-                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'publication',docids,
-                        unique=True,sort=True)
-            elif sel=='Filter by tags':
-                folderdata=sqlitedb.fetchMetaData(self.meta_dict,'tags_l',docids,
-                        unique=True,sort=True)
+            elif sel == 'Filter by publications':
+                folderdata = sqlitedb.fetchMetaData(self.meta_dict, 'publication', docids,
+                                                    unique=True, sort=True)
+            elif sel == 'Filter by tags':
+                folderdata = sqlitedb.fetchMetaData(self.meta_dict, 'tags_l', docids,
+                                                    unique=True, sort=True)
 
-            folderdata=list(set(folderdata))
+            folderdata = list(set(folderdata))
             folderdata.sort()
             self.filter_item_list.clear()
             self.filter_item_list.addItems(folderdata)
 
         return
-
 
     @pyqtSlot()
     def clearFilterButtonClicked(self):
@@ -152,14 +150,15 @@ class MainFrameFilterListSlots:
         if self.clear_filter_frame.isVisible():
             self.clear_filter_frame.setVisible(False)
 
-            current_folder=self._current_folder
+            current_folder = self._current_folder
             if current_folder:
-                folder,folderid=current_folder
+                folder, folderid = current_folder
 
                 # TODO: keep a record of previous sortidx?
-                if folder=='All' and folderid=='-1':
-                    self.loadDocTable(None,sortidx=None,sel_row=0)
+                if folder == 'All' and folderid == '-1':
+                    self.loadDocTable(None, sortidx=None, sel_row=0)
                 else:
-                    self.loadDocTable((folder,folderid),sortidx=None,sel_row=0)
+                    self.loadDocTable((folder, folderid),
+                                      sortidx=None, sel_row=0)
 
         return

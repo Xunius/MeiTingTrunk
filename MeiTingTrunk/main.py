@@ -7,7 +7,7 @@
 MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
-Copyright 2018-2019 Guang-zhi XU
+Copyright 2018-2026 Guang-zhi XU
 
 This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
@@ -16,6 +16,7 @@ terms of the GPLv3 license.
 '''
 
 import os
+os.environ['PNG_IGNORE_WARNINGS'] = '1'
 import sys
 import logging
 from PyQt5 import QtWidgets
@@ -25,33 +26,32 @@ from . import _MainWindow
 from .version import __version__
 
 
-
-dirname=os.path.split(__file__)[0]
-LOG_CONFIG={
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'standard': {
-                #'format': '<%(filename)s-%(funcName)s()>: %(asctime)s,%(levelname)s: %(message)s'},
-                'format': '<%(filename)s-%(funcName)s()>: %(levelname)s: %(message)s'},
-            },
-        'handlers': {
-            'default': {
-                'level': 'DEBUG',
-                'class': 'logging.handlers.RotatingFileHandler',
-                'formatter': 'standard',
-                'filename': os.path.join(dirname,'MTT.log'),
-                'mode': 'a',
-                'maxBytes': 10*1024*1024,  # 10 M
-                'backupCount': 1
-                },
-            },
-        'root' : {
-                'handlers': ['default'],
-                'level': 'DEBUG',
-                'propagate': True
-            }
-        }
+dirname = os.path.split(__file__)[0]
+LOG_CONFIG = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            # 'format': '<%(filename)s-%(funcName)s()>: %(asctime)s,%(levelname)s: %(message)s'},
+            'format': '<%(filename)s-%(funcName)s()>: %(levelname)s: %(message)s'},
+    },
+    'handlers': {
+        'default': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'standard',
+            'filename': os.path.join(dirname, 'MTT.log'),
+            'mode': 'a',
+            'maxBytes': 10*1024*1024,  # 10 M
+            'backupCount': 1
+        },
+    },
+    'root': {
+        'handlers': ['default'],
+        'level': 'DEBUG',
+        'propagate': True
+    }
+}
 
 
 # TODO:
@@ -138,13 +138,13 @@ LOG_CONFIG={
 def main(args=None):
 
     if args is None:
-        args=sys.argv[1:]
+        args = sys.argv[1:]
 
     logging.config.dictConfig(LOG_CONFIG)
-    app=QtWidgets.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
 
-    splash_pic=QPixmap(':/logo.png')
-    splash=QtWidgets.QSplashScreen(splash_pic, Qt.WindowStaysOnTopHint)
+    splash_pic = QPixmap(':/logo.png')
+    splash = QtWidgets.QSplashScreen(splash_pic, Qt.WindowStaysOnTopHint)
     splash.show()
     splash.showMessage(__version__)
 
@@ -168,13 +168,12 @@ def main(args=None):
     app.processEvents()
     '''
 
-    mainwindow=_MainWindow.MainWindow()
+    mainwindow = _MainWindow.MainWindow()
     sys.exit(app.exec_())
 
     return 0
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
 
     main()
-
-

@@ -97,7 +97,7 @@ Currently only support Linux and MacOS.
 
 ### Python dependencies
 
-* python3+
+* python3.8+
 * PyQt5>=5.12
 * PyQtWebEngine (this is no longer shipped with PyQt5 after 5.11)
 * sqlite3

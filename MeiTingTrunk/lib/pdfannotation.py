@@ -5,7 +5,7 @@ Utitlity functions for annotation extraction.
 MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
-Copyright 2018-2019 Guang-zhi XU
+Copyright 2018-2026 Guang-zhi XU
 
 This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
@@ -17,16 +17,14 @@ from datetime import datetime
 from PyPDF2.generic import *
 
 
-
 YELLOW = [0.95, 0.9, 0.2]
 
 
-
-def getRGBcolor(color,verbose=True):
+def getRGBcolor(color, verbose=True):
     '''Convert html color to RGB (0,1)
     '''
-    color=color.replace('#','')
-    rgb=tuple(map(ord,color.decode('hex')))
+    color = color.replace('#', '')
+    rgb = tuple(map(ord, color.decode('hex')))
     return [float(ii)/255 for ii in rgb]
 
 
@@ -36,29 +34,29 @@ def floatArray(lst):
 
 def now():
     # Python timezone handling is a messs, so just use UTC
-    return TextStringObject(datetime.utcnow().\
-            strftime("D:%Y%m%d%H%M%SZ00'00"))
+    return TextStringObject(datetime.utcnow().
+                            strftime("D:%Y%m%d%H%M%SZ00'00"))
 
 
 def _baseAnno(rect, contents=None, author=None, subject=None,
-                       cdate=None, color=None, alpha=1, flag=4):
+              cdate=None, color=None, alpha=1, flag=4):
     '''Set shared properties of all markup annotations.'''
 
     if cdate is None:
         cdate = now()
     else:
-        assert isinstance(cdate, datetime),\
-                "cdate is not a datetime object"
+        assert isinstance(cdate, datetime), \
+            "cdate is not a datetime object"
         cdate = TextStringObject(cdate.strftime("D:%Y%m%d%H%M%SZ00'00"))
 
-    retval = DictionaryObject({\
-            NameObject('/CA'): FloatObject(alpha),\
-            NameObject('/F'): NumberObject(flag),\
-            NameObject('/Rect'): floatArray(rect),\
-            NameObject('/Type'): NameObject('/Annot'),\
-            NameObject('/CreationDate'): cdate,\
-            NameObject('/M'): now(),\
-            })
+    retval = DictionaryObject({
+        NameObject('/CA'): FloatObject(alpha),
+        NameObject('/F'): NumberObject(flag),
+        NameObject('/Rect'): floatArray(rect),
+        NameObject('/Type'): NameObject('/Annot'),
+        NameObject('/CreationDate'): cdate,
+        NameObject('/M'): now(),
+    })
 
     # Whether to add an explicit popup when adding to page
     retval.popup = False
@@ -70,7 +68,6 @@ def _baseAnno(rect, contents=None, author=None, subject=None,
         retval[NameObject('/Subj')] = TextStringObject(subject)
     if color is not None:
         retval[NameObject('/C')] = floatArray(color)
-
 
     return retval
 
@@ -86,20 +83,20 @@ def _popupAnnotation(parent, rect=None):
         _, _, x, y = parent.getObject()['/Rect']
         rect = [x, y-100, x+162, y]
 
-    retval=DictionaryObject({\
-            NameObject('/Type'): NameObject('/Annot'),\
-          NameObject('/Subtype'): NameObject('/Popup'),\
-          NameObject('/M'): now(),\
-          NameObject('/Rect'): floatArray(rect),\
-          NameObject('/Parent'): parent,\
-        })
+    retval = DictionaryObject({
+        NameObject('/Type'): NameObject('/Annot'),
+        NameObject('/Subtype'): NameObject('/Popup'),
+        NameObject('/M'): now(),
+        NameObject('/Rect'): floatArray(rect),
+        NameObject('/Parent'): parent,
+    })
 
     return retval
 
 
-def createHighlight(rect, contents=None, author=None,\
-                         subject=None, cdate=None, color=None,\
-                         alpha=1, flag=4):
+def createHighlight(rect, contents=None, author=None,
+                    subject=None, cdate=None, color=None,
+                    alpha=1, flag=4):
     '''Create a Highlight annotation given rect.
 
     <rect>: list, coordinates of highlighted rectangles:
@@ -120,30 +117,30 @@ def createHighlight(rect, contents=None, author=None,\
 
     Return: <retval>: A DictionaryObject representing the annotation.
 
-    Update time: 2016-02-19 14:39:13.
+    Update time: 2026-02-15 16:54:35
     '''
 
-    x0,y0,x1,y1=rect
-    qpl=[x0, y1, x1, y1, x0, y0, x1, y0]
+    x0, y0, x1, y1 = rect
+    qpl = [x0, y1, x1, y1, x0, y0, x1, y0]
     if color is None:
-        color=YELLOW
+        color = YELLOW
     else:
         try:
-            color=getRGBcolor(color)
+            color = getRGBcolor(color)
         except:
-            color=YELLOW
+            color = YELLOW
 
-    retval = _baseAnno(rect, contents, author,\
-            subject, cdate, color, alpha, flag)
+    retval = _baseAnno(rect, contents, author,
+                       subject, cdate, color, alpha, flag)
     retval[NameObject('/Subtype')] = NameObject('/Highlight')
     retval[NameObject('/QuadPoints')] = floatArray(qpl)
 
     return retval
 
 
-def createNote(rect, contents=None, author=None, subject=None,\
-                    cdate=None, color=None, alpha=1, flag=4,\
-                    icon=None, open_=True, state=None, state_model=None):
+def createNote(rect, contents=None, author=None, subject=None,
+               cdate=None, color=None, alpha=1, flag=4,
+               icon=None, open_=True, state=None, state_model=None):
     '''Create a text annotation given rect as a sticky note.
 
     <rect>: a rectangle [x0,y0,x1,y1].  The icon will be in the
@@ -169,15 +166,15 @@ def createNote(rect, contents=None, author=None, subject=None,\
     '''
 
     if color is None:
-        color=YELLOW
+        color = YELLOW
     else:
         try:
-            color=getRGBcolor(color)
+            color = getRGBcolor(color)
         except:
-            color=YELLOW
+            color = YELLOW
 
     retval = _baseAnno(rect, contents, author, subject, cdate,
-                                color, alpha, flag)
+                       color, alpha, flag)
     retval.popup = True
 
     retval[NameObject('/Subtype')] = NameObject('/Text')
@@ -207,14 +204,7 @@ def addAnnotation(page, outpdf, anno):
     if anno.popup:
         popup = _popupAnnotation(indir)
         indir_popup = outpdf._addObject(popup)
-        anno[NameObject('/Popup')] =  indir_popup
+        anno[NameObject('/Popup')] = indir_popup
         page['/Annots'].append(indir_popup)
 
     return page
-
-
-
-
-
-
-

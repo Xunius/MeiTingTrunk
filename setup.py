@@ -15,7 +15,7 @@ setuptools.setup(
         url='https://github.com/Xunius/MeiTingTrunk',
         packages=setuptools.find_packages(),
         classifiers=[
-            'Development Status :: 3 - Alpha',
+            'Development Status :: 4 - Beta',
             'Environment :: X11 Applications :: Qt',
             'Intended Audience :: End Users/Desktop',
             'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
@@ -40,7 +40,7 @@ setuptools.setup(
             'python-levenshtein',
             'PyQtWebEngine'
             ],
-        python_requires='>=3',
+        python_requires='>=3.8',
         include_package_data=True,
         #package_dir={'': 'MeiTingTrunk'},
         #package_data={'': ['MeiTingTrunk/lib/pdfjs/*',

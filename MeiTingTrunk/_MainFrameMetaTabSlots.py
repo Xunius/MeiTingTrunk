@@ -5,7 +5,7 @@ Contains a few functions manipulating the meta tab.
 MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
-Copyright 2018-2019 Guang-zhi XU
+Copyright 2018-2026 Guang-zhi XU
 
 This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
@@ -16,29 +16,27 @@ terms of the GPLv3 license.
 import os
 import logging
 import subprocess
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QTemporaryFile,\
-        QProcess, QFileSystemWatcher, QFile, QIODevice
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QTemporaryFile, \
+    QProcess, QFileSystemWatcher, QFile, QIODevice
 from PyQt5 import QtWidgets, QtGui
 from .lib.widgets import ChooseAppDialog
 from .lib.widgets.zim_dialog import locateZimNote, getTheZimFile
 
-#import platform
-#CURRENT_OS=platform.system()
-#if CURRENT_OS=='Linux':
-    #import pyinotify
-#elif CURRENT_OS=='Darwin':
-    #pass
+# import platform
+# CURRENT_OS=platform.system()
+# if CURRENT_OS=='Linux':
+# import pyinotify
+# elif CURRENT_OS=='Darwin':
+# pass
 
 # list of editors that run in terminal
-TERMINAL_EDITORS=['vi', 'vim', 'nano']
-
-
+TERMINAL_EDITORS = ['vi', 'vim', 'nano']
 
 
 def getTerminal():
     '''Get the default terminal'''
 
-    term=os.environ.get('TERMCMD', os.environ['TERM'])
+    term = os.environ.get('TERMCMD', os.environ['TERM'])
 
     # Handle aliases of xterm and urxvt, rxvt.
     # Match 'xterm', 'xterm-256color'
@@ -50,11 +48,11 @@ def getTerminal():
         term = 'rxvt'
 
     # check term
-    prop=subprocess.Popen('which %s' %term, shell=True, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-    rec=prop.communicate()
-    if len(rec[0])==0 and len(rec[1])>0:
-        term='xterm'
+    prop = subprocess.Popen('which %s' % term, shell=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    rec = prop.communicate()
+    if len(rec[0]) == 0 and len(rec[1]) > 0:
+        term = 'xterm'
 
     # Choose correct cmdflag accordingly
     if term in ['xfce4-terminal', 'mate-terminal', 'terminator']:
@@ -74,13 +72,12 @@ def getTerminal():
     return term, cmdflag
 
 
-
 class EditorWorker(QObject):
 
     file_change_sig = pyqtSignal(bool)  # is_zim
 
     def __init__(self, command, old_text, is_zim, zim_folder=None,
-            docid=None, zim_file=None, parent=None):
+                 docid=None, zim_file=None, parent=None):
         '''Observe the write/save states of a txt file to edit notes
 
         Args:
@@ -96,10 +93,10 @@ class EditorWorker(QObject):
         '''
         super(EditorWorker, self).__init__(parent)
 
-        self.is_zim=is_zim
-        self.zim_folder=zim_folder
-        self.docid=docid
-        self.logger=logging.getLogger(__name__)
+        self.is_zim = is_zim
+        self.zim_folder = zim_folder
+        self.docid = docid
+        self.logger = logging.getLogger(__name__)
 
         if not self.is_zim:
             self._temp_file = QTemporaryFile(self)
@@ -107,28 +104,28 @@ class EditorWorker(QObject):
             if zim_file is not None:
                 # use given zim file
                 if os.path.exists(zim_file) and os.path.islink(zim_file):
-                    self._temp_file=QFile(zim_file, self)
-                    self.logger.debug('Got given zim file %s' %zim_file)
+                    self._temp_file = QFile(zim_file, self)
+                    self.logger.debug('Got given zim file %s' % zim_file)
                 else:
                     try:
-                        zim_file=locateZimNote(self.zim_folder, self.docid)
-                        self._temp_file=QFile(zim_file, self)
+                        zim_file = locateZimNote(self.zim_folder, self.docid)
+                        self._temp_file = QFile(zim_file, self)
                         self.logger.exception(
                             'Failed to open given zim file. Get the id one.')
-                    except:
+                    except Exception:
                         self.logger.exception('Failed to find zim file.')
                         self._temp_file = QTemporaryFile(self)
-                        self.is_zim=False
+                        self.is_zim = False
             else:
                 # no given zim file, get the one in all_notes
                 try:
-                    zim_file=locateZimNote(self.zim_folder, self.docid)
-                    self._temp_file=QFile(zim_file, self)
-                    self.logger.debug('Got zim file %s' %zim_file)
-                except:
+                    zim_file = locateZimNote(self.zim_folder, self.docid)
+                    self._temp_file = QFile(zim_file, self)
+                    self.logger.debug('Got zim file %s' % zim_file)
+                except Exception:
                     self.logger.exception('Failed to find zim file.')
                     self._temp_file = QTemporaryFile(self)
-                    self.is_zim=False
+                    self.is_zim = False
 
         self._process = QProcess(self)
         self._text = ""
@@ -142,11 +139,11 @@ class EditorWorker(QObject):
 
         # open() on temp file assumes QIODevice.ReadWrite as well.
         if self._temp_file.open(QIODevice.ReadWrite):
-            self._file_path=self._temp_file.fileName()
+            self._file_path = self._temp_file.fileName()
             self._watcher.addPath(self._file_path)
-            self.logger.debug('_file_path = %s' %self._file_path)
+            self.logger.debug('_file_path = %s' % self._file_path)
 
-            program=command[0]
+            program = command[0]
             arguments = command[1:]
             self._process.start(
                 program, arguments + [self._temp_file.fileName()]
@@ -156,20 +153,20 @@ class EditorWorker(QObject):
     def onFileChange(self):
         if self._temp_file.isOpen():
 
-            #self._temp_file.seek(0)
-            #self._text = self._temp_file.readAll().data().decode()
+            # self._temp_file.seek(0)
+            # self._text = self._temp_file.readAll().data().decode()
 
             # has to use with open and read(), the above doesn't work for
             # some editors, like xed
 
             # For some reason, if watching the zim file, and open in gvim
             # it reports file not found unless I wait for a while.
-            wtf=os.path.exists(self._temp_file.fileName())
+            wtf = os.path.exists(self._temp_file.fileName())
             while not wtf:
-                wtf=os.path.exists(self._temp_file.fileName())
+                wtf = os.path.exists(self._temp_file.fileName())
 
             with open(self._temp_file.fileName()) as tmp:
-                self._text=tmp.read()
+                self._text = tmp.read()
 
             # Re-add watch file, again for xed.
             self._watcher.removePath(self._file_path)
@@ -193,8 +190,8 @@ class MainFrameMetaTabSlots:
 
     def clearMetaTab(self):
 
-        for kk,vv in self._current_meta_dict.items():
-            if kk=='files_l':
+        for kk, vv in self._current_meta_dict.items():
+            if kk == 'files_l':
                 self.t_meta.delFileField()
             else:
                 vv.clear()
@@ -210,18 +207,16 @@ class MainFrameMetaTabSlots:
 
         return
 
-
     def enableMetaTab(self):
 
-        for kk,vv in self._current_meta_dict.items():
-            if kk!='files_l':
+        for kk, vv in self._current_meta_dict.items():
+            if kk != 'files_l':
                 vv.setReadOnly(False)
 
         for tii in [self.note_textedit, ]:
             tii.setReadOnly(False)
 
         return
-
 
     @pyqtSlot()
     def confirmReviewButtonClicked(self):
@@ -234,27 +229,26 @@ class MainFrameMetaTabSlots:
             * remove docid from the Needs Review folder (id='-2')
         """
 
-        docid=self._current_doc
+        docid = self._current_doc
 
-        self.meta_dict[docid]['confirmed']='true'
+        self.meta_dict[docid]['confirmed'] = 'true'
 
-        self.logger.debug("doc id = %s. meta_dict[docid]['confirmed'] = %s"\
-                %(docid, self.meta_dict[docid]['confirmed']))
+        self.logger.debug("doc id = %s. meta_dict[docid]['confirmed'] = %s"
+                          % (docid, self.meta_dict[docid]['confirmed']))
 
         self.confirm_review_frame.setVisible(False)
-        idx=self.doc_table.currentIndex()
-        self.doc_table.model().dataChanged.emit(idx,idx)
+        idx = self.doc_table.currentIndex()
+        self.doc_table.model().dataChanged.emit(idx, idx)
 
         # del doc from needs review folder
         if docid in self.folder_data['-2']:
             self.folder_data['-2'].remove(docid)
 
-        #self.loadDocTable(folder=self._current_folder,sortidx=False,
-        self.loadDocTable(docids=self._current_docids,sortidx=False,
-                sel_row=idx.row())
+        # self.loadDocTable(folder=self._current_folder,sortidx=False,
+        self.loadDocTable(docids=self._current_docids, sortidx=False,
+                          sel_row=idx.row())
 
         return
-
 
     @pyqtSlot(QtWidgets.QAction)
     def openEditorTriggered(self, action):
@@ -268,64 +262,63 @@ class MainFrameMetaTabSlots:
         if not self.parent.is_loaded:
             return
 
-        action_text=action.text()
-        self.logger.debug('action = %s' %action_text)
+        action_text = action.text()
+        self.logger.debug('action = %s' % action_text)
 
-        if action_text=='Open Editor':
-            editor_cmd=self.settings.value('editor',type=str)
+        if action_text == 'Open Editor':
+            editor_cmd = self.settings.value('editor', type=str)
             if editor_cmd == '':
-                editor_cmd='vim'
-            self.logger.debug('editor_cmd = %s' %editor_cmd)
+                editor_cmd = 'vim'
+            self.logger.debug('editor_cmd = %s' % editor_cmd)
 
-            #----------------Get exiting texts----------------
-            old_text=self.note_textedit.toPlainText()
+            # ----------------Get exiting texts----------------
+            old_text = self.note_textedit.toPlainText()
 
-            #-------------------Get terminal-------------------
+            # -------------------Get terminal-------------------
             if editor_cmd in TERMINAL_EDITORS:
-                term, cmdflag=getTerminal()
-                self.logger.debug('term = %s, cmdflag = %s' %(term, cmdflag))
+                term, cmdflag = getTerminal()
+                self.logger.debug('term = %s, cmdflag = %s' % (term, cmdflag))
 
-                cmd=[term, cmdflag, editor_cmd]
+                cmd = [term, cmdflag, editor_cmd]
             else:
-                cmd=[editor_cmd,]
+                cmd = [editor_cmd,]
 
-            use_zim_default=self.settings.value('saving/use_zim_default',
-                    type=bool)
-            docid=self._current_doc
-            zim_file=None
+            use_zim_default = self.settings.value('saving/use_zim_default',
+                                                  type=bool)
+            docid = self._current_doc
+            zim_file = None
 
             #######################################################################
             #                       Disable use_zim_default                       #
-            use_zim_default=False
+            use_zim_default = False
             #######################################################################
 
             # if using zim as default, get the zim file in a 'smart' way
             if use_zim_default:
-                current_folder=self._current_folder[1]
-                zim_file=getTheZimFile(self._zim_folder, self.meta_dict,
-                        self.folder_dict, docid, current_folder)
+                current_folder = self._current_folder[1]
+                zim_file = getTheZimFile(self._zim_folder, self.meta_dict,
+                                         self.folder_dict, docid, current_folder)
 
-            #--------------------Get editor--------------------
-            self.note_textedit.editor=EditorWorker(cmd, old_text,
-                    use_zim_default, zim_folder=self._zim_folder,
-                    docid=docid, zim_file=zim_file, parent=self)
+            # --------------------Get editor--------------------
+            self.note_textedit.editor = EditorWorker(cmd, old_text,
+                                                     use_zim_default, zim_folder=self._zim_folder,
+                                                     docid=docid, zim_file=zim_file, parent=self)
             self.note_textedit.editor.file_change_sig.connect(
-                    self.onEditingDone)
+                self.onEditingDone)
 
-        elif action_text=='Choose Editor':
-            diag=ChooseAppDialog('Choose Editor', 'editor', self.settings,
-                    self)
-            choice=diag.exec_()
+        elif action_text == 'Choose Editor':
+            diag = ChooseAppDialog('Choose Editor', 'editor', self.settings,
+                                   self)
+            choice = diag.exec_()
 
-            if choice==QtWidgets.QDialog.Accepted:
-                editor_cmd=diag.le.text()
-                self.logger.debug('New editor_cmd = %s' %editor_cmd)
+            if choice == QtWidgets.QDialog.Accepted:
+                editor_cmd = diag.le.text()
+                self.logger.debug('New editor_cmd = %s' % editor_cmd)
                 self.settings.setValue('editor', editor_cmd)
-            elif choice==QtWidgets.QDialog.Rejected:
+            elif choice == QtWidgets.QDialog.Rejected:
                 pass
 
         return
-
 
     @pyqtSlot(bool)
     def onEditingDone(self, is_zim):
@@ -350,7 +343,6 @@ class MainFrameMetaTabSlots:
 
         return
 
-
     @pyqtSlot(int)
     def currentTabChange(self, idx):
         '''Slot to currentChanged signal of QTabWidget
@@ -361,16 +353,13 @@ class MainFrameMetaTabSlots:
         This is only used to force a call of loadPDFThumbnail()
         '''
 
-        current_widget=self.tabs.widget(idx)
+        current_widget = self.tabs.widget(idx)
 
-        if current_widget==self.t_pdf:
-            docid=self._current_doc
+        if current_widget == self.t_pdf:
+            docid = self._current_doc
             self.loadPDFThumbnail(docid)
 
         return
-
-
-
 
 
 """

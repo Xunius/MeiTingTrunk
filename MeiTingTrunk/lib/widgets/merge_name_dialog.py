@@ -4,7 +4,7 @@ Merge similar terms dialog.
 MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
-Copyright 2018-2019 Guang-zhi XU
+Copyright 2018-2026 Guang-zhi XU
 
 This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
@@ -17,20 +17,18 @@ import logging
 from collections import OrderedDict
 from fuzzywuzzy import fuzz
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QModelIndex
+from PyQt5.QtCore import Qt, pyqtSlot, QModelIndex
 from PyQt5.QtGui import QFont, QBrush, QFontMetrics
 from PyQt5.QtWidgets import QDialogButtonBox
-from ..tools import getHLine, dfsCC, getSqlitePath,\
-        createDelButton
+from ..tools import getHLine, dfsCC, getSqlitePath, \
+    createDelButton
 from .threadrun_dialog import ThreadRunDialog
 from .doc_table import MyHeaderView, TableModel
 from .. import sqlitedb
 from ..._MainFrameLoadData import prepareDocs
 from .pdf_tab import PDFFrame
 
-LOGGER=logging.getLogger(__name__)
-
-
+LOGGER = logging.getLogger(__name__)
 
 
 class MergeNameDialog(QtWidgets.QDialog):
@@ -51,66 +49,66 @@ class MergeNameDialog(QtWidgets.QDialog):
 
         super().__init__(parent=parent)
 
-        self.db=db
-        self.meta_dict=meta_dict
-        self.settings=settings
-        self.parent=parent
+        self.db = db
+        self.meta_dict = meta_dict
+        self.settings = settings
+        self.parent = parent
 
-        self.scores_dict=scores_dict
+        self.scores_dict = scores_dict
 
         # cache scores for categories. keys: category_name_in_str (e.g.
         #    'Authors', 'Journals'). values: dict{(str1, str2): score12,
         #                                         (str1, str3): score13, ...}
-        self.cate_dict={}
+        self.cate_dict = {}
 
         # returned by dialog, if True, tell main window to reload data
-        self.reload_gui=False
+        self.reload_gui = False
 
-        self.label_color='color: rgb(0,0,140); background-color: rgb(235,235,240)'
-        self.title_label_font=QFont('Serif',12,QFont.Bold)
-        self.sub_title_label_font=QFont('Serif',10,QFont.Bold)
+        self.label_color = 'color: rgb(0,0,140); background-color: rgb(235,235,240)'
+        self.title_label_font = QFont('Serif', 12, QFont.Bold)
+        self.sub_title_label_font = QFont('Serif', 10, QFont.Bold)
 
-        self.resize(900,600)
+        self.resize(900, 600)
         self.setWindowTitle('Merge Names')
         self.setWindowModality(Qt.ApplicationModal)
 
-        v_layout=QtWidgets.QVBoxLayout()
-        h_layout=QtWidgets.QHBoxLayout()
-        #h_layout.setContentsMargins(10,40,10,20)
+        v_layout = QtWidgets.QVBoxLayout()
+        h_layout = QtWidgets.QHBoxLayout()
+        # h_layout.setContentsMargins(10,40,10,20)
         self.setLayout(v_layout)
 
-        title_label=QtWidgets.QLabel('    Choose Field')
-        title_label.setFont(QFont('Serif',12,QFont.Bold))
+        title_label = QtWidgets.QLabel('    Choose Field')
+        title_label.setFont(QFont('Serif', 12, QFont.Bold))
         v_layout.addWidget(title_label)
 
         v_layout.addLayout(h_layout)
 
-        self.cate_list=QtWidgets.QListWidget(self)
-        #self.list.setSizePolicy(getXMinYExpandSizePolicy())
+        self.cate_list = QtWidgets.QListWidget(self)
+        # self.list.setSizePolicy(getXMinYExpandSizePolicy())
         self.cate_list.setMaximumWidth(200)
         h_layout.addWidget(self.cate_list)
 
-        #self.cate_list.setStyleSheet('''
-            #QListWidget::item { border: 0px solid rgb(235,235,240);
-            #font: 14px;
-            #background-color: rgb(205,205,245);
-            #color: rgb(100,10,13) };
-            #background-color: rgb(230,234,235);
-            #''')
+        # self.cate_list.setStyleSheet('''
+        # QListWidget::item { border: 0px solid rgb(235,235,240);
+        # font: 14px;
+        # background-color: rgb(205,205,245);
+        # color: rgb(100,10,13) };
+        # background-color: rgb(230,234,235);
+        # ''')
 
         self.cate_list.addItems(['Merge Author Names',
-            'Merge Journal Names',
-            'Merge Keywords',
-            'Merge Tags'
-            ])
+                                 'Merge Journal Names',
+                                 'Merge Keywords',
+                                 'Merge Tags'
+                                 ])
 
-        self.content_vlayout=QtWidgets.QVBoxLayout()
+        self.content_vlayout = QtWidgets.QVBoxLayout()
         h_layout.addLayout(self.content_vlayout)
 
-        self.buttons=QDialogButtonBox(QDialogButtonBox.Close,
-            Qt.Horizontal, self)
-        self.apply_button=self.buttons.addButton('Apply',
-                QDialogButtonBox.ApplyRole)
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Close,
+                                        Qt.Horizontal, self)
+        self.apply_button = self.buttons.addButton('Apply',
+                                                   QDialogButtonBox.ApplyRole)
 
         self.apply_button.clicked.connect(self.doMerge)
         self.buttons.rejected.connect(self.reject)
@@ -121,47 +119,44 @@ class MergeNameDialog(QtWidgets.QDialog):
         self.cate_list.setCurrentRow(0)
 
         # a non-modal dialog to show related docs in a doc table
-        self.related_doc_diag=RelatedDocsDialog(self.meta_dict,
-                self.settings, self)
-
+        self.related_doc_diag = RelatedDocsDialog(self.meta_dict,
+                                                  self.settings, self)
 
     def exec_(self):
         '''Overwrite to return reload_gui'''
 
         super().exec_()
-        LOGGER.debug('reload_gui = %s' %self.reload_gui)
+        LOGGER.debug('reload_gui = %s' % self.reload_gui)
         self.related_doc_diag.accept()
 
         return self.reload_gui
 
-
     @pyqtSlot(QtWidgets.QListWidgetItem)
-    def cateSelected(self,item):
+    def cateSelected(self, item):
         '''Load widgets for a selected category
 
         Args:
             item (QListWidgetItem): selected category item.
         '''
 
-        item_text=item.text()
-        LOGGER.debug('item.text() = %s' %item_text)
+        item_text = item.text()
+        LOGGER.debug('item.text() = %s' % item_text)
 
-        if self.content_vlayout.count()>1:
+        if self.content_vlayout.count() > 1:
             self.content_vlayout.removeWidget(self.content_frame)
 
-        if item_text=='Merge Author Names':
-            self.content_frame=self.loadTab('Authors')
-        elif item_text=='Merge Journal Names':
-            self.content_frame=self.loadTab('Journals')
-        elif item_text=='Merge Keywords':
-            self.content_frame=self.loadTab('Keywords')
-        elif item_text=='Merge Tags':
-            self.content_frame=self.loadTab('Tags')
+        if item_text == 'Merge Author Names':
+            self.content_frame = self.loadTab('Authors')
+        elif item_text == 'Merge Journal Names':
+            self.content_frame = self.loadTab('Journals')
+        elif item_text == 'Merge Keywords':
+            self.content_frame = self.loadTab('Keywords')
+        elif item_text == 'Merge Tags':
+            self.content_frame = self.loadTab('Tags')
 
-        self.content_vlayout.insertWidget(0,self.content_frame)
+        self.content_vlayout.insertWidget(0, self.content_frame)
 
         return
-
 
     def createFrame(self, title):
         '''Create a frame for a category page
@@ -174,93 +169,93 @@ class MergeNameDialog(QtWidgets.QDialog):
             va (QVBoxLayout): the vertical box layout used in scroll.
         '''
 
-        frame=QtWidgets.QWidget(self)
-        scroll=QtWidgets.QScrollArea()
+        frame = QtWidgets.QWidget(self)
+        scroll = QtWidgets.QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(frame)
-        va=QtWidgets.QVBoxLayout()
+        va = QtWidgets.QVBoxLayout()
         frame.setLayout(va)
         va.setSpacing(int(va.spacing()*2))
 
-        label=QtWidgets.QLabel(title)
+        label = QtWidgets.QLabel(title)
         label.setStyleSheet(self.label_color)
         label.setFont(self.title_label_font)
         va.addWidget(label)
         va.addWidget(getHLine(self))
 
-        #------------Duplicate check min score------------
-        label3=QtWidgets.QLabel('Minimum Similarity Score to Define Duplicate (10-100)')
-        self.spinbox=QtWidgets.QSpinBox()
+        # ------------Duplicate check min score------------
+        label3 = QtWidgets.QLabel(
+            'Minimum Similarity Score to Define Duplicate (10-100)')
+        self.spinbox = QtWidgets.QSpinBox()
         self.spinbox.setMinimum(10)
         self.spinbox.setMaximum(100)
         self.spinbox.setValue(80)
         self.spinbox.valueChanged.connect(self.spinboxChanged)
-        self.spinbox_old_value=80
+        self.spinbox_old_value = 80
 
-        ha=QtWidgets.QHBoxLayout()
+        ha = QtWidgets.QHBoxLayout()
         ha.addWidget(label3)
         ha.addWidget(self.spinbox)
         va.addLayout(ha)
         va.addWidget(getHLine(self))
 
-        #-------------------Number label-------------------
-        self.number_label=QtWidgets.QLabel()
+        # -------------------Number label-------------------
+        self.number_label = QtWidgets.QLabel()
         label.setTextFormat(Qt.RichText)
         va.addWidget(self.number_label)
         va.addWidget(getHLine(self))
 
-        #----------------Select all button----------------
-        self.sel_all_button=QtWidgets.QCheckBox('Select All', self)
+        # ----------------Select all button----------------
+        self.sel_all_button = QtWidgets.QCheckBox('Select All', self)
         self.sel_all_button.setChecked(True)
 
-        #---------------Start search button---------------
-        self.search_button=QtWidgets.QToolButton(self)
+        # ---------------Start search button---------------
+        self.search_button = QtWidgets.QToolButton(self)
         self.search_button.setText('Search')
         self.search_button.clicked.connect(self.searchButtonClicked)
 
-        ha=QtWidgets.QHBoxLayout()
+        ha = QtWidgets.QHBoxLayout()
         ha.addWidget(self.sel_all_button)
         ha.addWidget(self.search_button)
         va.addLayout(ha)
 
-        #--------Frame to show similar term groups--------
-        self.merge_frame=MergeFrame(self.settings, self)
-        self.no_dup_label=QtWidgets.QLabel('No Similar Names Found')
+        # --------Frame to show similar term groups--------
+        self.merge_frame = MergeFrame(self.settings, self)
+        self.no_dup_label = QtWidgets.QLabel('No Similar Names Found')
         self.no_dup_label.setVisible(False)
         va.addWidget(self.no_dup_label)
         va.addWidget(self.merge_frame)
 
         return scroll, va
 
-
     def loadTab(self, category_name):
         '''Load a category'''
 
-        scroll,va=self.createFrame('Merge %s Names' %category_name)
-        self.current_task=category_name
-        docids=list(self.meta_dict.keys())
+        scroll, va = self.createFrame('Merge %s Names' % category_name)
+        self.current_task = category_name
+        docids = list(self.meta_dict.keys())
 
-        if category_name=='Authors':
-            key='authors_l'
-        elif category_name=='Journals':
-            key='publication'
-        elif category_name=='Keywords':
-            key='keywords_l'
-        elif category_name=='Tags':
-            key='tags_l'
+        if category_name == 'Authors':
+            key = 'authors_l'
+        elif category_name == 'Journals':
+            key = 'publication'
+        elif category_name == 'Keywords':
+            key = 'keywords_l'
+        elif category_name == 'Tags':
+            key = 'tags_l'
 
         # get terms
-        self.text_list=sqlitedb.fetchMetaData(self.meta_dict, key, docids,
-                unique=True,sort=True)
-        n_unique=len(self.text_list)
-        self.number_label.setText('NO. of unique terms in library = <span style="font:bold;">%d</span>' %n_unique)
+        self.text_list = sqlitedb.fetchMetaData(self.meta_dict, key, docids,
+                                                unique=True, sort=True)
+        n_unique = len(self.text_list)
+        self.number_label.setText(
+            'NO. of unique terms in library = <span style="font:bold;">%d</span>' % n_unique)
 
         # if in cache, skip computation
         if self.current_task in self.cate_dict:
             self.addResults(self.cate_dict[self.current_task])
 
         return scroll
-
 
     @pyqtSlot(int)
     def spinboxChanged(self, value):
@@ -269,13 +264,12 @@ class MergeNameDialog(QtWidgets.QDialog):
         Args:
             value (int): new spinbox value.
         '''
-        if self.spinbox_old_value!=value:
+        if self.spinbox_old_value != value:
             if self.current_task in self.cate_dict:
                 del self.cate_dict[self.current_task]
-                self.spinbox_old_value=value
+                self.spinbox_old_value = value
 
         return
-
 
     @pyqtSlot()
     def delFromCache(self, key):
@@ -287,11 +281,10 @@ class MergeNameDialog(QtWidgets.QDialog):
         '''
 
         if key in self.cate_dict:
-            LOGGER.debug('Delete from cache: %s' %key)
+            LOGGER.debug('Delete from cache: %s' % key)
             del self.cate_dict[key]
 
         return
-
 
     @pyqtSlot()
     def searchButtonClicked(self):
@@ -300,31 +293,30 @@ class MergeNameDialog(QtWidgets.QDialog):
 
         # if in cache, skip computation
         if self.current_task in self.cate_dict:
-            LOGGER.debug('Key %s in cache' %self.current_task)
+            LOGGER.debug('Key %s in cache' % self.current_task)
             self.addResults(self.cate_dict[self.current_task])
         else:
-            LOGGER.debug('Key %s not in cache' %self.current_task)
-            self.thread_run_dialog1=ThreadRunDialog(
-                    self.prepareJoblist,
-                    [(0, self.text_list)],
-                    show_message='Preparing job list...',
-                    max_threads=1,
-                    get_results=True,
-                    close_on_finish=True,
-                    progressbar_style='busy',
-                    post_process_func=None,
-                    parent=self)
+            LOGGER.debug('Key %s not in cache' % self.current_task)
+            self.thread_run_dialog1 = ThreadRunDialog(
+                self.prepareJoblist,
+                [(0, self.text_list)],
+                show_message='Preparing job list...',
+                max_threads=1,
+                get_results=True,
+                close_on_finish=True,
+                progressbar_style='busy',
+                post_process_func=None,
+                parent=self)
 
             self.thread_run_dialog1.master.all_done_signal.connect(
-                    self.jobListReady)
+                self.jobListReady)
             # if abort, del key from cache and disconnect all_done_signal
-            self.thread_run_dialog1.abort_job_signal.connect(lambda:\
-                    (self.delFromCache(self.current_task),
-                    self.thread_run_dialog1.master.all_done_signal.disconnect()))
+            self.thread_run_dialog1.abort_job_signal.connect(lambda:
+                                                             (self.delFromCache(self.current_task),
+                                                              self.thread_run_dialog1.master.all_done_signal.disconnect()))
             self.thread_run_dialog1.exec_()
 
         return
-
 
     def prepareJoblist(self, jobid, text_list):
         '''Prepare job list for threaded fuzzy matching computations
@@ -340,99 +332,97 @@ class MergeNameDialog(QtWidgets.QDialog):
                              ...]
         '''
 
-        n=len(text_list)
-        job_list=[]
+        n = len(text_list)
+        job_list = []
         # a dict for this category. key: (str1, str2), value: fuzzy ratio
-        sdict=self.cate_dict.setdefault(self.current_task, {})
+        sdict = self.cate_dict.setdefault(self.current_task, {})
 
-        #-----------------Prepare joblist-----------------
-        jobid2=0
+        # -----------------Prepare joblist-----------------
+        jobid2 = 0
         for ii in range(n):
-            tii=text_list[ii]
+            tii = text_list[ii]
             for jj in range(n):
-                tjj=text_list[jj]
-                if ii>=jj:
+                tjj = text_list[jj]
+                if ii >= jj:
                     sdict.setdefault((tii, tjj), 0)
                 else:
                     # shortcut: if in cache:
                     if (tii, tjj) in self.scores_dict:
-                        sdict[(tii, tjj)]=self.scores_dict[(tii, tjj)]
+                        sdict[(tii, tjj)] = self.scores_dict[(tii, tjj)]
                         continue
                     # shortcut: skip if 1st letter don't match
                     if tii[0].lower() != tjj[0].lower():
-                        sdict[(tii, tjj)]=0
+                        sdict[(tii, tjj)] = 0
                         continue
                     # shortcut: skip if string len diff >= 50%
-                    if abs(len(tii)-len(tjj))>=\
+                    if abs(len(tii)-len(tjj)) >=\
                             max(len(tii), len(tjj))//2:
-                        sdict[(tii, tjj)]=0
+                        sdict[(tii, tjj)] = 0
                         continue
 
                     if (tii, tjj) not in sdict:
                         job_list.append((jobid2, tii, tjj))
-                        jobid2+=1
+                        jobid2 += 1
 
-        LOGGER.info('len(job_list) = %d' %len(job_list))
+        LOGGER.info('len(job_list) = %d' % len(job_list))
 
-        return 0,jobid,job_list
-
+        return 0, jobid, job_list
 
     @pyqtSlot()
     def jobListReady(self):
         '''After getting all jobs, launch threads and process jobs
         '''
 
-        rec,jobid,job_list=self.thread_run_dialog1.results[0]
-        QtWidgets.QApplication.processEvents() # seems needed
-        LOGGER.debug('rec from job list prepare = %s' %rec)
+        rec, jobid, job_list = self.thread_run_dialog1.results[0]
+        QtWidgets.QApplication.processEvents()  # seems needed
+        LOGGER.debug('rec from job list prepare = %s' % rec)
 
         def fuzzWrapper(jobid, t1, t2):
             try:
-                s=fuzz.ratio(t1, t2)
+                s = fuzz.ratio(t1, t2)
                 return 0, jobid, ((t1, t2), s)
-            except:
+            except Exception:
                 return 1, jobid, None
 
-        if rec==0 and len(job_list)>0:
-            self.thread_run_dialog2=ThreadRunDialog(
-                    fuzzWrapper,
-                    job_list,
-                    show_message='Computing Fuzzy Matching...',
-                    max_threads=1,
-                    get_results=True,
-                    close_on_finish=True,
-                    progressbar_style='classic',
-                    post_process_func=None,
-                    parent=self)
+        if rec == 0 and len(job_list) > 0:
+            self.thread_run_dialog2 = ThreadRunDialog(
+                fuzzWrapper,
+                job_list,
+                show_message='Computing Fuzzy Matching...',
+                max_threads=1,
+                get_results=True,
+                close_on_finish=True,
+                progressbar_style='classic',
+                post_process_func=None,
+                parent=self)
 
             self.thread_run_dialog2.master.all_done_signal.connect(
-                    self.collectResults)
-            self.thread_run_dialog2.abort_job_signal.connect(lambda:\
-                    self.delFromCache(self.current_task))
+                self.collectResults)
+            self.thread_run_dialog2.abort_job_signal.connect(lambda:
+                                                             self.delFromCache(self.current_task))
             self.thread_run_dialog2.exec_()
         else:
             # if job_list empty, no new jobs to compute, got all scores from
             # cache.
-            sdict=self.cate_dict[self.current_task]
+            sdict = self.cate_dict[self.current_task]
             self.scores_dict.update(sdict)
             self.addResults(sdict)
 
         return
 
-
     @pyqtSlot()
     def collectResults(self):
         '''Collect matching results and send results to GUI'''
 
-        new=self.thread_run_dialog2.results
-        sdict=self.cate_dict[self.current_task]
-        for recii,jobidii,resii in new:
-            if recii==0:
-                kii,vii=resii
-                sdict[kii]=vii
+        new = self.thread_run_dialog2.results
+        sdict = self.cate_dict[self.current_task]
+        for recii, jobidii, resii in new:
+            if recii == 0:
+                kii, vii = resii
+                sdict[kii] = vii
 
         # save to cache for use during this dialog is open
-        self.cate_dict[self.current_task]=sdict
+        self.cate_dict[self.current_task] = sdict
         # save to cache for use during this app is running
         self.scores_dict.update(sdict)
         LOGGER.info('Duplicate search results collected.')
@@ -440,14 +430,13 @@ class MergeNameDialog(QtWidgets.QDialog):
 
         return
 
-
     @pyqtSlot()
     def addResults(self, sdict):
         '''Add matching results to frame'''
 
-        edges=[kk for kk,vv in sdict.items() if vv>=self.spinbox.value()]
+        edges = [kk for kk, vv in sdict.items() if vv >= self.spinbox.value()]
         # if no duplicates, return
-        if len(edges)==0:
+        if len(edges) == 0:
             self.no_dup_label.setVisible(True)
             self.merge_frame.clearMergeLayout()
             LOGGER.info('No duplicate found.')
@@ -455,38 +444,37 @@ class MergeNameDialog(QtWidgets.QDialog):
 
         self.no_dup_label.setVisible(False)
 
-        #--------------------Get groups--------------------
-        groups={}  # key: gid, value: list of terms in same group
+        # --------------------Get groups--------------------
+        groups = {}  # key: gid, value: list of terms in same group
 
         # get connected components
-        comps=dfsCC(edges)
-        for ii,cii in enumerate(comps):
+        comps = dfsCC(edges)
+        for ii, cii in enumerate(comps):
             cii.sort()
-            groups[ii]=cii
+            groups[ii] = cii
 
         # sort by alphabetic
-        headers=sorted(groups.keys(), key=lambda x: groups[x],
-                reverse=False)
+        headers = sorted(groups.keys(), key=lambda x: groups[x],
+                         reverse=False)
 
-        self.group_dict=OrderedDict()
+        self.group_dict = OrderedDict()
         # key: groupid, value: dict: {'header': one term,
         #                             'members': list of all terms in group}
 
         # clear existing data in frame
         self.merge_frame.clearMergeLayout()
 
-        for ii,gii in enumerate(headers):
-            members=groups[gii]
-            textii=members[0]
+        for ii, gii in enumerate(headers):
+            members = groups[gii]
+            textii = members[0]
 
             # add to group_dict
-            self.group_dict[ii]={'header': textii, 'members' : members}
+            self.group_dict[ii] = {'header': textii, 'members': members}
 
             # add to merge_frame
             self.merge_frame.addGroup(ii, self.group_dict)
 
         return
-
 
     @pyqtSlot()
     def doMerge(self):
@@ -494,19 +482,19 @@ class MergeNameDialog(QtWidgets.QDialog):
 
         '''
 
-        choice=QtWidgets.QMessageBox.question(self, 'Confirm Merge',
-                'Changes can not be reverted. Confirm?',
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-        if choice==QtWidgets.QMessageBox.No:
+        choice = QtWidgets.QMessageBox.question(self, 'Confirm Merge',
+                                                'Changes can not be reverted. Confirm?',
+                                                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        if choice == QtWidgets.QMessageBox.No:
             return
 
-        LOGGER.info('Applying task = %s' %self.current_task)
+        LOGGER.info('Applying task = %s' % self.current_task)
 
-        collect_dict=self.merge_frame.collect_dict
-        group_dict=self.merge_frame.group_dict
-        button_le_dict=self.merge_frame.button_le_dict
-        sel_groups=self.merge_frame.getCheckedGroups()
-        job_list=[]
+        collect_dict = self.merge_frame.collect_dict
+        group_dict = self.merge_frame.group_dict
+        button_le_dict = self.merge_frame.button_le_dict
+        sel_groups = self.merge_frame.getCheckedGroups()
+        job_list = []
 
         for gidii in group_dict:
 
@@ -514,17 +502,18 @@ class MergeNameDialog(QtWidgets.QDialog):
             if gidii not in sel_groups:
                 continue
 
-            rgroupii=collect_dict[gidii]
-            checked=rgroupii.checkedButton()
+            rgroupii = collect_dict[gidii]
+            checked = rgroupii.checkedButton()
             # get the corresponding textedit/lineedit
-            textwidget=button_le_dict[checked]
-            newterm=textwidget.text()
+            textwidget = button_le_dict[checked]
+            newterm = textwidget.text()
             # get members from button group
-            members=[button_le_dict[tii].text() for tii in rgroupii.buttons()]
-            LOGGER.info('New term = %s. Group = %s' %(newterm, members))
+            members = [button_le_dict[tii].text()
+                       for tii in rgroupii.buttons()]
+            LOGGER.info('New term = %s. Group = %s' % (newterm, members))
             job_list.append((members, newterm))
 
-        if len(job_list)==0:
+        if len(job_list) == 0:
             return
 
         # call save first
@@ -533,7 +522,7 @@ class MergeNameDialog(QtWidgets.QDialog):
 
         for old_listii, newtermii in job_list:
             sqlitedb.replaceTerm(self.db, self.current_task, old_listii,
-                    newtermii)
+                                 newtermii)
 
         # remove from cache
         del self.cate_dict[self.current_task]
@@ -543,13 +532,12 @@ class MergeNameDialog(QtWidgets.QDialog):
 
         # reload data, delay load_to_gui till dialog closing
         self.parent.loadSqlite(getSqlitePath(self.db), load_to_gui=False)
-        self.meta_dict=self.parent.main_frame.meta_dict
+        self.meta_dict = self.parent.main_frame.meta_dict
         # reload current category. can't just call loadTab().
         self.cateSelected(self.cate_list.currentItem())
-        self.reload_gui=True
+        self.reload_gui = True
 
         return
-
 
 
 class MergeFrame(QtWidgets.QScrollArea):
@@ -564,40 +552,39 @@ class MergeFrame(QtWidgets.QScrollArea):
 
         super(self.__class__, self).__init__(parent=parent)
 
-        self.settings=settings
-        self.parent=parent
+        self.settings = settings
+        self.parent = parent
 
-        frame=QtWidgets.QWidget()
+        frame = QtWidgets.QWidget()
         frame.setStyleSheet('background-color:white')
         self.setWidgetResizable(True)
         self.setWidget(frame)
-        va=QtWidgets.QVBoxLayout(self)
-        #va.setContentsMargins(0,0,0,0)
+        va = QtWidgets.QVBoxLayout(self)
+        # va.setContentsMargins(0,0,0,0)
 
         # select all button
-        self.sel_all_button=self.parent.sel_all_button
+        self.sel_all_button = self.parent.sel_all_button
 
         # buttongroup, used with sel_all_button to toggle all checkboxes
-        self.button_group=QtWidgets.QButtonGroup(self)
+        self.button_group = QtWidgets.QButtonGroup(self)
         self.button_group.setExclusive(False)
 
-        self.sel_all_button.toggled.connect(lambda on: \
-                self.invertAllSelection(on, self.button_group))
+        self.sel_all_button.toggled.connect(lambda on:
+                                            self.invertAllSelection(on, self.button_group))
 
         # vbox layout, will be filled in addGroup
-        self.merge_layout=QtWidgets.QVBoxLayout()
+        self.merge_layout = QtWidgets.QVBoxLayout()
         va.addLayout(self.merge_layout)
         va.addStretch()
 
         frame.setLayout(va)
 
-        self.group_dict={}
+        self.group_dict = {}
         # key: groupid, value: dict: {'header': one term,
         #                             'members': list of all terms in group}
-        self.collect_dict={} # key: gid, value: buttongroup containing radiobuttons
-        self.button_le_dict={} # key: radiobutton:
-                               # value: textedit/lineedit
-
+        self.collect_dict = {}  # key: gid, value: buttongroup containing radiobuttons
+        self.button_le_dict = {}  # key: radiobutton:
+        # value: textedit/lineedit
 
     def clearMergeLayout(self):
         '''Clear the merge layout'''
@@ -609,18 +596,17 @@ class MergeFrame(QtWidgets.QScrollArea):
                 if child.widget():
                     try:
                         clearLayout(child.widget().layout())
-                    except:
+                    except Exception:
                         pass
                     child.widget().setParent(None)
                     child.widget().deleteLater()
             return
 
         clearLayout(self.merge_layout)
-        self.collect_dict={}
-        self.button_le_dict={}
+        self.collect_dict = {}
+        self.button_le_dict = {}
 
         return
-
 
     def addGroup(self, gid, group_dict):
         '''Add to frame a merging group
@@ -632,84 +618,83 @@ class MergeFrame(QtWidgets.QScrollArea):
                                 'members': list of all terms in group}.
         '''
 
-        self.group_dict=group_dict
-        members=group_dict[gid]['members']
+        self.group_dict = group_dict
+        members = group_dict[gid]['members']
 
-        font=self.settings.value('display/fonts/doc_table',QFont)
-        hi_color=self.settings.value('display/folder/highlight_color_br',
-                QBrush)
+        font = self.settings.value('display/fonts/doc_table', QFont)
+        hi_color = self.settings.value('display/folder/highlight_color_br',
+                                       QBrush)
 
-        rgroup=QtWidgets.QButtonGroup(self) # NOTE: has to add self
+        rgroup = QtWidgets.QButtonGroup(self)  # NOTE: has to add self
         rgroup.setExclusive(True)
-        self.collect_dict[gid]=rgroup
+        self.collect_dict[gid] = rgroup
 
         # a dummy widget to hold the widgets in a group
-        tmpw=QtWidgets.QWidget()
+        tmpw = QtWidgets.QWidget()
         # alternating coloring
-        if gid%2==0:
-            tmpw.setStyleSheet('background-color: %s;'\
-                    %hi_color.color().name())
+        if gid % 2 == 0:
+            tmpw.setStyleSheet('background-color: %s;'
+                               % hi_color.color().name())
 
-        grid=QtWidgets.QGridLayout(tmpw)
-        crow=0
+        grid = QtWidgets.QGridLayout(tmpw)
+        crow = 0
 
         # delete group button
-        del_group_button=QtWidgets.QToolButton(self)
+        del_group_button = QtWidgets.QToolButton(self)
         del_group_button.setText('Del Group')
         del_group_button.clicked.connect(lambda: self.delGroupClicked(
             gid, tmpw))
         grid.addWidget(del_group_button, 0, 0)
 
         # selection checkbox
-        checkbox=QtWidgets.QCheckBox()
+        checkbox = QtWidgets.QCheckBox()
         checkbox.setChecked(True)
         checkbox.stateChanged.connect(lambda on: self.groupCheckStateChange(on,
-            tmpw))
+                                                                            tmpw))
         self.button_group.addButton(checkbox, gid)
         grid.addWidget(checkbox, 1, 0)
 
         # add unique values
-        for jj,vjj in enumerate(members):
+        for jj, vjj in enumerate(members):
 
             # radio button
-            radiojj=QtWidgets.QRadioButton()
+            radiojj = QtWidgets.QRadioButton()
             rgroup.addButton(radiojj)
             radiojj.toggled.connect(lambda on: self.radioButtonStateChange(
                 on, tmpw))
 
             # textedit
-            text_editjj=QtWidgets.QLineEdit()
+            text_editjj = QtWidgets.QLineEdit()
             text_editjj.setFont(font)
             text_editjj.setText(vjj)
             text_editjj.setReadOnly(True)
 
             # del entry button
-            font_height=QFontMetrics(text_editjj.font()).height()
-            button=createDelButton(font_height)
+            font_height = QFontMetrics(text_editjj.font()).height()
+            button = createDelButton(font_height)
             button.clicked.connect(lambda: self.delValueButtonClicked(
                 gid, tmpw))
 
             # show related button
-            detail_button=QtWidgets.QToolButton()
+            detail_button = QtWidgets.QToolButton()
             detail_button.setText('Docs')
             detail_button.clicked.connect(lambda: self.openRelatedDialog(tmpw))
 
-            grid.addWidget(radiojj,crow,1)
-            grid.addWidget(text_editjj,crow,2)
-            grid.addWidget(button,crow,3)
-            grid.addWidget(detail_button,crow,4)
-            self.button_le_dict[radiojj]=text_editjj
+            grid.addWidget(radiojj, crow, 1)
+            grid.addWidget(text_editjj, crow, 2)
+            grid.addWidget(button, crow, 3)
+            grid.addWidget(detail_button, crow, 4)
+            self.button_le_dict[radiojj] = text_editjj
 
-            if jj==0:
+            if jj == 0:
                 # has to do this AFTER connecting radiojj.toggled
                 radiojj.setChecked(True)
-            crow+=1
+            crow += 1
 
         self.merge_layout.addWidget(tmpw)
-        LOGGER.debug('Added group %s' %gid)
+        LOGGER.debug('Added group %s' % gid)
 
         return
-
 
     @pyqtSlot(int, QtWidgets.QWidget)
     def radioButtonStateChange(self, on, widget):
@@ -721,10 +706,10 @@ class MergeFrame(QtWidgets.QScrollArea):
         '''
 
         # find the related textedit
-        grid=widget.layout()
-        idx=grid.indexOf(self.sender())
-        rowid=grid.getItemPosition(idx)[0]
-        textwidget=grid.itemAtPosition(rowid, 2).widget()
+        grid = widget.layout()
+        idx = grid.indexOf(self.sender())
+        rowid = grid.getItemPosition(idx)[0]
+        textwidget = grid.itemAtPosition(rowid, 2).widget()
 
         if on:
             textwidget.setReadOnly(False)
@@ -732,7 +717,6 @@ class MergeFrame(QtWidgets.QScrollArea):
             textwidget.setReadOnly(True)
 
         return
-
 
     @pyqtSlot(int, QtWidgets.QWidget)
     def groupCheckStateChange(self, on, widget):
@@ -743,25 +727,24 @@ class MergeFrame(QtWidgets.QScrollArea):
             widget (QtWidgets.QWidget): container widget of the checkbox.
         '''
 
-        grid=widget.layout()
-        nrow=grid.rowCount()
-        ncol=grid.columnCount()
-        sender=self.sender()
+        grid = widget.layout()
+        nrow = grid.rowCount()
+        ncol = grid.columnCount()
+        sender = self.sender()
 
         # loop through grid
         for ii in range(nrow):
             for jj in range(ncol):
-                itemij=grid.itemAtPosition(ii, jj)
+                itemij = grid.itemAtPosition(ii, jj)
                 if itemij:
-                    wij=itemij.widget()
+                    wij = itemij.widget()
                     # don't disable the checkbox itself
                     if wij == sender:
                         continue
                     if hasattr(wij, 'setEnabled'):
-                        wij.setEnabled(True if on>0 else False)
+                        wij.setEnabled(True if on > 0 else False)
 
         return
-
 
     @pyqtSlot(int, QtWidgets.QButtonGroup)
     def invertAllSelection(self, on, button_group):
@@ -778,7 +761,6 @@ class MergeFrame(QtWidgets.QScrollArea):
 
         return
 
-
     def getCheckedGroups(self):
         '''Collect check states in the checkbox buttongroup
 
@@ -786,16 +768,15 @@ class MergeFrame(QtWidgets.QScrollArea):
             checked (list): list of group ids checked.
         '''
 
-        checked=[]
+        checked = []
 
         for box in self.button_group.buttons():
             if box.isChecked():
                 checked.append(self.button_group.id(box))
 
-        LOGGER.debug('Checked groups: %s' %checked)
+        LOGGER.debug('Checked groups: %s' % checked)
 
         return checked
-
 
     @pyqtSlot(int, QtWidgets.QWidget)
     def delValueButtonClicked(self, gid, widget):
@@ -807,57 +788,57 @@ class MergeFrame(QtWidgets.QScrollArea):
         '''
 
         # find the related textedit
-        grid=widget.layout()
-        idx=grid.indexOf(self.sender())
-        rowid=grid.getItemPosition(idx)[0]
-        textwidget=grid.itemAtPosition(rowid, 2).widget()
-        text=textwidget.text()
+        grid = widget.layout()
+        idx = grid.indexOf(self.sender())
+        rowid = grid.getItemPosition(idx)[0]
+        textwidget = grid.itemAtPosition(rowid, 2).widget()
+        text = textwidget.text()
 
-        values=self.group_dict[gid]['members']
+        values = self.group_dict[gid]['members']
         if text in values:
             values.remove(text)
-            self.group_dict[gid]['members']=values
+            self.group_dict[gid]['members'] = values
 
         # del widgets in the row
-        col1=[]  # save widgets in the 1st column (del group button or checkbox)
+        # save widgets in the 1st column (del group button or checkbox)
+        col1 = []
         for jj in range(grid.columnCount()):
-            itemjj=grid.itemAtPosition(rowid, jj)
+            itemjj = grid.itemAtPosition(rowid, jj)
             if itemjj:
                 # col 1 has something
-                if jj==0:
-                    wjj=itemjj.widget()
-                    idx=grid.indexOf(wjj)
-                    wjj=grid.takeAt(idx).widget()
+                if jj == 0:
+                    wjj = itemjj.widget()
+                    idx = grid.indexOf(wjj)
+                    wjj = grid.takeAt(idx).widget()
                     col1.append(wjj)
                     wjj.setParent(None)
 
                     # if it's del group button, also need to shift checkbox
                     if isinstance(wjj, QtWidgets.QToolButton):
-                        checkbox=grid.itemAtPosition(rowid+1, 0)
-                        wjj=checkbox.widget()
-                        idx=grid.indexOf(wjj)
-                        wjj=grid.takeAt(idx).widget()
+                        checkbox = grid.itemAtPosition(rowid+1, 0)
+                        wjj = checkbox.widget()
+                        idx = grid.indexOf(wjj)
+                        wjj = grid.takeAt(idx).widget()
                         col1.append(wjj)
                         wjj.setParent(None)
                 # col 1 has nothing, just del
                 else:
-                    wjj=itemjj.widget()
+                    wjj = itemjj.widget()
                     wjj.setParent(None)
                     wjj.deleteLater()
 
-        #---------Delete the group if only 1 left---------
+        # ---------Delete the group if only 1 left---------
         # NOTE that the rowcount() method doesn't decrease!!!
-        if len(values)<2:
+        if len(values) < 2:
             self.delGroupClicked(gid, widget)
             return
 
-        if len(col1)>0:
+        if len(col1) > 0:
             for ii, wii in enumerate(col1):
                 # shift col 1 widgets down by 1 row
                 grid.addWidget(wii, rowid+1+ii, 0)
 
         return
-
 
     @pyqtSlot(int, QtWidgets.QWidget)
     def delGroupClicked(self, gid, widget):
@@ -873,9 +854,9 @@ class MergeFrame(QtWidgets.QScrollArea):
         if gid in self.collect_dict:
             del self.collect_dict[gid]
 
-        idx=self.merge_layout.indexOf(widget)
+        idx = self.merge_layout.indexOf(widget)
         if idx != -1:
-            item=self.merge_layout.takeAt(idx)
+            item = self.merge_layout.takeAt(idx)
             if item:
                 item.widget().setParent(None)
                 item.widget().deleteLater()
@@ -885,24 +866,22 @@ class MergeFrame(QtWidgets.QScrollArea):
 
         return
 
-
     def alternateColor(self):
         '''Give alternating background colors to groups'''
 
-        hi_color=self.settings.value('display/folder/highlight_color_br',
-                QBrush)
+        hi_color = self.settings.value('display/folder/highlight_color_br',
+                                       QBrush)
 
-        n=self.merge_layout.count()
+        n = self.merge_layout.count()
         for ii in range(n):
-            wii=self.merge_layout.itemAt(ii).widget()
-            if ii%2==0:
-                wii.setStyleSheet('background-color: %s;'\
-                        %hi_color.color().name())
+            wii = self.merge_layout.itemAt(ii).widget()
+            if ii % 2 == 0:
+                wii.setStyleSheet('background-color: %s;'
+                                  % hi_color.color().name())
             else:
                 wii.setStyleSheet('background-color: rgb(255,255,255);')
 
         return
-
 
     @pyqtSlot(QtWidgets.QWidget)
     def openRelatedDialog(self, widget):
@@ -913,40 +892,39 @@ class MergeFrame(QtWidgets.QScrollArea):
         '''
 
         # find the related textedit
-        grid=widget.layout()
-        idx=grid.indexOf(self.sender())
-        rowid=grid.getItemPosition(idx)[0]
-        textwidget=grid.itemAtPosition(rowid, 2).widget()
-        text=textwidget.text()
+        grid = widget.layout()
+        idx = grid.indexOf(self.sender())
+        rowid = grid.getItemPosition(idx)[0]
+        textwidget = grid.itemAtPosition(rowid, 2).widget()
+        text = textwidget.text()
 
-        if len(text)==0:
+        if len(text) == 0:
             self.parent.related_doc_diag.loadDocTable([])
             return
 
-        current_task=self.parent.current_task
-        meta_dict=self.parent.meta_dict
+        current_task = self.parent.current_task
+        meta_dict = self.parent.meta_dict
 
-        if current_task=='Authors':
-            filter_type='Filter by authors'
-        elif current_task=='Journals':
-            filter_type='Filter by publications'
-        elif current_task=='Keywords':
-            filter_type='Filter by keywords'
-        elif current_task=='Tags':
-            filter_type='Filter by tags'
+        if current_task == 'Authors':
+            filter_type = 'Filter by authors'
+        elif current_task == 'Journals':
+            filter_type = 'Filter by publications'
+        elif current_task == 'Keywords':
+            filter_type = 'Filter by keywords'
+        elif current_task == 'Tags':
+            filter_type = 'Filter by tags'
 
-        filter_docids=sqlitedb.filterDocs(meta_dict,
-                meta_dict.keys(),
-                filter_type, text)
+        filter_docids = sqlitedb.filterDocs(meta_dict,
+                                            meta_dict.keys(),
+                                            filter_type, text)
 
-        LOGGER.debug('term = %s' %text)
-        LOGGER.debug('filter_docids = %s' %filter_docids)
+        LOGGER.debug('term = %s' % text)
+        LOGGER.debug('filter_docids = %s' % filter_docids)
 
         self.parent.related_doc_diag.loadDocTable(filter_docids)
         self.parent.related_doc_diag.show()
 
         return
-
 
 
 class RelatedDocsDialog(QtWidgets.QDialog):
@@ -963,44 +941,44 @@ class RelatedDocsDialog(QtWidgets.QDialog):
 
         super().__init__(parent=parent)
 
-        self.meta_dict=meta_dict
-        self.settings=settings
-        self.parent=parent
+        self.meta_dict = meta_dict
+        self.settings = settings
+        self.parent = parent
 
-        self.resize(700,600)
+        self.resize(700, 600)
         self.setWindowTitle('Related documents')
         self.setWindowModality(Qt.NonModal)
-        v_layout=QtWidgets.QVBoxLayout(self)
+        v_layout = QtWidgets.QVBoxLayout(self)
 
-        self.doc_table=self.createDocTable()
+        self.doc_table = self.createDocTable()
         v_layout.addWidget(self.doc_table)
 
-        self.buttons=QDialogButtonBox(QDialogButtonBox.Ok,
-            Qt.Horizontal, self)
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok,
+                                        Qt.Horizontal, self)
         self.buttons.accepted.connect(self.accept)
         v_layout.addWidget(self.buttons)
-
 
     def createDocTable(self):
         '''Create a table view as doc table'''
 
-        tv=QtWidgets.QTableView(self)
-        hh=MyHeaderView(self)
+        tv = QtWidgets.QTableView(self)
+        hh = MyHeaderView(self)
 
         tv.setHorizontalHeader(hh)
         tv.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         tv.setShowGrid(True)
         tv.doubleClicked.connect(self.docDoubleClicked)
-        #tv.setSortingEnabled(True)  # dont enable sort!
+        # tv.setSortingEnabled(True)  # dont enable sort!
 
-        header=['docid','favourite','read','has_file','author','title',
-                'journal','year','added','confirmed']
-        tablemodel=TableModel(self,[],header,self.settings)
+        header = ['docid', 'favourite', 'read', 'has_file', 'author', 'title',
+                  'journal', 'year', 'added', 'confirmed']
+        tablemodel = TableModel(self, [], header, self.settings)
         tv.setModel(tablemodel)
         hh.setModel(tablemodel)
         hh.initresizeSections()
-        tv.setColumnHidden(0,True) # doc id column, hide
-        tv.setColumnHidden(9,True) # needs review column, shown as bold/normal
+        tv.setColumnHidden(0, True)  # doc id column, hide
+        # needs review column, shown as bold/normal
+        tv.setColumnHidden(9, True)
         tv.setAlternatingRowColors(True)
 
         # NOTE: this seems to be change somewhere between PyQt5.6.0 and
@@ -1011,7 +989,6 @@ class RelatedDocsDialog(QtWidgets.QDialog):
                 background-color: none''')
 
         return tv
-
 
     def loadDocTable(self, docids, sortidx=4, sortorder=0):
         """Load the doc table
@@ -1026,20 +1003,19 @@ class RelatedDocsDialog(QtWidgets.QDialog):
                          Qt.DescendingOrder (1), order to sort the columns.
         """
 
-        tablemodel=self.doc_table.model()
+        tablemodel = self.doc_table.model()
 
-        #-------------Format data to table rows-------------
-        data=prepareDocs(self.meta_dict, docids)
-        tablemodel.arraydata=data
+        # -------------Format data to table rows-------------
+        data = prepareDocs(self.meta_dict, docids)
+        tablemodel.arraydata = data
 
-        if len(data)>0:
-            #--------------------Sort rows--------------------
+        if len(data) > 0:
+            # --------------------Sort rows--------------------
             tablemodel.sort(sortidx, sortorder)
 
         tablemodel.layoutChanged.emit()
 
         return
-
 
     @pyqtSlot(QModelIndex)
     def docDoubleClicked(self, idx):
@@ -1053,36 +1029,37 @@ class RelatedDocsDialog(QtWidgets.QDialog):
         user choose which one to open.
         """
 
-        row_idx=idx.row()
-        LOGGER.info('Clicked row=%s' %row_idx)
+        row_idx = idx.row()
+        LOGGER.info('Clicked row=%s' % row_idx)
 
-        #docid=self._tabledata[row_idx][0]
-        docid=self.doc_table.model().arraydata[row_idx][0]
-        files=self.meta_dict[docid]['files_l']
-        nfiles=len(files)
+        # docid=self._tabledata[row_idx][0]
+        docid = self.doc_table.model().arraydata[row_idx][0]
+        files = self.meta_dict[docid]['files_l']
+        nfiles = len(files)
 
-        if nfiles==0:
+        if nfiles == 0:
             return
-        elif nfiles==1:
+        elif nfiles == 1:
             self.openPDFViewer(files[0])
         else:
 
-            LOGGER.info('Multiple files associated with doc. n = %d' %nfiles)
+            LOGGER.info('Multiple files associated with doc. n = %d' % nfiles)
 
-            dialog=QtWidgets.QDialog()
-            dialog.resize(500,500)
+            dialog = QtWidgets.QDialog()
+            dialog.resize(500, 500)
             dialog.setWindowTitle('Choose Open File')
             dialog.setWindowModality(Qt.ApplicationModal)
-            layout=QtWidgets.QVBoxLayout()
+            layout = QtWidgets.QVBoxLayout()
             dialog.setLayout(layout)
 
-            label=QtWidgets.QLabel('Select file(s) to open')
-            label_font=QFont('Serif',12,QFont.Bold)
+            label = QtWidgets.QLabel('Select file(s) to open')
+            label_font = QFont('Serif', 12, QFont.Bold)
             label.setFont(label_font)
             layout.addWidget(label)
 
-            listwidget=QtWidgets.QListWidget()
-            listwidget.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+            listwidget = QtWidgets.QListWidget()
+            listwidget.setSelectionMode(
+                QtWidgets.QAbstractItemView.SingleSelection)
 
             for fii in files:
                 listwidget.addItem(fii)
@@ -1090,7 +1067,7 @@ class RelatedDocsDialog(QtWidgets.QDialog):
             listwidget.setCurrentRow(0)
             layout.addWidget(listwidget)
 
-            buttons=QtWidgets.QDialogButtonBox(
+            buttons = QtWidgets.QDialogButtonBox(
                 QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
                 Qt.Horizontal, dialog)
 
@@ -1098,22 +1075,20 @@ class RelatedDocsDialog(QtWidgets.QDialog):
             buttons.rejected.connect(dialog.reject)
             layout.addWidget(buttons)
 
-            rec=dialog.exec_()
-            LOGGER.debug('return value from dialog: %s' %rec)
+            rec = dialog.exec_()
+            LOGGER.debug('return value from dialog: %s' % rec)
 
             if rec:
-                sel_files=listwidget.selectionModel().selectedRows()
-                sel_files=[listwidget.item(ii.row()) for ii in sel_files]
-                sel_files=[ii.data(0) for ii in sel_files]
-                LOGGER.info('Selected files=%s' %sel_files)
+                sel_files = listwidget.selectionModel().selectedRows()
+                sel_files = [listwidget.item(ii.row()) for ii in sel_files]
+                sel_files = [ii.data(0) for ii in sel_files]
+                LOGGER.info('Selected files=%s' % sel_files)
 
-                if len(sel_files)>0:
+                if len(sel_files) > 0:
                     for fii in sel_files:
                         self.openPDFViewer(fii)
 
         return
-
-
 
     def openPDFViewer(self, filepath):
         '''Open a dialog showing the PDF viewer
@@ -1124,30 +1099,31 @@ class RelatedDocsDialog(QtWidgets.QDialog):
 
         # if a file newly added and has not been saved, it would be an abs
         if not os.path.isabs(filepath):
-            lib_folder=self.settings.value('saving/current_lib_folder', type=str)
-            filepath=os.path.join(lib_folder, filepath)
+            lib_folder = self.settings.value(
+                'saving/current_lib_folder', type=str)
+            filepath = os.path.join(lib_folder, filepath)
 
         try:
-            diag=QtWidgets.QDialog(self)
+            diag = QtWidgets.QDialog(self)
             diag.setWindowTitle(os.path.split(filepath)[1])
             diag.setWindowFlags(
-                    Qt.Window |
-                    Qt.WindowTitleHint |
-                    Qt.WindowSystemMenuHint |
-                    Qt.WindowMinimizeButtonHint |
-                    Qt.WindowMaximizeButtonHint |
-                    Qt.WindowCloseButtonHint |
-                    Qt.WindowStaysOnTopHint
-                    )
+                Qt.Window |
+                Qt.WindowTitleHint |
+                Qt.WindowSystemMenuHint |
+                Qt.WindowMinimizeButtonHint |
+                Qt.WindowMaximizeButtonHint |
+                Qt.WindowCloseButtonHint |
+                Qt.WindowStaysOnTopHint
+            )
 
-            diag.resize(700,600)
-            va=QtWidgets.QVBoxLayout(diag)
+            diag.resize(700, 600)
+            va = QtWidgets.QVBoxLayout(diag)
 
-            pdfframe=PDFFrame(diag)
+            pdfframe = PDFFrame(diag)
             va.addWidget(pdfframe)
 
             pdfframe.loadFile(lib_folder, filepath)
 
             diag.show()
-        except:
+        except Exception:
             LOGGER.warning('Failed to launch pdf viewer.')

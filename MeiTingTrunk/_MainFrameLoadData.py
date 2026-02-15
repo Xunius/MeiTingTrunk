@@ -74,7 +74,7 @@ is loaded in loadBibTab().
 MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
-Copyright 2018-2019 Guang-zhi XU
+Copyright 2018-2026 Guang-zhi XU
 
 This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
@@ -93,7 +93,6 @@ from .lib import bibparse
 from .lib.tools import getHLine, hasPoppler, ZimNoteNotFoundError
 
 
-
 def addFolder(parent, folderid, folder_dict):
     """Add a new folder item to the folder tree
 
@@ -108,19 +107,19 @@ def addFolder(parent, folderid, folder_dict):
     Sub-folders are added by recursive calls of the function.
     """
 
-    foldername,parentid=folder_dict[folderid]
-    fitem=QtWidgets.QTreeWidgetItem([foldername,str(folderid)])
-    style=QtWidgets.QApplication.style()
-    diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
-    fitem.setIcon(0,diropen_icon)
-    sub_ids=sqlitedb.getChildFolders(folder_dict,folderid)
-    if parentid=='-1':
+    foldername, parentid = folder_dict[folderid]
+    fitem = QtWidgets.QTreeWidgetItem([foldername, str(folderid)])
+    style = QtWidgets.QApplication.style()
+    diropen_icon = style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+    fitem.setIcon(0, diropen_icon)
+    sub_ids = sqlitedb.getChildFolders(folder_dict, folderid)
+    if parentid == '-1':
         parent.addTopLevelItem(fitem)
     else:
         parent.addChild(fitem)
-    if len(sub_ids)>0:
+    if len(sub_ids) > 0:
         for sii in sub_ids:
-            addFolder(fitem,sii,folder_dict)
+            addFolder(fitem, sii, folder_dict)
 
     return
 
@@ -141,40 +140,39 @@ def prepareDocs(meta_dict, docids):
                           doc to feed into the doc_table QTableView.
     """
 
-    data=[]
+    data = []
     for ii in docids:
-        entryii=meta_dict[ii]
-        fav_check=QtWidgets.QCheckBox()
-        read_check=QtWidgets.QCheckBox()
-        fav_check.setChecked(True if entryii['favourite']=='true' else False)
-        read_check.setChecked(True if entryii['read']=='true' else False)
-        aii=[ii,
-            fav_check,
-            read_check,
-            entryii['has_file'],
-            '; '.join(entryii['authors_l']),
-            entryii['title'],
-            entryii['publication'],
-            entryii['year'],
-            entryii['added'],
-            entryii['confirmed']
-            ]
+        entryii = meta_dict[ii]
+        fav_check = QtWidgets.QCheckBox()
+        read_check = QtWidgets.QCheckBox()
+        fav_check.setChecked(True if entryii['favourite'] == 'true' else False)
+        read_check.setChecked(True if entryii['read'] == 'true' else False)
+        aii = [ii,
+               fav_check,
+               read_check,
+               entryii['has_file'],
+               '; '.join(entryii['authors_l']),
+               entryii['title'],
+               entryii['publication'],
+               entryii['year'],
+               entryii['added'],
+               entryii['confirmed']
+               ]
 
         data.append(aii)
 
     return data
 
-# NOTE: need to put this after prepareDocs to break a cyclic import
+
 from .lib.widgets.zim_dialog import readZimNote
+# NOTE: need to put this after prepareDocs to break a cyclic import
 
 
 class MainFrameLoadData:
 
-
     #######################################################################
     #                       Load data into widgets                        #
     #######################################################################
-
 
     def loadLibTree(self, db, meta_dict, folder_data, folder_dict):
         """Load folders in a library
@@ -186,70 +184,72 @@ class MainFrameLoadData:
             folder_dict (dict): dict containing folder info in the library.
         """
 
-        self.db=db
-        self.meta_dict=meta_dict
-        self.folder_data=folder_data
-        self.folder_dict=folder_dict
-        #self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
+        self.db = db
+        self.meta_dict = meta_dict
+        self.folder_data = folder_data
+        self.folder_dict = folder_dict
+        # self.inv_folder_dict={v[0]:k for k,v in self.folder_dict.items()}
 
-        style=QtWidgets.QApplication.style()
-        diropen_icon=style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
-        needsreview_icon=style.standardIcon(QtWidgets.QStyle.SP_MessageBoxInformation)
-        trash_icon=style.standardIcon(QtWidgets.QStyle.SP_TrashIcon)
+        style = QtWidgets.QApplication.style()
+        diropen_icon = style.standardIcon(QtWidgets.QStyle.SP_DirOpenIcon)
+        needsreview_icon = style.standardIcon(
+            QtWidgets.QStyle.SP_MessageBoxInformation)
+        trash_icon = style.standardIcon(QtWidgets.QStyle.SP_TrashIcon)
 
-        #-------------Create preserved folders-------------
-        self.all_folder=QtWidgets.QTreeWidgetItem(['All','-1'])
-        self.all_folder.setIcon(0,diropen_icon)
+        # -------------Create preserved folders-------------
+        self.all_folder = QtWidgets.QTreeWidgetItem(['All', '-1'])
+        self.all_folder.setIcon(0, diropen_icon)
         self.libtree.addTopLevelItem(self.all_folder)
 
-        self.needsreview_folder=QtWidgets.QTreeWidgetItem(['Needs Review','-2'])
-        self.needsreview_folder.setIcon(0,needsreview_icon)
+        self.needsreview_folder = QtWidgets.QTreeWidgetItem(
+            ['Needs Review', '-2'])
+        self.needsreview_folder.setIcon(0, needsreview_icon)
         self.libtree.addTopLevelItem(self.needsreview_folder)
 
-        self.trash_folder=QtWidgets.QTreeWidgetItem(['Trash','-3'])
-        self.trash_folder.setIcon(0,trash_icon)
+        self.trash_folder = QtWidgets.QTreeWidgetItem(['Trash', '-3'])
+        self.trash_folder.setIcon(0, trash_icon)
         self.libtree.addTopLevelItem(self.trash_folder)
 
-        self.sys_folders=[self.all_folder,self.needsreview_folder,self.trash_folder]
+        self.sys_folders = [self.all_folder,
+                            self.needsreview_folder, self.trash_folder]
 
-        #-------------Get all level 1 folders-------------
-        folders1=[(vv[0],kk) for kk,vv in self.folder_dict.items() if\
-                vv[1]=='-1']
+        # -------------Get all level 1 folders-------------
+        folders1 = [(vv[0], kk) for kk, vv in self.folder_dict.items() if
+                    vv[1] == '-1']
         folders1.sort()
 
-        self.logger.debug('Level 1 folder ids = %s' %folders1)
+        self.logger.debug('Level 1 folder ids = %s' % folders1)
 
-        #------------------Add separator------------------
-        separator=QtWidgets.QTreeWidgetItem([' ',None])
+        # ------------------Add separator------------------
+        separator = QtWidgets.QTreeWidgetItem([' ', None])
         separator.setFlags(Qt.NoItemFlags)
         self.libtree.addTopLevelItem(separator)
-        h_line=getHLine(None)
-        self.libtree.setItemWidget(separator,0,h_line)
+        h_line = getHLine(None)
+        self.libtree.setItemWidget(separator, 0, h_line)
 
-        #------------Add folders from database------------
-        for fnameii,idii in folders1:
-            addFolder(self.libtree,idii,self.folder_dict)
+        # ------------Add folders from database------------
+        for fnameii, idii in folders1:
+            addFolder(self.libtree, idii, self.folder_dict)
 
-        #---------------Add folders in trash---------------
-        trashed_folders=[(vv[0],kk) for kk,vv in self.folder_dict.items()\
-                if vv[1]=='-3']
+        # ---------------Add folders in trash---------------
+        trashed_folders = [(vv[0], kk) for kk, vv in self.folder_dict.items()
+                           if vv[1] == '-3']
 
-        self.logger.debug('Ids of folders in Trash = %s' %trashed_folders)
+        self.logger.debug('Ids of folders in Trash = %s' % trashed_folders)
 
-        for fnameii,idii in trashed_folders:
-            addFolder(self.trash_folder,idii,self.folder_dict)
+        for fnameii, idii in trashed_folders:
+            addFolder(self.trash_folder, idii, self.folder_dict)
 
         self.sortFolders()
         self.libtree.setCurrentItem(self.all_folder)
 
-        self.changed_doc_ids=[] # store ids of changed docs
-        self.changed_folder_ids=[] # store ids of changed folders
+        self.changed_doc_ids = []  # store ids of changed docs
+        self.changed_folder_ids = []  # store ids of changed folders
 
         return
 
-
     def loadDocTable(self, folder=None, docids=None, sortidx=None,
-            sortorder=0, sel_row=None):
+                     sortorder=0, sel_row=None):
         """Load the doc table
 
         Kwargs:
@@ -270,78 +270,79 @@ class MainFrameLoadData:
                                    If None, don't change selection.
         """
 
-        tablemodel=self.doc_table.model()
-        hh=self.doc_table.horizontalHeader()
+        tablemodel = self.doc_table.model()
+        hh = self.doc_table.horizontalHeader()
 
-        self.logger.debug('Load folder = %s. sort indicator section = %s. sort order = %s'\
-                %(folder, hh.sortIndicatorSection(), hh.sortIndicatorOrder()))
+        self.logger.debug('Load folder = %s. sort indicator section = %s. sort order = %s'
+                          % (folder, hh.sortIndicatorSection(), hh.sortIndicatorOrder()))
 
-        #-----------Get list of doc ids to load-----------
+        # -----------Get list of doc ids to load-----------
         if docids is None:
 
             # load All folder
-            if folder is None or folder[1]=='-1':
-                docids=self.meta_dict.keys()
+            if folder is None or folder[1] == '-1':
+                docids = self.meta_dict.keys()
 
-                self.logger.debug('NO. before subtracting orphan docs: %d'\
-                        %len(docids))
+                self.logger.debug('NO. before subtracting orphan docs: %d'
+                                  % len(docids))
 
-                docids=list(set(docids).difference(self._orphan_doc_ids))
+                docids = list(set(docids).difference(self._orphan_doc_ids))
 
-                self.logger.info('NO. after subtracting orphan docs: %d'\
-                        %len(docids))
+                self.logger.info('NO. after subtracting orphan docs: %d'
+                                 % len(docids))
 
             # load any other folder
             else:
-                docids=self.folder_data[folder[1]]
-                self.logger.info('NO. in folder %s = %d' %(folder[1], len(docids)))
+                docids = self.folder_data[folder[1]]
+                self.logger.info('NO. in folder %s = %d' %
+                                 (folder[1], len(docids)))
 
-        #-------------Format data to table rows-------------
-        data=prepareDocs(self.meta_dict,docids)
-        tablemodel.arraydata=data
+        # -------------Format data to table rows-------------
+        data = prepareDocs(self.meta_dict, docids)
+        tablemodel.arraydata = data
 
-        #--------------------Sort rows--------------------
-        if sortidx != False:
+        # --------------------Sort rows--------------------
+        if sortidx:
             if sortidx is None:
-                sortidx=self.settings.value('view/sortidx', 4, type=int)
-                sortorder=self.settings.value('view/sortorder', 0, type=int)
+                sortidx = self.settings.value('view/sortidx', 4, type=int)
+                sortorder = self.settings.value('view/sortorder', 0, type=int)
                 tablemodel.sort(sortidx, sortorder)
             else:
-                #if sortidx is not None and sortidx in range(tablemodel.columnCount(None)):
-                self.logger.info('sort idx = %s. sortorder = %s' %(sortidx, sortorder))
+                # if sortidx is not None and sortidx in range(tablemodel.columnCount(None)):
+                self.logger.info('sort idx = %s. sortorder = %s' %
+                                 (sortidx, sortorder))
                 tablemodel.sort(sortidx, sortorder)
 
-        if len(data)>0:
+        if len(data) > 0:
             self.enableMetaTab()
 
-            #-------------------Select a given row-------------------
+            # -------------------Select a given row-------------------
             if sel_row is not None:
-                current_row=self.doc_table.currentIndex().row()
-                docid=self._current_doc
+                current_row = self.doc_table.currentIndex().row()
+                docid = self._current_doc
 
-                self.logger.info('Selected row = %s, docid = %s'\
-                        %(current_row, docid))
+                self.logger.info('Selected row = %s, docid = %s'
+                                 % (current_row, docid))
 
                 self.doc_table.selectRow(sel_row)
 
-                if current_row==sel_row:
+                if current_row == sel_row:
                     self.logger.info('@@@@@row not change. force sel doc')
-                    self.selDoc(self.doc_table.currentIndex(),None)
+                    self.selDoc(self.doc_table.currentIndex(), None)
             else:
-                self.selDoc(self.doc_table.currentIndex(),None)
+                self.selDoc(self.doc_table.currentIndex(), None)
 
-            self.status_bar.showMessage('%d rows' %len(data))
+            self.status_bar.showMessage('%d rows' % len(data))
         else:
-            #------------------Clear meta tab------------------
+            # ------------------Clear meta tab------------------
             self.logger.info('No data to be loaded. Clear meta tab.')
             self.removeFolderHighlights()
             self.clearMetaTab()
 
-        #self.doc_table.viewport().update()
+        # self.doc_table.viewport().update()
         tablemodel.layoutChanged.emit()
 
         return
-
 
     def loadMetaTab(self, docid=None):
         """Load meta data tab of a doc
@@ -350,45 +351,45 @@ class MainFrameLoadData:
             docid (int or None): if int, the id of the doc to load.
         """
 
-        self.logger.info('docid = %s' %docid)
+        self.logger.info('docid = %s' % docid)
 
         if docid is None:
             return
 
-        fields=self._current_meta_dict.keys()
+        fields = self._current_meta_dict.keys()
         if fields is None:
             return
 
-        metaii=self.meta_dict[docid]
+        metaii = self.meta_dict[docid]
+
         def conv(text):
-            if isinstance(text,(str)):
+            if isinstance(text, (str)):
                 return text
             else:
                 return str(text)
 
-        #---------Loop through fields in meta tab---------
+        # ---------Loop through fields in meta tab---------
         for fii in fields:
-            tii=metaii[fii]
+            tii = metaii[fii]
             if tii is None:
                 self._current_meta_dict[fii].clear()
                 continue
-            elif fii=='files_l':
+            elif fii == 'files_l':
                 # show only file name
                 self.t_meta.delFileField()
                 for fjj in tii:
                     self.t_meta.createFileField(fjj)
             else:
-                if isinstance(tii,(list,tuple)):
-                    tii=u'; '.join(tii)
+                if isinstance(tii, (list, tuple)):
+                    tii = u'; '.join(tii)
                 self._current_meta_dict[fii].setText(conv(tii))
 
-            if fii in ['authors_l','abstract','tags_l','keywords_l']:
+            if fii in ['authors_l', 'abstract', 'tags_l', 'keywords_l']:
                 if self.t_meta.fold_dict[fii]:
                     # fold long texts
                     self._current_meta_dict[fii].foldText()
 
         return
-
 
     def loadBibTab(self, docid=None):
         """Load bibtex tab of a doc
@@ -397,26 +398,25 @@ class MainFrameLoadData:
             docid (int or None): if int, the id of the doc to load.
         """
 
-        self.logger.info('docid = %s' %docid)
+        self.logger.info('docid = %s' % docid)
         if docid is None:
             return
 
-        metaii=self.meta_dict[docid]
-        omit_keys=self.settings.value('export/bib/omit_fields', [], str)
-        if isinstance(omit_keys,str) and omit_keys=='':
-            omit_keys=[]
+        metaii = self.meta_dict[docid]
+        omit_keys = self.settings.value('export/bib/omit_fields', [], str)
+        if isinstance(omit_keys, str) and omit_keys == '':
+            omit_keys = []
 
-        path_type=self.settings.value('export/bib/path_type',type=str)
-        if path_type=='absolute':
-            prefix=self.settings.value('saving/current_lib_folder',type=str)
-        elif path_type=='relative':
-            prefix=''
+        path_type = self.settings.value('export/bib/path_type', type=str)
+        if path_type == 'absolute':
+            prefix = self.settings.value('saving/current_lib_folder', type=str)
+        elif path_type == 'relative':
+            prefix = ''
 
-        text=bibparse.metaDictToBib(0,metaii,omit_keys,prefix)[2]
+        text = bibparse.metaDictToBib(0, metaii, omit_keys, prefix)[2]
         self.bib_textedit.setText(text)
 
         return
-
 
     def loadNoteTab(self, docid=None):
         """Load note tab of a doc
@@ -425,36 +425,37 @@ class MainFrameLoadData:
             docid (int or None): if int, the id of the doc to load.
         """
 
-        self.logger.info('docid = %s' %docid)
+        self.logger.info('docid = %s' % docid)
         if docid is None:
             return
 
-        use_zim_default=self.settings.value('saving/use_zim_default', type=bool)
+        use_zim_default = self.settings.value(
+            'saving/use_zim_default', type=bool)
 
         #######################################################################
         #                       Disable use_zim_default                       #
-        use_zim_default=False
+        use_zim_default = False
         #######################################################################
 
         if use_zim_default:
-            self.logger.debug('use_zim_default = %s' %use_zim_default)
+            self.logger.debug('use_zim_default = %s' % use_zim_default)
             try:
-                noteii=readZimNote(self._zim_folder, docid)
+                noteii = readZimNote(self._zim_folder, docid)
             except ZimNoteNotFoundError as e:
-                self.logger.exception('zim note not found. Revert to meta_dict. e = %s' %e)
-                noteii=self.meta_dict[docid]['notes']
+                self.logger.exception(
+                    'zim note not found. Revert to meta_dict. e = %s' % e)
+                noteii = self.meta_dict[docid]['notes']
             except Exception as e:
-                self.logger.exception('Failed to read zim note. e = %s' %e)
-                noteii=self.meta_dict[docid]['notes']
+                self.logger.exception('Failed to read zim note. e = %s' % e)
+                noteii = self.meta_dict[docid]['notes']
         else:
-            noteii=self.meta_dict[docid]['notes']
+            noteii = self.meta_dict[docid]['notes']
 
-        self.logger.debug('noteii = %s' %noteii)
+        self.logger.debug('noteii = %s' % noteii)
         self.note_textedit.clear()
         self.note_textedit.setText(noteii)
 
         return
-
 
     def loadPDFThumbnail(self, docid=None):
         """Load a thumbnail of the 1st page of a pdf
@@ -466,72 +467,69 @@ class MainFrameLoadData:
         if docid is None:
             return
 
-        files=self.meta_dict[docid]['files_l']
-        if len(files)==0:
+        files = self.meta_dict[docid]['files_l']
+        if len(files) == 0:
             self.pdf_viewer.clearLayout()
             return
 
-        dpi=self.settings.value('view/thumbnail_dpi', type=str)
+        dpi = self.settings.value('view/thumbnail_dpi', type=str)
 
-        lib_folder=self.settings.value('saving/current_lib_folder', type=str)
-        cache_folder=os.path.join(lib_folder, '_cache')
+        lib_folder = self.settings.value('saving/current_lib_folder', type=str)
+        cache_folder = os.path.join(lib_folder, '_cache')
 
         # get the 1st file
-        filepath=files[0]
-        filepath=os.path.join(lib_folder, filepath)
-        filename=os.path.split(filepath)[1]
-        outfile=os.path.join(cache_folder, '%s-%s' %(filename, dpi))
+        filepath = files[0]
+        filepath = os.path.join(lib_folder, filepath)
+        filename = os.path.split(filepath)[1]
+        outfile = os.path.join(cache_folder, '%s-%s' % (filename, dpi))
 
-        self.logger.debug('outfile = %s' %outfile)
+        self.logger.debug('outfile = %s' % outfile)
 
         # prefer poppler over imagemagic
         # NO, imagemagic for some reason doesn't allow pdf conversion, so f it.
         if hasPoppler():
-            cmd=['pdftoppm', filepath, outfile, '-jpeg',
-                    '-r', dpi]
+            cmd = ['pdftoppm', filepath, outfile, '-jpeg',
+                   '-r', dpi]
         else:
-            #if hasImageMagic():
-                #cmd=['convert', '-density', dpi, filepath, outfile]
-            #else:
-                #return
-            label=QtWidgets.QLabel()
-            poppler='https://poppler.freedesktop.org/'
+            # if hasImageMagic():
+            # cmd=['convert', '-density', dpi, filepath, outfile]
+            # else:
+            # return
+            label = QtWidgets.QLabel()
+            poppler = 'https://poppler.freedesktop.org/'
             label.setText('''Requires 'poppler' to create previews. See <a href="%s"> %s </a> for installation details
-            ''' %(poppler, poppler))
+            ''' % (poppler, poppler))
             label.setTextFormat(Qt.RichText)
             label.setWordWrap(True)
             self.pdf_viewer.clearLayout()
             self.pdf_viewer.layout.addWidget(label)
             return
 
-        #-----------Try finding saved thumbnail-----------
-        glob_paths=os.path.join(cache_folder, '%s-%s*.jpg' %(filename, dpi))
-        outfiles=glob.glob(glob_paths)
-        if len(outfiles)>0:
+        # -----------Try finding saved thumbnail-----------
+        glob_paths = os.path.join(cache_folder, '%s-%s*.jpg' % (filename, dpi))
+        outfiles = glob.glob(glob_paths)
+        if len(outfiles) > 0:
             outfiles.sort()
-            tb_imgs=(QtGui.QPixmap(fii) for fii in outfiles)
+            tb_imgs = (QtGui.QPixmap(fii) for fii in outfiles)
             self.logger.debug('Using cached thumbnail.')
         else:
             try:
-                proc=subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE)
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
                 proc.wait()
-            except:
+            except Exception:
                 return
             else:
-                outfiles=glob.glob(glob_paths)
+                outfiles = glob.glob(glob_paths)
                 outfiles.sort()
-                tb_imgs=(QtGui.QPixmap(fii) for fii in outfiles)
+                tb_imgs = (QtGui.QPixmap(fii) for fii in outfiles)
                 self.logger.debug('Generate a new thumbnail.')
 
-        #--------------------Add images--------------------
+        # --------------------Add images--------------------
         self.pdf_viewer.clearLayout()
         for pii in tb_imgs:
-            labelii=QtWidgets.QLabel(self)
+            labelii = QtWidgets.QLabel(self)
             labelii.setPixmap(pii)
             self.pdf_viewer.layout.addWidget(labelii)
 
         return
-
-
-

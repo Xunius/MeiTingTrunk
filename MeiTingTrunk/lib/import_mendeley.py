@@ -5,7 +5,7 @@ Import data from Mendeley.
 MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
-Copyright 2018-2019 Guang-zhi XU
+Copyright 2018-2026 Guang-zhi XU
 
 This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
@@ -22,12 +22,12 @@ import re
 import logging
 import time
 from datetime import datetime
-if sys.version_info[0]>=3:
-    #---------------------Python3---------------------
+if sys.version_info[0] >= 3:
+    # ---------------------Python3---------------------
     from urllib.parse import unquote
     from urllib.parse import urlparse
 else:
-    #--------------------Python2.7--------------------
+    # --------------------Python2.7--------------------
     from urllib import unquote
     from urlparse import urlparse
 
@@ -39,49 +39,49 @@ if tools.isXapianReady():
 from bs4 import BeautifulSoup
 
 
-LOGGER=logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 # columns to read from Mendeley database
-READ_DOC_ATTRS=[\
-'issn', 'issue', 'language', 'read', 'type', 'confirmed',
-'deduplicated', 'favourite', 'note',
-'abstract', 'advisor', 'added',
-'arxivId', 'title', 'pmid',
-'publication', 'publicLawNumber', 'month',
-'pages', 'sections', 'seriesEditor', 'series', 'seriesNumber',
-'publisher', 'reprintEdition', 'reviewedArticle', 'revisionNumber',
-'userType', 'volume', 'year', 'session', 'shortTitle', 'sourceType',
-'code', 'codeNumber', 'codeSection', 'codeVolume', 'chapter',
-'citationKey', 'city', 'day', 'department', 'doi', 'edition',
-'committee', 'counsel', 'country', 'dateAccessed',
-'internationalAuthor', 'internationalNumber', 'internationalTitle',
-'internationalUserType', 'genre',
-'institution', 'lastUpdate', 'legalStatus', 'length', 'medium', 'isbn']
+READ_DOC_ATTRS = [
+    'issn', 'issue', 'language', 'read', 'type', 'confirmed',
+    'deduplicated', 'favourite', 'note',
+    'abstract', 'advisor', 'added',
+    'arxivId', 'title', 'pmid',
+    'publication', 'publicLawNumber', 'month',
+    'pages', 'sections', 'seriesEditor', 'series', 'seriesNumber',
+    'publisher', 'reprintEdition', 'reviewedArticle', 'revisionNumber',
+    'userType', 'volume', 'year', 'session', 'shortTitle', 'sourceType',
+    'code', 'codeNumber', 'codeSection', 'codeVolume', 'chapter',
+    'citationKey', 'city', 'day', 'department', 'doi', 'edition',
+    'committee', 'counsel', 'country', 'dateAccessed',
+    'internationalAuthor', 'internationalNumber', 'internationalTitle',
+    'internationalUserType', 'genre',
+    'institution', 'lastUpdate', 'legalStatus', 'length', 'medium', 'isbn']
 
 # columns to create in output sqlite
-WRITE_DOC_ATTRS=[\
-'issn', 'issue', 'language', 'read', 'type', 'confirmed',
-'deduplicated', 'favourite', 'note',
-'abstract', 'advisor', 'added',
-'arxivId', 'title', 'pmid',
-'publication', 'publicLawNumber', 'month',
-'pages', 'sections', 'seriesEditor', 'series', 'seriesNumber',
-'publisher', 'reprintEdition', 'reviewedArticle', 'revisionNumber',
-'userType', 'volume', 'year', 'session', 'shortTitle', 'sourceType',
-'code', 'codeNumber', 'codeSection', 'codeVolume', 'chapter',
-'citationKey', 'city', 'day', 'department', 'doi', 'edition',
-'committee', 'counsel', 'country', 'dateAccessed',
-'internationalAuthor', 'internationalNumber', 'internationalTitle',
-'internationalUserType', 'genre',
-'institution', 'lastUpdate', 'legalStatus', 'length', 'medium', 'isbn',
-'deletionPending']
+WRITE_DOC_ATTRS = [
+    'issn', 'issue', 'language', 'read', 'type', 'confirmed',
+    'deduplicated', 'favourite', 'note',
+    'abstract', 'advisor', 'added',
+    'arxivId', 'title', 'pmid',
+    'publication', 'publicLawNumber', 'month',
+    'pages', 'sections', 'seriesEditor', 'series', 'seriesNumber',
+    'publisher', 'reprintEdition', 'reviewedArticle', 'revisionNumber',
+    'userType', 'volume', 'year', 'session', 'shortTitle', 'sourceType',
+    'code', 'codeNumber', 'codeSection', 'codeVolume', 'chapter',
+    'citationKey', 'city', 'day', 'department', 'doi', 'edition',
+    'committee', 'counsel', 'country', 'dateAccessed',
+    'internationalAuthor', 'internationalNumber', 'internationalTitle',
+    'internationalUserType', 'genre',
+    'institution', 'lastUpdate', 'legalStatus', 'length', 'medium', 'isbn',
+    'deletionPending']
 
-INT_COLUMNS=['month', 'year', 'day']
+INT_COLUMNS = ['month', 'year', 'day']
 
 
-DOI_PATTERN=re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
-        re.DOTALL|re.UNICODE)
+DOI_PATTERN = re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
+                         re.DOTALL | re.UNICODE)
 
 # Sometimes citation imported via a .bib or .ris file may contain
 # a note field (`annote = {{some note}} `for .bib, `N1 - some note` for .ris).
@@ -95,22 +95,22 @@ DOI_PATTERN=re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
 # of regex patterns trying to catch some recognizable patterns and exclude
 # them from the notes.
 
-NOTE_EXCLUDE_PATTERNS=[
-        DOI_PATTERN,
-        ]
+NOTE_EXCLUDE_PATTERNS = [
+    DOI_PATTERN,
+]
 
 
 def getDocIds(db):
     '''Get a list of docids from a folder'''
 
-    query=\
-    '''SELECT Documents.id
+    query =\
+        '''SELECT Documents.id
        FROM Documents
     '''
 
-    ret=db.execute(query)
-    data=ret.fetchall()
-    docids=[ii[0] for ii in data]
+    ret = db.execute(query)
+    data = ret.fetchall()
+    docids = [ii[0] for ii in data]
     docids.sort()
 
     return docids
@@ -121,22 +121,22 @@ def converturl2abspath(url):
     This is necessary for filenames with unicode strings.
     '''
 
-    #--------------------For linux--------------------
-    #path = unquote(str(urlparse(url).path)).decode("utf8")
+    # --------------------For linux--------------------
+    # path = unquote(str(urlparse(url).path)).decode("utf8")
     path = unquote(str(urlparse(url).path))
-    path=os.path.abspath(path)
+    path = os.path.abspath(path)
 
     if os.path.exists(path):
         return path
     else:
-        #-------------------For windowes-------------------
-        if url[5:8]==u'///':
-            url=u'file://'+url[8:]
-            path=urlparse(url)
-            path=os.path.join(path.netloc,path.path)
-            #path=unquote(str(path)).decode('utf8')
-            path=unquote(str(path))
-            path=os.path.abspath(path)
+        # -------------------For windowes-------------------
+        if url[5:8] == u'///':
+            url = u'file://'+url[8:]
+            path = urlparse(url)
+            path = os.path.join(path.netloc, path.path)
+            # path=unquote(str(path)).decode('utf8')
+            path = unquote(str(path))
+            path = os.path.abspath(path)
             return path
 
 
@@ -153,15 +153,15 @@ def selByDocid(cursor, table, column, docid):
     """
 
     if isinstance(column, str):
-        cols=column
-        single=True
+        cols = column
+        single = True
     elif isinstance(column, (tuple, list)):
-        cols=', '.join(column)
-        single=False
+        cols = ', '.join(column)
+        single = False
 
-    query='''SELECT %s from %s
-    WHERE %s.documentId = ?''' %(cols, table, table)
-    ret=cursor.execute(query, (docid,)).fetchall()
+    query = '''SELECT %s from %s
+    WHERE %s.documentId = ?''' % (cols, table, table)
+    ret = cursor.execute(query, (docid,)).fetchall()
 
     if single:
         return [ii[0] for ii in ret]
@@ -170,24 +170,24 @@ def selByDocid(cursor, table, column, docid):
 
 
 def convert2datetime(s):
-    return datetime.strptime(s,'%Y-%m-%dT%H:%M:%SZ')
+    return datetime.strptime(s, '%Y-%m-%dT%H:%M:%SZ')
 
 
 def getUserName(db):
     '''Query db to get user name'''
 
-    query=\
-    '''SELECT Profiles.firstName, Profiles.lastName
+    query =\
+        '''SELECT Profiles.firstName, Profiles.lastName
     FROM Profiles WHERE Profiles.isSelf="true"
     '''
-    query_fallback=\
-    '''SELECT Profiles.firstName, Profiles.lastName
+    query_fallback =\
+        '''SELECT Profiles.firstName, Profiles.lastName
     FROM Profiles
     '''
-    ret=db.execute(query).fetchall()
-    if len(ret)==0:
-        ret=db.execute(query_fallback).fetchall()
-    return ' '.join(filter(None,ret[0]))
+    ret = db.execute(query).fetchall()
+    if len(ret) == 0:
+        ret = db.execute(query_fallback).fetchall()
+    return ' '.join(filter(None, ret[0]))
 
 
 def getFilePath(db, docid):
@@ -201,22 +201,22 @@ def getFilePath(db, docid):
              otherwise.
     """
 
-    query=\
-    '''SELECT Files.localUrl
+    query =\
+        '''SELECT Files.localUrl
        FROM Files
        LEFT JOIN DocumentFiles
            ON DocumentFiles.hash=Files.hash
        LEFT JOIN Documents
            ON Documents.id=DocumentFiles.documentId
        WHERE (Documents.id=%s)
-    ''' %docid
+    ''' % docid
 
-    ret=db.execute(query)
-    data=ret.fetchall()
-    if len(data)==0:
+    ret = db.execute(query)
+    data = ret.fetchall()
+    if len(data) == 0:
         return None
     else:
-        pth=[converturl2abspath(urlii[0]) for urlii in data]
+        pth = [converturl2abspath(urlii[0]) for urlii in data]
         return pth
 
 
@@ -267,7 +267,7 @@ def getHighlights(db, filterdocid, results=None):
 
     # For Mendeley versions newer than 1.16.1 (include), with highlight colors
     query_new =\
-    '''SELECT Files.localUrl, FileHighlightRects.page,
+        '''SELECT Files.localUrl, FileHighlightRects.page,
                     FileHighlightRects.x1, FileHighlightRects.y1,
                     FileHighlightRects.x2, FileHighlightRects.y2,
                     FileHighlights.createdTime,
@@ -284,11 +284,11 @@ def getHighlights(db, filterdocid, results=None):
                 ON Profiles.uuid=FileHighlights.profileUuid
             WHERE (FileHighlightRects.page IS NOT NULL) AND
             (FileHighlights.documentId=%s)
-    ''' %filterdocid
+    ''' % filterdocid
 
     # For Mendeley versions older than 1.16.1, no highlight colors
     query_old =\
-    '''SELECT Files.localUrl, FileHighlightRects.page,
+        '''SELECT Files.localUrl, FileHighlightRects.page,
                     FileHighlightRects.x1, FileHighlightRects.y1,
                     FileHighlightRects.x2, FileHighlightRects.y2,
                     FileHighlights.createdTime,
@@ -304,63 +304,64 @@ def getHighlights(db, filterdocid, results=None):
                 ON Profiles.uuid=FileHighlights.profileUuid
             WHERE (FileHighlightRects.page IS NOT NULL) AND
             (FileHighlights.documentId=%s)
-    ''' %filterdocid
+    ''' % filterdocid
 
     if results is None:
-        results={}
+        results = {}
 
-    #------------------Get highlights------------------
+    # ------------------Get highlights------------------
     try:
         ret = db.execute(query_new)
-        hascolor=True
+        hascolor = True
     except:
         ret = db.execute(query_old)
-        hascolor=False
+        hascolor = False
 
-    for ii,r in enumerate(ret):
+    for ii, r in enumerate(ret):
         pth = converturl2abspath(r[0])
         pg = r[1]
         bbox = [r[2], r[3], r[4], r[5]]
         # [x1,y1,x2,y2], (x1,y1) being bottom-left,
         # (x2,y2) being top-right. Origin at bottom-left.
         # Fix incorrect storage ordering in Mendeley:
-        if bbox[0] > bbox[2]: bbox[0], bbox[2] = bbox[2], bbox[0]
-        if bbox[1] > bbox[3]: bbox[1], bbox[3] = bbox[3], bbox[1]
+        if bbox[0] > bbox[2]:
+            bbox[0], bbox[2] = bbox[2], bbox[0]
+        if bbox[1] > bbox[3]:
+            bbox[1], bbox[3] = bbox[3], bbox[1]
         cdate = convert2datetime(r[6])
 
         # Changes suggested by matteosecli: retrieve author of highlight:
-        author=r[7]
+        author = r[7]
         if not author.strip():
-            author=' '.join(filter(None,r[8:10]))
+            author = ' '.join(filter(None, r[8:10]))
 
-        color=r[10] if hascolor else None
+        color = r[10] if hascolor else None
 
-        hlight = {'rect': bbox,\
-                  'cdate': cdate,\
+        hlight = {'rect': bbox,
+                  'cdate': cdate,
                   'color': color,
                   'page': pg,
                   'author': author,
                   'path': pth   # distinguish between multi-attachments
                   }
 
-        #------------Save to dict------------
+        # ------------Save to dict------------
         # any better way of doing this sht?
         if pth in results:
             if 'highlights' in results[pth]:
                 if pg in results[pth]['highlights']:
                     results[pth]['highlights'][pg].append(hlight)
                 else:
-                    results[pth]['highlights'][pg]=[hlight,]
+                    results[pth]['highlights'][pg] = [hlight,]
             else:
-                results[pth]['highlights']={pg:[hlight,]}
+                results[pth]['highlights'] = {pg: [hlight,]}
         else:
-            results[pth]={'highlights': {pg:[hlight,]}}
-
+            results[pth] = {'highlights': {pg: [hlight,]}}
 
     return results
 
 
-#-------------------Get sticky notes-------------------
+# -------------------Get sticky notes-------------------
 def getNotes(db, filterdocid, results=None):
     '''Extract notes and related meta data
 
@@ -376,8 +377,8 @@ def getNotes(db, filterdocid, results=None):
                         getHighlights() for more details.
     '''
 
-    query=\
-    '''SELECT Files.localUrl, FileNotes.page,
+    query =\
+        '''SELECT Files.localUrl, FileNotes.page,
                     FileNotes.x, FileNotes.y,
                     FileNotes.note,
                     FileNotes.modifiedTime,
@@ -391,15 +392,15 @@ def getNotes(db, filterdocid, results=None):
                 ON Profiles.uuid=FileNotes.profileUuid
             WHERE (FileNotes.page IS NOT NULL) AND
             (FileNotes.documentId=%s)
-    ''' %filterdocid
+    ''' % filterdocid
 
     if results is None:
-        results={}
+        results = {}
 
-    #------------------Get notes------------------
+    # ------------------Get notes------------------
     ret = db.execute(query)
 
-    for ii,r in enumerate(ret):
+    for ii, r in enumerate(ret):
         pth = converturl2abspath(r[0])
         pg = r[1]
         bbox = [r[2], r[3], r[2]+30, r[3]+30]
@@ -409,36 +410,35 @@ def getNotes(db, filterdocid, results=None):
         cdate = convert2datetime(r[5])
 
         # Changes suggested by matteosecli: retrieve author of note:
-        author=r[6]
+        author = r[6]
         if not author.strip():
-            author=' '.join(filter(None,r[7:9]))
+            author = ' '.join(filter(None, r[7:9]))
 
-        note = {'rect': bbox,\
-                'author':author,\
-                'content':txt,\
-                'cdate': cdate,\
-                'page':pg,
-                'path':pth,
+        note = {'rect': bbox,
+                'author': author,
+                'content': txt,
+                'cdate': cdate,
+                'page': pg,
+                'path': pth,
                 'isgeneralnote': False
-                  }
+                }
 
-        #------------Save to dict------------
+        # ------------Save to dict------------
         if pth in results:
             if 'notes' in results[pth]:
                 if pg in results[pth]['notes']:
                     results[pth]['notes'][pg].append(note)
                 else:
-                    results[pth]['notes'][pg]=[note,]
+                    results[pth]['notes'][pg] = [note,]
             else:
-                results[pth]['notes']={pg:[note,]}
+                results[pth]['notes'] = {pg: [note,]}
         else:
-            results[pth]={'notes': {pg:[note,]}}
-
+            results[pth] = {'notes': {pg: [note,]}}
 
     return results
 
 
-#-------------------Get side-bar notes-------------------
+# -------------------Get side-bar notes-------------------
 def getDocNotes(db, filterdocid, results=None):
     '''Extract side-bar notes and related meta data
 
@@ -455,35 +455,36 @@ def getDocNotes(db, filterdocid, results=None):
     '''
 
     # Some versions of Mendeley saves notes in DocumentsNotes
-    query=\
-    '''SELECT DocumentNotes.text,
+    query =\
+        '''SELECT DocumentNotes.text,
               DocumentNotes.documentId,
               DocumentNotes.baseNote
             FROM DocumentNotes
             WHERE (DocumentNotes.documentId IS NOT NULL) AND
             (DocumentNotes.documentId=%s)
-    ''' %filterdocid
+    ''' % filterdocid
 
     # Some versions (not sure which exactly) of Mendeley saves
     # notes in Documents.note
-    query2=\
-    '''SELECT Documents.note
+    query2 =\
+        '''SELECT Documents.note
             FROM Documents
             WHERE (Documents.note IS NOT NULL) AND
             (Documents.id=%s)
-    ''' %filterdocid
+    ''' % filterdocid
 
     # regex to transform Mendeley's old note formatting to html
     # e.g. <m:bold>Bold</m:bold>  to <bold>Bold</bold>
-    pattern=re.compile(r'<(/?)m:(bold|italic|underline|center|left|right|linebreak)(/?)>',
-            re.DOTALL | re.UNICODE)
-    subfunc=lambda match: u'<%s%s%s>' %match.groups()
+    pattern = re.compile(r'<(/?)m:(bold|italic|underline|center|left|right|linebreak)(/?)>',
+                         re.DOTALL | re.UNICODE)
+
+    def subfunc(match): return u'<%s%s%s>' % match.groups()
 
     if results is None:
-        results={}
+        results = {}
 
-    #------------------Get notes------------------
-    ret=[]
+    # ------------------Get notes------------------
+    ret = []
     try:
         ret1 = db.execute(query).fetchall()
         ret.extend(ret1)
@@ -494,44 +495,44 @@ def getDocNotes(db, filterdocid, results=None):
         ret.extend(ret2)
     except:
         pass
-    username=getUserName(db)
+    username = getUserName(db)
 
-    for ii,rii in enumerate(ret):
-        docnote=rii[0]
-        if len(docnote)==0:
+    for ii, rii in enumerate(ret):
+        docnote = rii[0]
+        if len(docnote) == 0:
             # skip u''
             continue
 
         # skip things that are not user notes. See def of NOTE_EXCLUDE_PATTERNS
-        skip=False
+        skip = False
         for patternii in NOTE_EXCLUDE_PATTERNS:
             if patternii.match(docnote) is not None:
-                skip=True
+                skip = True
                 break
 
         if skip:
             continue
 
-        docid=filterdocid
+        docid = filterdocid
         try:
-            basenote=rii[2]
+            basenote = rii[2]
         except:
-            basenote=None
-        pg=1
+            basenote = None
+        pg = 1
 
         if docnote is not None and basenote is not None\
-                and docnote!=basenote:
-            docnote=basenote+'\n\n'+docnote
+                and docnote != basenote:
+            docnote = basenote+'\n\n'+docnote
 
-        #--------Convert old <m:tag> to html <tag>--------
-        docnote=re.sub(pattern,subfunc,docnote)
+        # --------Convert old <m:tag> to html <tag>--------
+        docnote = re.sub(pattern, subfunc, docnote)
 
-        #--------------------Parse html--------------------
-        soup=BeautifulSoup(docnote,'html.parser')
+        # --------------------Parse html--------------------
+        soup = BeautifulSoup(docnote, 'html.parser')
         # replace <br> tags with newline
         for br in soup.find_all('br'):
             br.replace_with('\n')
-        docnote=soup.get_text()
+        docnote = soup.get_text()
         '''
         parser=html2text.HTML2Text()
         parser.ignore_links=True
@@ -539,38 +540,37 @@ def getDocNotes(db, filterdocid, results=None):
         '''
 
         # Try get file path
-        #pth=getFilePath(db,docid) or '/pseudo_path/%s.pdf' %title
-        pth=getFilePath(db,docid) # a list, could be more than 1, or None
+        # pth=getFilePath(db,docid) or '/pseudo_path/%s.pdf' %title
+        pth = getFilePath(db, docid)  # a list, could be more than 1, or None
         # If no attachment, use None as path
         if pth is None:
             # make it compatible with the for loop below
-            pth=[None,]
+            pth = [None,]
 
         bbox = [50, 700, 80, 730]
         # needs a rectangle, size does not matter
         note = {'rect': bbox,
                 'author': username,
-                'content':docnote,
+                'content': docnote,
                 'cdate': datetime.now(),
-                'page':pg,
-                'path':pth,
+                'page': pg,
+                'path': pth,
                 'isgeneralnote': True
-                  }
+                }
 
-        #-------------------Save to dict-------------------
+        # -------------------Save to dict-------------------
         # if multiple attachments, add to each of them
         for pthii in pth:
             if pthii in results:
                 if 'notes' in results[pthii]:
                     if pg in results[pthii]['notes']:
-                        results[pthii]['notes'][pg].insert(0,note)
+                        results[pthii]['notes'][pg].insert(0, note)
                     else:
-                        results[pthii]['notes'][pg]=[note,]
+                        results[pthii]['notes'][pg] = [note,]
                 else:
-                    results[pthii]['notes']={pg:[note,]}
+                    results[pthii]['notes'] = {pg: [note,]}
             else:
-                results[pthii]={'notes': {pg:[note,]}}
-
+                results[pthii] = {'notes': {pg: [note,]}}
 
     return results
 
@@ -598,59 +598,61 @@ def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
     """
 
     try:
-        #--------------Connect input database--------------
-        dbfin=os.path.abspath(file_in_path)
+        # --------------Connect input database--------------
+        dbfin = os.path.abspath(file_in_path)
 
         try:
             dbin = sqlite3.connect(dbfin)
-            LOGGER.info('Connected to database %s' %file_in_path)
+            LOGGER.info('Connected to database %s' % file_in_path)
         except:
-            LOGGER.exception('Failed to connect to database %s' %file_in_path)
+            LOGGER.exception('Failed to connect to database %s' % file_in_path)
             return 1, jobid, None, None, None, None, None
 
-        cin=dbin.cursor()
+        cin = dbin.cursor()
 
-        #-----------------Create empty db-----------------
-        file_out_path=os.path.expanduser(file_out_path)
-        dbout, storage_folder, lib_name=sqlitedb.createNewDatabase(file_out_path)
-        cout=dbout.cursor()
+        # -----------------Create empty db-----------------
+        file_out_path = os.path.expanduser(file_out_path)
+        dbout, storage_folder, lib_name = sqlitedb.createNewDatabase(
+            file_out_path)
+        cout = dbout.cursor()
 
-        lib_folder=os.path.join(storage_folder,lib_name)
-        rel_lib_folder=os.path.join('', lib_name) # relative to storage folder
+        lib_folder = os.path.join(storage_folder, lib_name)
+        # relative to storage folder
+        rel_lib_folder = os.path.join('', lib_name)
 
-        LOGGER.debug('storage_folder = %s' %storage_folder)
-        LOGGER.debug('lib_name = %s' %lib_name)
-        LOGGER.debug('lib_folder = %s' %lib_folder)
-        LOGGER.debug('rel_lib_folder = %s' %rel_lib_folder)
+        LOGGER.debug('storage_folder = %s' % storage_folder)
+        LOGGER.debug('lib_name = %s' % lib_name)
+        LOGGER.debug('lib_folder = %s' % lib_folder)
+        LOGGER.debug('rel_lib_folder = %s' % rel_lib_folder)
 
-        #----------------Copy folders table----------------
-        query='''SELECT id, name, parentId
+        # ----------------Copy folders table----------------
+        query = '''SELECT id, name, parentId
         FROM Folders
         '''
-        ret=cin.execute(query).fetchall()
+        ret = cin.execute(query).fetchall()
 
-        #------------If Default in folder list------------
-        folders=[]
+        # ------------If Default in folder list------------
+        folders = []
         for fid, fname, pid in ret:
-            if fname=='Default' and pid==-1:
-                fname='Default_Mendeley'
+            if fname == 'Default' and pid == -1:
+                fname = 'Default_Mendeley'
                 LOGGER.info('Renaming "Default" folder to "Default_Mendeley')
             # may not happen to you
-            if pid==0:
-                pid=-1
+            if pid == 0:
+                pid = -1
             folders.append((fid, fname, pid))
 
-        query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
+        query = '''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
         VALUES (?,?,?,?)'''
 
         for fii in folders:
             cout.execute(query, (fii[0], fii[1], fii[2],
-                os.path.join(rel_lib_folder,fii[1])))
+                                 os.path.join(rel_lib_folder, fii[1])))
 
-        #----------------Loop through docs----------------
-        docids=getDocIds(dbin)
+        # ----------------Loop through docs----------------
+        docids = getDocIds(dbin)
 
-        LOGGER.info('NO. of docs in database = %d' %len(docids))
+        LOGGER.info('NO. of docs in database = %d' % len(docids))
 
         return 0, jobid, dbin, dbout, docids, lib_folder, lib_name
     except:
@@ -658,7 +660,7 @@ def importMendeleyPreprocess(jobid, file_in_path, file_out_path):
 
 
 def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
-        rename_file, ii, docii, do_indexing):
+                           rename_file, ii, docii, do_indexing):
     """Copy document data from Mendeley and commit to output sqlite
 
     Args:
@@ -689,243 +691,244 @@ def importMendeleyCopyData(jobid, dbin, dbout, lib_name, lib_folder,
         dbin.close()
         return 0, jobid, None
 
-    cout=dbout.cursor()
-    cin=dbin.cursor()
+    cout = dbout.cursor()
+    cin = dbin.cursor()
 
-    file_folder=os.path.join(lib_folder,'_collections')
-    rel_lib_folder=os.path.join('', lib_name) # relative to storage folder
-    rel_file_folder=os.path.join('','_collections')
+    file_folder = os.path.join(lib_folder, '_collections')
+    rel_lib_folder = os.path.join('', lib_name)  # relative to storage folder
+    rel_file_folder = os.path.join('', '_collections')
 
     if do_indexing:
-        xapian_folder=os.path.join(lib_folder, '_xapian_db')
-        xapian_db=xapiandb.createDatabase(xapian_folder)
+        xapian_folder = os.path.join(lib_folder, '_xapian_db')
+        xapian_db = xapiandb.createDatabase(xapian_folder)
 
     try:
-        ii+=1
+        ii += 1
 
-        LOGGER.debug('Copying doc id = %s' %docii)
+        LOGGER.debug('Copying doc id = %s' % docii)
 
-        #---------------Get Documents columns---------------
-        meta_query='''SELECT %s from Documents
-        WHERE Documents.id = ?''' %', '.join(READ_DOC_ATTRS)
+        # ---------------Get Documents columns---------------
+        meta_query = '''SELECT %s from Documents
+        WHERE Documents.id = ?''' % ', '.join(READ_DOC_ATTRS)
 
-        ret=cin.execute(meta_query, (docii,))
-        metaii=list(ret.fetchall()[0])
+        ret = cin.execute(meta_query, (docii,))
+        metaii = list(ret.fetchall()[0])
 
         # convert int
         for jj in INT_COLUMNS:
-            idxjj=READ_DOC_ATTRS.index(jj)
-            fjj=metaii[idxjj]
+            idxjj = READ_DOC_ATTRS.index(jj)
+            fjj = metaii[idxjj]
             if fjj is not None:
-                fjj=int(fjj)
-                metaii[idxjj]=fjj
+                fjj = int(fjj)
+                metaii[idxjj] = fjj
 
         # make sure added exists
-        idxjj=READ_DOC_ATTRS.index('added')
-        fjj=metaii[idxjj]
+        idxjj = READ_DOC_ATTRS.index('added')
+        fjj = metaii[idxjj]
         if fjj is None:
-            fjj=str(int(time.time()))
-        metaii[idxjj]=fjj
+            fjj = str(int(time.time()))
+        metaii[idxjj] = fjj
 
-        meta_dictii=dict(zip(READ_DOC_ATTRS, metaii))
-        meta_dictii['deletionPending']='false'
+        meta_dictii = dict(zip(READ_DOC_ATTRS, metaii))
+        meta_dictii['deletionPending'] = 'false'
         metaii.append('false')
-        metaii=tuple(metaii)
+        metaii = tuple(metaii)
 
-        #-----------------Get DocumentTags-----------------
-        tags=selByDocid(cin, 'DocumentTags', 'tag', docii)
+        # -----------------Get DocumentTags-----------------
+        tags = selByDocid(cin, 'DocumentTags', 'tag', docii)
 
-        #------------------Get FileNotes------------------
-        #notes=selByDocid(cin, 'DocumentNotes', 'text', docii)
-        notes=selByDocid(cin, 'FileNotes', ['note', 'modifiedTime',
-            'createdTime'], docii)
+        # ------------------Get FileNotes------------------
+        # notes=selByDocid(cin, 'DocumentNotes', 'text', docii)
+        notes = selByDocid(cin, 'FileNotes', ['note', 'modifiedTime',
+                                              'createdTime'], docii)
 
-        #---------------Get DocumentKeywords---------------
-        keywords=selByDocid(cin, 'DocumentKeywords', 'keyword', docii)
+        # ---------------Get DocumentKeywords---------------
+        keywords = selByDocid(cin, 'DocumentKeywords', 'keyword', docii)
 
-        #-----------------Get DocumentUrls-----------------
-        urls=selByDocid(cin, 'DocumentUrls', 'url', docii)
-        urls=[str(bjj) for bjj in urls]   # convert blob to str
+        # -----------------Get DocumentUrls-----------------
+        urls = selByDocid(cin, 'DocumentUrls', 'url', docii)
+        urls = [str(bjj) for bjj in urls]   # convert blob to str
 
-        #---------------Get DocumentFolders---------------
-        query='''SELECT Folders.id, Folders.name, Folders.parentId
+        # ---------------Get DocumentFolders---------------
+        query = '''SELECT Folders.id, Folders.name, Folders.parentId
         FROM Folders
         LEFT JOIN DocumentFolders ON DocumentFolders.folderId = Folders.id
         WHERE DocumentFolders.documentId = ?'''
 
-        ret=cin.execute(query, (docii,)).fetchall()
+        ret = cin.execute(query, (docii,)).fetchall()
 
         # if name conflict with Default
-        folder_info=[]
+        folder_info = []
         for fid, fname, pid in ret:
-            if fname=='Default' and pid==-1:
-                fname='Default_Mendeley'
-            if pid==0:
-                pid=-1
+            if fname == 'Default' and pid == -1:
+                fname = 'Default_Mendeley'
+            if pid == 0:
+                pid = -1
             folder_info.append((fid, fname, pid))
 
         # if not in any folder, put to Default
-        if len(folder_info)==0:
+        if len(folder_info) == 0:
             folder_info.append((0, 'Default', -1))
 
-        #-------------Get DocumentContributors-------------
-        authors=selByDocid(cin, 'DocumentContributors',
-        ['contribution', 'firstNames', 'Lastname'], docii)
+        # -------------Get DocumentContributors-------------
+        authors = selByDocid(cin, 'DocumentContributors',
+                             ['contribution', 'firstNames', 'Lastname'], docii)
 
-        meta_dictii['lastName_l']=[jj[2] for jj in authors]
+        meta_dictii['lastName_l'] = [jj[2] for jj in authors]
 
-        #------------Insert to output database------------
-        query='''INSERT INTO Documents (
+        # ------------Insert to output database------------
+        query = '''INSERT INTO Documents (
         %s )
-        VALUES (%s)''' %(', '.join(WRITE_DOC_ATTRS), ', '.join(['?']*len(WRITE_DOC_ATTRS)))
+        VALUES (%s)''' % (', '.join(WRITE_DOC_ATTRS), ', '.join(['?']*len(WRITE_DOC_ATTRS)))
 
-        metaii=tuple([meta_dictii[jj] for jj in WRITE_DOC_ATTRS])
+        metaii = tuple([meta_dictii[jj] for jj in WRITE_DOC_ATTRS])
         cout.execute(query, metaii)
 
         for tagii in tags:
-            query='''INSERT INTO DocumentTags (did, tag)
+            query = '''INSERT INTO DocumentTags (did, tag)
             VALUES (?, ?)'''
             cout.execute(query, (ii, tagii))
 
         for keyii in keywords:
-            query='''INSERT INTO DocumentKeywords (did, text)
+            query = '''INSERT INTO DocumentKeywords (did, text)
             VALUES (?, ?)'''
             cout.execute(query, (ii, keyii))
 
         for nii in notes:
-            query='''INSERT INTO DocumentNotes (did, note, modifiedTime, createdTime)
+            query = '''INSERT INTO DocumentNotes (did, note, modifiedTime, createdTime)
             VALUES (?, ?, ?, ?)'''
-            cout.execute(query, (ii,)+ nii)
+            cout.execute(query, (ii,) + nii)
 
         for fii in folder_info:
-            query='''INSERT INTO DocumentFolders (did, folderid)
+            query = '''INSERT INTO DocumentFolders (did, folderid)
             VALUES (?, ?)'''
             cout.execute(query, (ii, fii[0]))
 
-            query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
+            query = '''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
             VALUES (?,?,?,?)'''
             cout.execute(query, (fii[0], fii[1], fii[2],
-                os.path.join(rel_lib_folder,fii[1])))
+                                 os.path.join(rel_lib_folder, fii[1])))
 
         for aii in authors:
-            query='''INSERT INTO DocumentContributors (
+            query = '''INSERT INTO DocumentContributors (
             did, contribution, firstNames, lastName)
             VALUES (?, ?, ?, ?)'''
             cout.execute(query, (ii,)+aii)
 
         for urlii in urls:
-            query='''INSERT INTO DocumentUrls (did, url)
+            query = '''INSERT INTO DocumentUrls (did, url)
             VALUES (?, ?)'''
             cout.execute(query, (ii, urlii))
 
-        #---------------Fetch pdf highlights and notes---------
-        annotations={}
-        annotations = getHighlights(dbin,docii,annotations)
-        annotations = getNotes(dbin,docii,annotations)
-        annotations = getDocNotes(dbin,docii,annotations)
+        # ---------------Fetch pdf highlights and notes---------
+        annotations = {}
+        annotations = getHighlights(dbin, docii, annotations)
+        annotations = getNotes(dbin, docii, annotations)
+        annotations = getDocNotes(dbin, docii, annotations)
 
-        #------------------Get file paths------------------
-        query='''SELECT Files.localUrl
+        # ------------------Get file paths------------------
+        query = '''SELECT Files.localUrl
         FROM Files
         LEFT JOIN DocumentFiles ON DocumentFiles.hash = Files.hash
         WHERE DocumentFiles.documentId = ?'''
 
-        ret=cin.execute(query, (docii,))
+        ret = cin.execute(query, (docii,))
 
-        fileurl=ret.fetchall()
-        meta_dictii['files_l']=[]
+        fileurl = ret.fetchall()
+        meta_dictii['files_l'] = []
 
-        file_fail_list=[]
-        xapian_fail_list=[]
-        if len(fileurl)>0:
+        file_fail_list = []
+        xapian_fail_list = []
+        if len(fileurl) > 0:
 
             for fileii in fileurl:
-                urlii=fileii[0]
-                filepath=converturl2abspath(urlii)
+                urlii = fileii[0]
+                filepath = converturl2abspath(urlii)
                 meta_dictii['files_l'].append(filepath)
 
             for filepath in meta_dictii['files_l']:
 
-                #-------------------Rename file-------------------
+                # -------------------Rename file-------------------
                 if rename_file:
-                    filename=sqlitedb.renameFile(filepath,meta_dictii)
+                    filename = sqlitedb.renameFile(filepath, meta_dictii)
                 else:
-                    filename=os.path.split(filepath)[1]
+                    filename = os.path.split(filepath)[1]
 
-                #---------------Remove invalid chars---------------
-                filename=re.sub(r'[//\ <>:"|?*]','_',filename)
-                filename=re.sub(r'al.','al',filename)
-                filename=re.sub(r'_-_','_',filename)
-                filename=filename.strip()
+                # ---------------Remove invalid chars---------------
+                filename = re.sub(r'[//\ <>:"|?*]', '_', filename)
+                filename = re.sub(r'al.', 'al', filename)
+                filename = re.sub(r'_-_', '_', filename)
+                filename = filename.strip()
 
-                relpath=os.path.join(rel_file_folder,filename)
+                relpath = os.path.join(rel_file_folder, filename)
 
-                query='''INSERT INTO DocumentFiles (did, relpath)
+                query = '''INSERT INTO DocumentFiles (did, relpath)
                 VALUES (?, ?)'''
                 cout.execute(query, (ii, relpath))
 
-                #---------------------Copy file---------------------
-                abspath=os.path.join(file_folder, filename)
+                # ---------------------Copy file---------------------
+                abspath = os.path.join(file_folder, filename)
 
-                #LOGGER.debug('relpath = %s' %relpath)
-                LOGGER.debug('abspath = %s' %abspath)
-                if len(annotations)>0 and filepath in annotations:
-                    anno=annotations[filepath]
+                # LOGGER.debug('relpath = %s' %relpath)
+                LOGGER.debug('abspath = %s' % abspath)
+                if len(annotations) > 0 and filepath in annotations:
+                    anno = annotations[filepath]
                     try:
                         exportpdf.exportPdf(filepath, abspath, anno)
                     except:
-                        LOGGER.warning('Failed to export annotated pdf %s'\
-                                %filepath)
+                        LOGGER.warning('Failed to export annotated pdf %s'
+                                       % filepath)
                         file_fail_list.append(filepath)
                         try:
-                            shutil.copy2(filepath,abspath)
-                            LOGGER.debug('Copied %s to %s' %(filepath, abspath))
+                            shutil.copy2(filepath, abspath)
+                            LOGGER.debug('Copied %s to %s' %
+                                         (filepath, abspath))
                         except:
-                            LOGGER.exception('Failed to copy %s to %s' %(filepath,
-                                abspath))
+                            LOGGER.exception('Failed to copy %s to %s' % (filepath,
+                                                                          abspath))
                 else:
                     try:
-                        shutil.copy2(filepath,abspath)
-                        LOGGER.debug('Copied %s to %s' %(filepath, abspath))
+                        shutil.copy2(filepath, abspath)
+                        LOGGER.debug('Copied %s to %s' % (filepath, abspath))
                     except:
-                        LOGGER.exception('Failed to copy %s to %s' %(filepath,
-                            abspath))
+                        LOGGER.exception('Failed to copy %s to %s' % (filepath,
+                                                                      abspath))
 
-                #-----------------Update to xapian-----------------
+                # -----------------Update to xapian-----------------
                 if do_indexing:
                     try:
-                        rec=xapiandb.indexFile(xapian_folder, filepath, relpath,
-                                {'id': ii}, db=xapian_db)
-                        if rec==1:
+                        rec = xapiandb.indexFile(xapian_folder, filepath, relpath,
+                                                 {'id': ii}, db=xapian_db)
+                        if rec == 1:
                             xapian_fail_list.append(filepath)
-                            LOGGER.error('Failed to index attachment %s' %filepath)
+                            LOGGER.error(
+                                'Failed to index attachment %s' % filepath)
                     except:
                         xapian_fail_list.append(filepath)
-                        LOGGER.exception('Failed to index attachment %s' %filepath)
+                        LOGGER.exception(
+                            'Failed to index attachment %s' % filepath)
 
-        if len(file_fail_list)>0:
-            if len(xapian_fail_list)>0:
-                return 4, jobid, '%s\n%s' %('; '.join(file_fail_list),
-                        '; '.join(xapian_fail_list))
+        if len(file_fail_list) > 0:
+            if len(xapian_fail_list) > 0:
+                return 4, jobid, '%s\n%s' % ('; '.join(file_fail_list),
+                                             '; '.join(xapian_fail_list))
             else:
                 return 2, jobid, '; '.join(file_fail_list)
-        elif len(xapian_fail_list)>0:
+        elif len(xapian_fail_list) > 0:
             return 3, jobid, '; '.join(xapian_fail_list)
         else:
             return 0, jobid, None
 
     except Exception as e:
-        LOGGER.exception('Failed to copy data for doc %s' %docii)
+        LOGGER.exception('Failed to copy data for doc %s' % docii)
         return 1, jobid, None
-
-
 
 
 def importMendeley(file_in_path, file_out_path, rename_file):
     '''For debug'''
 
-    #--------------Connect input database--------------
-    dbfin=os.path.abspath(file_in_path)
+    # --------------Connect input database--------------
+    dbfin = os.path.abspath(file_in_path)
 
     try:
         dbin = sqlite3.connect(dbfin)
@@ -933,217 +936,218 @@ def importMendeley(file_in_path, file_out_path, rename_file):
     except:
         print('Failed to connect to database:')
 
-    cin=dbin.cursor()
+    cin = dbin.cursor()
 
-    #-----------------Create empty db-----------------
-    file_out_path=os.path.expanduser(file_out_path)
-    dbout, storage_folder, lib_name=sqlitedb.createNewDatabase(file_out_path)
-    cout=dbout.cursor()
+    # -----------------Create empty db-----------------
+    file_out_path = os.path.expanduser(file_out_path)
+    dbout, storage_folder, lib_name = sqlitedb.createNewDatabase(file_out_path)
+    cout = dbout.cursor()
 
-    lib_folder=os.path.join(storage_folder,lib_name)
-    file_folder=os.path.join(lib_folder,'_collections')
-    rel_lib_folder=os.path.join('', lib_name) # relative to storage folder
-    rel_file_folder=os.path.join('','_collections')
+    lib_folder = os.path.join(storage_folder, lib_name)
+    file_folder = os.path.join(lib_folder, '_collections')
+    rel_lib_folder = os.path.join('', lib_name)  # relative to storage folder
+    rel_file_folder = os.path.join('', '_collections')
 
-    #----------------Copy folders table----------------
-    query='''SELECT id, name, parentId
+    # ----------------Copy folders table----------------
+    query = '''SELECT id, name, parentId
     FROM Folders
     '''
 
-    ret=cin.execute(query).fetchall()
+    ret = cin.execute(query).fetchall()
 
-    #------------If Default in folder list------------
-    folders=[]
+    # ------------If Default in folder list------------
+    folders = []
     for fid, fname, pid in ret:
-        if fname=='Default' and pid==-1:
-            fname='Default_Mendeley'
+        if fname == 'Default' and pid == -1:
+            fname = 'Default_Mendeley'
         # may not happen to you
-        if pid==0:
-            pid=-1
+        if pid == 0:
+            pid = -1
         folders.append((fid, fname, pid))
 
-    query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
+    query = '''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
     VALUES (?,?,?,?)'''
 
     for fii in folders:
         cout.execute(query, (fii[0], fii[1], fii[2],
-            os.path.join(rel_lib_folder,fii[1])))
+                             os.path.join(rel_lib_folder, fii[1])))
 
-    #----------------Loop through docs----------------
-    docids=getDocIds(dbin)
+    # ----------------Loop through docs----------------
+    docids = getDocIds(dbin)
 
-    for ii,docii in enumerate(docids):
+    for ii, docii in enumerate(docids):
 
-        ii+=1
+        ii += 1
         print('# <imporMendeley>: Copying doc ', ii)
 
-        #---------------Get Documents columns---------------
-        meta_query='''SELECT %s from Documents
-        WHERE Documents.id = ?''' %', '.join(READ_DOC_ATTRS)
+        # ---------------Get Documents columns---------------
+        meta_query = '''SELECT %s from Documents
+        WHERE Documents.id = ?''' % ', '.join(READ_DOC_ATTRS)
 
-        ret=cin.execute(meta_query, (docii,))
-        metaii=list(ret.fetchall()[0])
+        ret = cin.execute(meta_query, (docii,))
+        metaii = list(ret.fetchall()[0])
 
         # convert int
         for jj in INT_COLUMNS:
-            idxjj=READ_DOC_ATTRS.index(jj)
-            fjj=metaii[idxjj]
+            idxjj = READ_DOC_ATTRS.index(jj)
+            fjj = metaii[idxjj]
             if fjj is not None:
-                fjj=int(fjj)
-                metaii[idxjj]=fjj
+                fjj = int(fjj)
+                metaii[idxjj] = fjj
 
         # make sure added exists
-        idxjj=READ_DOC_ATTRS.index('added')
-        fjj=metaii[idxjj]
+        idxjj = READ_DOC_ATTRS.index('added')
+        fjj = metaii[idxjj]
         if fjj is None:
-            fjj=str(int(time.time()))
-        metaii[idxjj]=fjj
+            fjj = str(int(time.time()))
+        metaii[idxjj] = fjj
 
-        meta_dictii=dict(zip(READ_DOC_ATTRS, metaii))
-        meta_dictii['deletionPending']='false'
+        meta_dictii = dict(zip(READ_DOC_ATTRS, metaii))
+        meta_dictii['deletionPending'] = 'false'
         metaii.append('false')
-        metaii=tuple(metaii)
+        metaii = tuple(metaii)
 
-        #-----------------Get DocumentTags-----------------
-        tags=selByDocid(cin, 'DocumentTags', 'tag', docii)
+        # -----------------Get DocumentTags-----------------
+        tags = selByDocid(cin, 'DocumentTags', 'tag', docii)
 
-        #------------------Get FileNotes------------------
-        #notes=selByDocid(cin, 'DocumentNotes', 'text', docii)
-        notes=selByDocid(cin, 'FileNotes', ['note', 'modifiedTime', 'createdTime'], docii)
+        # ------------------Get FileNotes------------------
+        # notes=selByDocid(cin, 'DocumentNotes', 'text', docii)
+        notes = selByDocid(cin, 'FileNotes', [
+                           'note', 'modifiedTime', 'createdTime'], docii)
 
-        #---------------Get DocumentKeywords---------------
-        keywords=selByDocid(cin, 'DocumentKeywords', 'keyword', docii)
+        # ---------------Get DocumentKeywords---------------
+        keywords = selByDocid(cin, 'DocumentKeywords', 'keyword', docii)
 
-        #-----------------Get DocumentUrls-----------------
-        urls=selByDocid(cin, 'DocumentUrls', 'url', docii)
-        urls=[str(bjj) for bjj in urls]   # convert blob to str
+        # -----------------Get DocumentUrls-----------------
+        urls = selByDocid(cin, 'DocumentUrls', 'url', docii)
+        urls = [str(bjj) for bjj in urls]   # convert blob to str
 
-        #---------------Get DocumentFolders---------------
-        query='''SELECT Folders.id, Folders.name, Folders.parentId
+        # ---------------Get DocumentFolders---------------
+        query = '''SELECT Folders.id, Folders.name, Folders.parentId
         FROM Folders
         LEFT JOIN DocumentFolders ON DocumentFolders.folderId = Folders.id
         WHERE DocumentFolders.documentId = ?'''
 
-        ret=cin.execute(query, (docii,)).fetchall()
+        ret = cin.execute(query, (docii,)).fetchall()
 
         # if name conflict with Default
-        folder_info=[]
+        folder_info = []
         for fid, fname, pid in ret:
-            if fname=='Default' and pid==-1:
-                fname='Default_Mendeley'
-            if pid==0:
-                pid=-1
+            if fname == 'Default' and pid == -1:
+                fname = 'Default_Mendeley'
+            if pid == 0:
+                pid = -1
             folder_info.append((fid, fname, pid))
 
         # if not in any folder, put to Default
-        if len(folder_info)==0:
+        if len(folder_info) == 0:
             folder_info.append((0, 'Default', -1))
 
-        #-------------Get DocumentContributors-------------
-        authors=selByDocid(cin, 'DocumentContributors',
-        ['contribution', 'firstNames', 'Lastname'], docii)
+        # -------------Get DocumentContributors-------------
+        authors = selByDocid(cin, 'DocumentContributors',
+                             ['contribution', 'firstNames', 'Lastname'], docii)
 
-        meta_dictii['lastName_l']=[jj[2] for jj in authors]
+        meta_dictii['lastName_l'] = [jj[2] for jj in authors]
 
-        #------------Insert to output database------------
-        query='''INSERT INTO Documents (
+        # ------------Insert to output database------------
+        query = '''INSERT INTO Documents (
         %s )
-        VALUES (%s)''' %(', '.join(WRITE_DOC_ATTRS), ', '.join(['?']*len(WRITE_DOC_ATTRS)))
+        VALUES (%s)''' % (', '.join(WRITE_DOC_ATTRS), ', '.join(['?']*len(WRITE_DOC_ATTRS)))
 
-        metaii=tuple([meta_dictii[jj] for jj in WRITE_DOC_ATTRS])
+        metaii = tuple([meta_dictii[jj] for jj in WRITE_DOC_ATTRS])
         cout.execute(query, metaii)
 
         for tagii in tags:
-            query='''INSERT INTO DocumentTags (did, tag)
+            query = '''INSERT INTO DocumentTags (did, tag)
             VALUES (?, ?)'''
             cout.execute(query, (ii, tagii))
 
         for keyii in keywords:
-            query='''INSERT INTO DocumentKeywords (did, text)
+            query = '''INSERT INTO DocumentKeywords (did, text)
             VALUES (?, ?)'''
             cout.execute(query, (ii, keyii))
 
         for nii in notes:
-            query='''INSERT INTO DocumentNotes (did, note, modifiedTime, createdTime)
+            query = '''INSERT INTO DocumentNotes (did, note, modifiedTime, createdTime)
             VALUES (?, ?, ?, ?)'''
-            cout.execute(query, (ii,)+ nii)
+            cout.execute(query, (ii,) + nii)
 
         for fii in folder_info:
-            query='''INSERT INTO DocumentFolders (did, folderid)
+            query = '''INSERT INTO DocumentFolders (did, folderid)
             VALUES (?, ?)'''
             cout.execute(query, (ii, fii[0]))
 
-            query='''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
+            query = '''INSERT OR IGNORE INTO Folders (id, name, parentId, path)
             VALUES (?,?,?,?)'''
             cout.execute(query, (fii[0], fii[1], fii[2],
-                os.path.join(rel_lib_folder,fii[1])))
+                                 os.path.join(rel_lib_folder, fii[1])))
 
         for aii in authors:
-            query='''INSERT INTO DocumentContributors (
+            query = '''INSERT INTO DocumentContributors (
             did, contribution, firstNames, lastName)
             VALUES (?, ?, ?, ?)'''
             cout.execute(query, (ii,)+aii)
 
         for urlii in urls:
-            query='''INSERT INTO DocumentUrls (did, url)
+            query = '''INSERT INTO DocumentUrls (did, url)
             VALUES (?, ?)'''
             cout.execute(query, (ii, urlii))
 
         # get path
-        query='''SELECT Files.localUrl
+        query = '''SELECT Files.localUrl
         FROM Files
         LEFT JOIN DocumentFiles ON DocumentFiles.hash = Files.hash
         WHERE DocumentFiles.documentId = ?'''
 
-        ret=cin.execute(query, (docii,))
+        ret = cin.execute(query, (docii,))
 
-        fileurl=ret.fetchall()
-        meta_dictii['files_l']=[]
-        if len(fileurl)>0:
+        fileurl = ret.fetchall()
+        meta_dictii['files_l'] = []
+        if len(fileurl) > 0:
 
             for fileii in fileurl:
-                urlii=fileii[0]
-                filepath=converturl2abspath(urlii)
+                urlii = fileii[0]
+                filepath = converturl2abspath(urlii)
                 meta_dictii['files_l'].append(filepath)
 
             for filepath in meta_dictii['files_l']:
 
                 # rename file
                 if rename_file:
-                    filename=sqlitedb.renameFile(filepath,meta_dictii)
+                    filename = sqlitedb.renameFile(filepath, meta_dictii)
                 else:
-                    filename=os.path.split(filepath)[1]
+                    filename = os.path.split(filepath)[1]
 
-                filename=re.sub(r'[//\ <>:"|?*]','_',filename)
-                filename=re.sub(r'al.','al',filename)
-                filename=re.sub(r'_-_','_',filename)
-                filename=filename.strip()
+                filename = re.sub(r'[//\ <>:"|?*]', '_', filename)
+                filename = re.sub(r'al.', 'al', filename)
+                filename = re.sub(r'_-_', '_', filename)
+                filename = filename.strip()
 
-                relpath=os.path.join(rel_file_folder,filename)
+                relpath = os.path.join(rel_file_folder, filename)
 
-                query='''INSERT INTO DocumentFiles (did, relpath)
+                query = '''INSERT INTO DocumentFiles (did, relpath)
                 VALUES (?, ?)'''
 
                 cout.execute(query, (ii, relpath))
 
-                abspath=os.path.join(file_folder, filename)
-                shutil.copy2(filepath,abspath)
+                abspath = os.path.join(file_folder, filename)
+                shutil.copy2(filepath, abspath)
 
     dbout.commit()
 
     return 0
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
 
-    #importMendeley(FILE_IN_NAME, FILE_OUT_NAME, True)
-    FILE_OUT_NAME='../New_Folder/men.sqlite'
-    FILE_IN_NAME='../mendeley.sqlite'
-    rec, jobid, dbin, dbout, docids, lib_folder, lib_name=\
-    importMendeleyPreprocess(0, FILE_IN_NAME, FILE_OUT_NAME)
+    # importMendeley(FILE_IN_NAME, FILE_OUT_NAME, True)
+    FILE_OUT_NAME = '../New_Folder/men.sqlite'
+    FILE_IN_NAME = '../mendeley.sqlite'
+    rec, jobid, dbin, dbout, docids, lib_folder, lib_name =\
+        importMendeleyPreprocess(0, FILE_IN_NAME, FILE_OUT_NAME)
 
     for ii, docii in enumerate(docids):
         rec2, jobid, fail_list = importMendeleyCopyData(1, dbin, dbout, lib_name, lib_folder,
-            True, ii, docii)
+                                                        True, ii, docii)
 
         print('rec = ', rec2, 'jobid = ', jobid, 'fail=', fail_list)

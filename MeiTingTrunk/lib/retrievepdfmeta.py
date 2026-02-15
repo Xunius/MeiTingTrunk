@@ -5,7 +5,7 @@ Utitlity functions for extract meta data from PDF file.
 MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
-Copyright 2018-2019 Guang-zhi XU
+Copyright 2018-2026 Guang-zhi XU
 
 This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
@@ -19,7 +19,7 @@ import logging
 
 try:
     from . import sqlitedb
-except:
+except Exception:
     import sqlitedb
 
 from collections import Counter
@@ -29,12 +29,11 @@ from pdfminer.pdfdocument import PDFDocument
 from PyPDF2 import PdfFileReader
 
 
-#---------Regex pattern for matching dois---------
-DOI_PATTERN=re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
-        re.DOTALL|re.UNICODE)
+# ---------Regex pattern for matching dois---------
+DOI_PATTERN = re.compile(r'(?:doi:)?\s?(10.[1-9][0-9]{3}/.*$)',
+                         re.DOTALL | re.UNICODE)
 
-LOGGER=logging.getLogger(__name__)
-
+LOGGER = logging.getLogger(__name__)
 
 
 def getPDFMeta_pypdf2(path):
@@ -51,8 +50,9 @@ def getPDFMeta_pypdf2(path):
         info = pdf.getDocumentInfo()
         number_of_pages = pdf.getNumPages()
 
-    LOGGER.info('Read PDF file %s. NO. of pages = %d' %(path, number_of_pages))
-    LOGGER.debug('Info of PDF file: %s' %info)
+    LOGGER.info('Read PDF file %s. NO. of pages = %d' %
+                (path, number_of_pages))
+    LOGGER.debug('Info of PDF file: %s' % info)
 
     return info
 
@@ -70,8 +70,8 @@ def getPDFMeta_pdfminer(path):
         parser = PDFParser(fin)
         doc = PDFDocument(parser)
 
-    LOGGER.info('Read PDF file %s.' %path)
-    LOGGER.debug('Info of PDF file: %s' %doc.info)
+    LOGGER.info('Read PDF file %s.' % path)
+    LOGGER.debug('Info of PDF file: %s' % doc.info)
 
     return doc.info
 
@@ -85,15 +85,15 @@ def parseToList(text):
     Returns: result (list): sequence split into a list.
     """
 
-    result=[]
+    result = []
     if ' and ' in text:
-        delim=' and '
+        delim = ' and '
     else:
-        delim=',' if ',' in text else ';'
-    textlist=text.replace('\n',delim).strip(delim).split(delim)
+        delim = ',' if ',' in text else ';'
+    textlist = text.replace('\n', delim).strip(delim).split(delim)
     for tii in textlist:
-        tii=str(tii).strip()
-        if len(tii)>0:
+        tii = str(tii).strip()
+        if len(tii) > 0:
             result.append(tii)
     return result
 
@@ -112,45 +112,44 @@ def prepareMeta(meta_dict):
         * doi is searched in a regex.
     """
 
-    result=sqlitedb.DocMeta()
-    gotdois=[]
-    for kk,vv in meta_dict.items():
-        if len(vv)>0:
-            kk=kk.lower().lstrip('/') # pypdf2 convention starts with /
-            if kk=='author':
-                result['authors_l']=parseToList(vv)
-            elif kk=='keywords':
-                result['keywords_l']=parseToList(vv)
+    result = sqlitedb.DocMeta()
+    gotdois = []
+    for kk, vv in meta_dict.items():
+        if len(vv) > 0:
+            kk = kk.lower().lstrip('/')  # pypdf2 convention starts with /
+            if kk == 'author':
+                result['authors_l'] = parseToList(vv)
+            elif kk == 'keywords':
+                result['keywords_l'] = parseToList(vv)
             elif kk in ['title', ]:
-                result[kk]=str(vv)
+                result[kk] = str(vv)
 
-            match=DOI_PATTERN.match(vv)
+            match = DOI_PATTERN.match(vv)
             if match:
                 gotdois.append(vv)
 
-    if len(gotdois)>0:
-        counter=Counter(gotdois)
-        doi=counter.most_common(1)[0][0]
-        result['doi']=doi
+    if len(gotdois) > 0:
+        counter = Counter(gotdois)
+        doi = counter.most_common(1)[0][0]
+        result['doi'] = doi
 
     return result
 
 
+if __name__ == '__main__':
 
-if __name__=='__main__':
-
-    FILE_IN='testpdf2.pdf'
-    FILE_IN='mypdf2.pdf'
+    FILE_IN = 'testpdf2.pdf'
+    FILE_IN = 'mypdf2.pdf'
 
     print('\nget meta data using pdfminer--------------')
-    m1=getPDFMeta_pdfminer(FILE_IN)
+    m1 = getPDFMeta_pdfminer(FILE_IN)
 
     print('\nget meta data using pypdf2--------------')
-    m2=getPDFMeta_pypdf2(FILE_IN)
+    m2 = getPDFMeta_pypdf2(FILE_IN)
 
-    #result=sqlitedb.DocMeta()
-    #result.update(m1[0])
+    # result=sqlitedb.DocMeta()
+    # result.update(m1[0])
 
-    aa=prepareMeta(m2)
+    aa = prepareMeta(m2)
     print('\nmeta from pdf:')
     pprint(aa)

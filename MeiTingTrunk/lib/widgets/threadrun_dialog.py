@@ -6,7 +6,7 @@ controls.
 MeiTing Trunk
 An open source reference management tool developed in PyQt5 and Python3.
 
-Copyright 2018-2019 Guang-zhi XU
+Copyright 2018-2026 Guang-zhi XU
 
 This file is distributed under the terms of the
 GPLv3 licence. See the LICENSE file for details.
@@ -21,7 +21,7 @@ from PyQt5.QtCore import QObject, QThread, Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QDialogButtonBox
 
 
-LOGGER=logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class SimpleWorker(QObject):
@@ -35,8 +35,8 @@ class SimpleWorker(QObject):
             func (function): function object to call in the thread.
         '''
 
-        self.id=id
-        self.func=func
+        self.id = id
+        self.func = func
 
     @pyqtSlot()
     def processJob(self):
@@ -45,13 +45,12 @@ class SimpleWorker(QObject):
         return
 
 
-
 class Worker(QObject):
 
-    worker_jobdone_signal=pyqtSignal(int) # jobid
+    worker_jobdone_signal = pyqtSignal(int)  # jobid
 
     def __init__(self, id, func, jobqueue, outqueue):
-        super(Worker,self).__init__()
+        super(Worker, self).__init__()
         '''Worker used in separate thread.
 
         Args:
@@ -65,12 +64,11 @@ class Worker(QObject):
                 other_results)
         '''
 
-        self.id=id
-        self.func=func
-        self.jobqueue=jobqueue
-        self.outqueue=outqueue
-        self.abort=False
-
+        self.id = id
+        self.func = func
+        self.jobqueue = jobqueue
+        self.outqueue = outqueue
+        self.abort = False
 
     @pyqtSlot()
     def processJob(self):
@@ -79,16 +77,16 @@ class Worker(QObject):
             if self.abort:
                 return
 
-            args=self.jobqueue.get()
-            jobid=args[0]
+            args = self.jobqueue.get()
+            jobid = args[0]
             try:
-                rec=self.func(*args)
-                LOGGER.debug('Job %d done. Remaining queue size: %d.'\
-                    %(jobid, self.jobqueue.qsize()))
-            except:
-                rec=(1,jobid,None)
-                LOGGER.debug('Job %d failed. Remaining queue size: %d.'\
-                    %(jobid, self.jobqueue.qsize()))
+                rec = self.func(*args)
+                LOGGER.debug('Job %d done. Remaining queue size: %d.'
+                             % (jobid, self.jobqueue.qsize()))
+            except Exception:
+                rec = (1, jobid, None)
+                LOGGER.debug('Job %d failed. Remaining queue size: %d.'
+                             % (jobid, self.jobqueue.qsize()))
             self.jobqueue.task_done()
             self.outqueue.put(rec)
             self.worker_jobdone_signal.emit(jobid)
@@ -98,18 +96,18 @@ class Worker(QObject):
 
 class Master(QObject):
 
-    all_done_signal=pyqtSignal()
-    donejobs_count_signal=pyqtSignal(int) # NO. of finshed jobs
+    all_done_signal = pyqtSignal()
+    donejobs_count_signal = pyqtSignal(int)  # NO. of finshed jobs
 
     def __init__(self, func, joblist, max_threads=4, progressbar=None,
-            progressbar_style='classic',
-            statusbar=None,
-            show_message='',
-            post_process_func=None,
-            post_process_func_args=(),
-            post_process_progress=1,
-            close_on_finish=True,
-            parent=None):
+                 progressbar_style='classic',
+                 statusbar=None,
+                 show_message='',
+                 post_process_func=None,
+                 post_process_func_args=(),
+                 post_process_progress=1,
+                 close_on_finish=True,
+                 parent=None):
         '''A controller distributing tasks to workers, collecting results and
         sending feedbacks on task status
 
@@ -138,35 +136,34 @@ class Master(QObject):
             parent (QWidget): parent widget.
 
         '''
-        super(self.__class__,self).__init__()
+        super(self.__class__, self).__init__()
 
-        self.func=func
-        self.joblist=joblist
-        self.max_threads=max_threads
-        self.progressbar=progressbar
-        self.progressbar_style=progressbar_style
-        self.statusbar=statusbar
-        self.show_message=show_message
-        self.post_process_func=post_process_func
-        self.post_process_func_args=post_process_func_args
-        self.post_process_progress=post_process_progress
-        self.close_on_finish=close_on_finish
-        self.parent=parent
+        self.func = func
+        self.joblist = joblist
+        self.max_threads = max_threads
+        self.progressbar = progressbar
+        self.progressbar_style = progressbar_style
+        self.statusbar = statusbar
+        self.show_message = show_message
+        self.post_process_func = post_process_func
+        self.post_process_func_args = post_process_func_args
+        self.post_process_progress = post_process_progress
+        self.close_on_finish = close_on_finish
+        self.parent = parent
 
         self.all_done_signal.connect(self.onAllJobsDone)
-
 
     def run(self):
 
         if self.progressbar:
-            if self.progressbar_style=='classic':
+            if self.progressbar_style == 'classic':
                 if self.post_process_func is None:
                     self.progressbar.setMaximum(len(self.joblist))
                 else:
-                    self.progressbar.setMaximum(len(self.joblist)+\
-                            self.post_process_progress)
+                    self.progressbar.setMaximum(len(self.joblist) +
+                                                self.post_process_progress)
                 self.progressbar.setValue(0)
-            elif self.progressbar_style=='busy':
+            elif self.progressbar_style == 'busy':
                 self.progressbar.setMaximum(0)
             else:
                 raise Exception("Not defined")
@@ -174,25 +171,25 @@ class Master(QObject):
         if self.statusbar and self.show_message:
             self.statusbar.showMessage(self.show_message)
 
-        self.threads=[]
-        self.results=[]
-        n_threads=min(self.max_threads,len(self.joblist))
-        self.finished=0
-        self.finished_jobs=[]
+        self.threads = []
+        self.results = []
+        n_threads = min(self.max_threads, len(self.joblist))
+        self.finished = 0
+        self.finished_jobs = []
 
-        self.jobqueue=Queue()
-        self.outqueue=Queue()
+        self.jobqueue = Queue()
+        self.outqueue = Queue()
         # populate job queue
-        for ii,jobii in enumerate(self.joblist):
+        for ii, jobii in enumerate(self.joblist):
             self.jobqueue.put(jobii)
 
         # start worker threads
         for ii in range(n_threads):
-            LOGGER.debug('Create thread %s' %ii)
+            LOGGER.debug('Create thread %s' % ii)
 
-            tii=QThread()
-            wii=Worker(ii,self.func,self.jobqueue,self.outqueue)
-            self.threads.append((tii,wii)) # need to keep record of both!
+            tii = QThread()
+            wii = Worker(ii, self.func, self.jobqueue, self.outqueue)
+            self.threads.append((tii, wii))  # need to keep record of both!
 
             wii.moveToThread(tii)
             wii.worker_jobdone_signal.connect(self.countJobDone)
@@ -201,40 +198,38 @@ class Master(QObject):
 
         return
 
-
     @pyqtSlot(int)
-    def countJobDone(self,jobid):
+    def countJobDone(self, jobid):
 
-        self.finished+=1
+        self.finished += 1
         self.finished_jobs.append(jobid)
         self.donejobs_count_signal.emit(self.finished)
         while self.outqueue.qsize():
-            resii=self.outqueue.get()
+            resii = self.outqueue.get()
             self.results.append(resii)
-        if self.progressbar and self.progressbar_style=='classic':
+        if self.progressbar and self.progressbar_style == 'classic':
             self.progressbar.setValue(self.finished)
 
-        LOGGER.debug('finished = %s. NO of results = %d' %(self.finished,
-            len(self.results)))
+        LOGGER.debug('finished = %s. NO of results = %d' % (self.finished,
+                                                            len(self.results)))
 
-        if self.finished==len(self.joblist):
+        if self.finished == len(self.joblist):
             self.all_done_signal.emit()
 
         return
 
-
     @pyqtSlot()
     def onAllJobsDone(self):
 
-        for tii,wii in self.threads:
+        for tii, wii in self.threads:
             tii.quit()
             tii.wait()
 
         if self.post_process_func is not None:
             LOGGER.debug('Call post-process')
 
-            self.results=self.post_process_func(self.results,
-                    *self.post_process_func_args)
+            self.results = self.post_process_func(self.results,
+                                                  *self.post_process_func_args)
             if self.progressbar:
                 self.progressbar.setValue(self.progressbar.maximum())
 
@@ -251,11 +246,10 @@ class Master(QObject):
 
         return
 
-
     @pyqtSlot()
     def abortJobs(self):
-        for tii,wii in self.threads:
-            wii.abort=True
+        for tii, wii in self.threads:
+            wii.abort = True
             tii.quit()
             tii.wait()
         if self.progressbar:
@@ -268,15 +262,15 @@ class Master(QObject):
 
 class ThreadRunDialog(QtWidgets.QDialog):
 
-    abort_job_signal=pyqtSignal()
+    abort_job_signal = pyqtSignal()
 
-    def __init__(self,func, joblist, show_message='', max_threads=3,
-            get_results=False, close_on_finish=True,
-            progressbar_style='classic',
-            post_process_func=None,
-            post_process_func_args=(),
-            post_process_progress=1,
-            parent=None):
+    def __init__(self, func, joblist, show_message='', max_threads=3,
+                 get_results=False, close_on_finish=True,
+                 progressbar_style='classic',
+                 post_process_func=None,
+                 post_process_func_args=(),
+                 post_process_progress=1,
+                 parent=None):
         '''A modal dialog shown when calling some long-lasting tasks, with
         message label, progressbar giving feedbacks.
 
@@ -301,34 +295,34 @@ class ThreadRunDialog(QtWidgets.QDialog):
             parent (QWidget): parent widget.
         '''
 
-        super(self.__class__,self).__init__(parent=parent)
+        super(self.__class__, self).__init__(parent=parent)
 
-        self.func=func
-        self.joblist=joblist
-        self.show_message=show_message
-        self.max_threads=max_threads
-        self.get_results=get_results
-        self.close_on_finish=close_on_finish
-        self.progressbar_style=progressbar_style
-        self.post_process_func=post_process_func
-        self.post_process_func_args=post_process_func_args
-        self.post_process_progress=post_process_progress
-        self.parent=parent
+        self.func = func
+        self.joblist = joblist
+        self.show_message = show_message
+        self.max_threads = max_threads
+        self.get_results = get_results
+        self.close_on_finish = close_on_finish
+        self.progressbar_style = progressbar_style
+        self.post_process_func = post_process_func
+        self.post_process_func_args = post_process_func_args
+        self.post_process_progress = post_process_progress
+        self.parent = parent
 
         self.setWindowModality(Qt.ApplicationModal)
         self.setWindowTitle('Processing ...')
-        self.resize(500,100)
+        self.resize(500, 100)
 
-        va=QtWidgets.QVBoxLayout(self)
+        va = QtWidgets.QVBoxLayout(self)
 
-        self.label=QtWidgets.QLabel(show_message)
+        self.label = QtWidgets.QLabel(show_message)
         va.addWidget(self.label)
 
-        self.progressbar=QtWidgets.QProgressBar(self)
+        self.progressbar = QtWidgets.QProgressBar(self)
         self.progressbar.setMaximum(len(joblist))
         self.progressbar.setValue(0)
 
-        self.buttons=QDialogButtonBox(
+        self.buttons = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
 
         va.addWidget(self.progressbar)
@@ -337,27 +331,26 @@ class ThreadRunDialog(QtWidgets.QDialog):
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.abortJobs)
 
-        self.master=Master(func,joblist,self.max_threads,self.progressbar,
-                self.progressbar_style, None, '',
-                self.post_process_func,
-                self.post_process_func_args,
-                self.post_process_progress,
-                self.close_on_finish,
-                None)
+        self.master = Master(func, joblist, self.max_threads, self.progressbar,
+                             self.progressbar_style, None, '',
+                             self.post_process_func,
+                             self.post_process_func_args,
+                             self.post_process_progress,
+                             self.close_on_finish,
+                             None)
 
-        self.ok_button=self.buttons.button(QDialogButtonBox.Ok)
+        self.ok_button = self.buttons.button(QDialogButtonBox.Ok)
         self.ok_button.setEnabled(False)
-        self.cancel_button=self.buttons.button(QDialogButtonBox.Cancel)
+        self.cancel_button = self.buttons.button(QDialogButtonBox.Cancel)
         self.master.all_done_signal.connect(self.allJobsDone)
 
     def exec_(self):
 
         # have to start master first
         self.master.run()
-        super(ThreadRunDialog,self).exec_()
+        super(ThreadRunDialog, self).exec_()
 
         return
-
 
     @pyqtSlot()
     def allJobsDone(self):
@@ -370,26 +363,22 @@ class ThreadRunDialog(QtWidgets.QDialog):
 
         return
 
-
     @pyqtSlot()
     def abortJobs(self):
         self.master.abortJobs()
         if self.get_results:
-            self.results=self.master.results
+            self.results = self.master.results
         self.abort_job_signal.emit()
         self.reject()
 
         return
 
-
     @pyqtSlot()
     def accept(self):
 
-        LOGGER.debug('get_results = %s' %self.get_results)
+        LOGGER.debug('get_results = %s' % self.get_results)
         if self.get_results:
-            self.results=self.master.results
-        super(self.__class__,self).accept()
+            self.results = self.master.results
+        super(self.__class__, self).accept()
 
         return
-
-
